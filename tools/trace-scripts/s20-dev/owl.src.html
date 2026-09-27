@@ -1,0 +1,11 @@
+<!--#include head-->
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const q=new URLSearchParams(location.search);
+const { drawOwl, owlPose } = await import('/src/lib/owlInk.js');
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+ctx.fillStyle='#000';ctx.fillRect(0,0,2206,946);
+const jobs=JSON.parse(q.get('p'));
+for (const j of jobs) { const a = drawOwl(ctx, { ...owlPose(j.name, j.over||{}), ...j.place }); window.__info = JSON.stringify(a); }
+window.__done=true;
+</script>

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=2206, height=946" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>* { margin: 0; padding: 0; } html, body { width: 2206px; height: 946px; overflow: hidden; background: #000; } #film { position: absolute; inset: 0; }</style>
+</head><body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="300" data-fps="25" data-width="2206" data-height="946">
+<canvas id="film" width="2206" height="946"></canvas></div>
+<script type="module">
+  // s26 rig preview (scratch): tau -> frame F = 2700 + round(tau); draws only the owl rig of that frame on grey
+  import { drawRig, unpack } from "./src/shots/s26/rig.js";
+  import { POSES_C, POSES_C_KEYS } from "./src/shots/s26/posesC.js";
+  import { POSES_D, POSES_D_KEYS } from "./src/shots/s26/posesD.js";
+  import { POSES_F, POSES_F_KEYS } from "./src/shots/s26/posesF.js";
+  const c = document.getElementById("film"), ctx = c.getContext("2d");
+  const BASE = { look: "ink", head: { x: 0, y: 0, r: 90, rot: 0, yaw: -0.3, tuft: 0.4 }, eyes: { L: "angry", R: "angry", lookL: [1.3, 0.1], lookR: [0.1, 0.05] },
+    body: { x: 0, y: 0, rx: 100, ry: 100, rot: 0 }, wings: [{ S: [0, 0], Wr: [0, 0], T: [0, 0], trail: 2, sec: 120, layer: "back" }, { S: [0, 0], Wr: [0, 0], T: [0, 0], trail: 1, sec: 120, layer: "back" }], tail: null, feet: [{ x: 0, y: 0, ang: 0, size: 58 }, { x: 0, y: 0, ang: 0, size: 58 }] };
+  function renderAt(tau) {
+    const F = 2700 + Math.round(tau);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = "#3a3a3a"; ctx.fillRect(0, 0, 2206, 946);
+    const FB = { ...BASE, look: "colour", head: { ...BASE.head, cupR: 1.0, cupW: 0.3, cupH: 0.42, bandW: 0.98, bandH: 0.72, cupY: 0.05, eyeSp: 0.4, eyeY: 0.12, eyeR: 0.2 }, eyes: { L: "open", R: "open" } };
+    if (POSES_C[F]) drawRig(ctx, unpack(POSES_C_KEYS, POSES_C[F], BASE));
+    else if (POSES_D[F]) drawRig(ctx, unpack(POSES_D_KEYS, POSES_D[F], { ...BASE, head: { ...BASE.head, yaw: 0.3 } }));
+    else if (POSES_F[F]) drawRig(ctx, unpack(POSES_F_KEYS, POSES_F[F], FB));
+  }
+  const clock = { _t: 0, get t() { return this._t; }, set t(v) { this._t = v; renderAt(v); } };
+  const tl = gsap.timeline({ paused: true });
+  tl.fromTo(clock, { t: 0 }, { t: 300, duration: 300, ease: "none" }, 0);
+  window.__timelines = { main: tl };
+</script></body></html>

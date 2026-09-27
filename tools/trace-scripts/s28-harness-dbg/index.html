@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=2206, height=946">
+    <title>The Apprentice — drawn in code</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Archivo"; src: url("assets/fonts/Archivo-Var.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Var.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Fraunces"; src: url("assets/fonts/Fraunces-Variable.ttf") format("truetype"); font-weight: 100 900; }
+      @font-face { font-family: "Shrikhand"; src: url("assets/fonts/Shrikhand.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Fraunces Soft"; src: url("assets/fonts/FrauncesSoft-Black.ttf") format("truetype"); font-weight: 900; }
+      @font-face { font-family: "Satoshi"; src: url("assets/fonts/Satoshi-Variable.woff2") format("woff2"); font-weight: 300 900; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-500.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-600.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-700.woff2") format("woff2"); font-weight: 700; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 2206px; height: 946px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 100%; height: 100%; background: #000; }
+      #film { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-4l55" id="root" data-composition-id="main" data-start="0" data-duration="140.8" data-fps="25" data-width="2206" data-height="946">
+      <canvas data-hf-id="hf-mule" id="film" width="2206" height="946"></canvas>
+    </div>
+    <script>window.__s28dbg = { noRoom: true, noLid: true };</script>
+    <script type="module">
+      // s28 scratch harness (not part of the film): s28 alone through the film's grade.
+      import { createPost } from "./src/lib/post.js";
+      import { shot } from "./src/shots/s28.js";
+      const out = document.getElementById("film");
+      const paint = document.createElement("canvas"); paint.width = 2206; paint.height = 946;
+      const ctx = paint.getContext("2d");
+      const grade = createPost(out);
+      function renderAt(t) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 2206, 946);
+        const tt = Math.min(135.999, Math.max(129.3, t));
+        ctx.save();
+        try { shot.draw(ctx, tt - 129.3, tt); } catch (e) { ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle = "#300"; ctx.fillRect(0, 0, 2206, 120); ctx.fillStyle = "#f66"; ctx.font = "30px monospace"; ctx.fillText(String(e && e.stack || e).slice(0, 150), 20, 50); ctx.fillText(String(e && e.stack || e).slice(150, 300), 20, 100); }
+        ctx.restore();
+        grade(paint, tt, { fade: 1 });
+      }
+      const clock = { _t: 0, get t() { return this._t; }, set t(v) { this._t = v; renderAt(v); } };
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo(clock, { t: 0 }, { t: 140.8, duration: 140.8, ease: "none" }, 0);
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+<!--#include head-->
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const m = await import('/src/shots/s08/dbg.js');
+window.__info = m.__dbg();
+window.__done=true;
+</script>

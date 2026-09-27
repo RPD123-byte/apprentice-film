@@ -1,0 +1,13 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=2206, height=946"><title>seek probe</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>* { margin: 0; padding: 0; } html, body { width: 2206px; height: 946px; overflow: hidden; background: #000; }
+#log { position: absolute; left: 20px; top: 20px; color: #0f0; font: 30px monospace; white-space: pre; }</style></head>
+<body><div data-hf-id="hf-r2lab3" id="root" data-composition-id="main" data-start="0" data-duration="140.8" data-fps="25" data-width="2206" data-height="946"><div id="log" data-hf-id="hf-r2log3"></div></div>
+<script type="module">
+const log = document.getElementById("log"); const L = [];
+function show(s) { L.push(s); while (L.length > 12) L.shift(); log.textContent = L.join("\n"); }
+const clock = { _t: 0, get t() { return this._t; }, set t(v) { this._t = v; show("clock.t = " + v.toPrecision(17) + (v >= 6.04 ? "" : " (<6.04)") ); } };
+const tl = gsap.timeline({ paused: true }); tl.fromTo(clock, { t: 0 }, { t: 140.8, duration: 140.8, ease: "none" }, 0);
+window.__timelines = window.__timelines || {}; window.__timelines["main"] = tl;
+window.addEventListener("hf-seek", (e) => show("hf-seek " + e.detail.time.toPrecision(17)));
+</script></body></html>

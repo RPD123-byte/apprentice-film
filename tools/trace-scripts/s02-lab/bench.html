@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>s02 bench</title></head><body>
+<canvas id="c" width="2206" height="946"></canvas><pre id="o"></pre>
+<script type="module">
+import { shot } from "./src/shots/s02.js";
+const ctx = document.getElementById("c").getContext("2d");
+const out = [];
+const T = [6.2, 6.24, 8.76, 9.6, 11.2, 12.0, 13.0, 13.6, 14.2, 15.0, 15.4, 16.2, 16.8, 17.4, 18.0, 18.6, 19.08];
+for (const t of T) {
+  const t0 = performance.now(); shot.draw(ctx, t - 6.04, t); const dt = performance.now() - t0;
+  out.push(t.toFixed(2) + " " + dt.toFixed(0) + " ms");
+}
+document.getElementById("o").textContent = out.join("\n");
+window.__bench = out;
+</script></body></html>

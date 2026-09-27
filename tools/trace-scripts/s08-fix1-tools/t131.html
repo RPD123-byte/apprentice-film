@@ -1,0 +1,15 @@
+<!doctype html><html><body><canvas id="c" width="200" height="100"></canvas><script>
+const c=document.getElementById('c'),g=c.getContext('2d');
+g.fillStyle='rgb(200,200,200)'; g.fillRect(0,0,200,100);
+const f=document.createElement('canvas'); f.width=50; f.height=50; const fg=f.getContext('2d'); fg.fillStyle='rgb(128,128,128)'; fg.fillRect(0,0,50,50);
+const res={};
+// A: multiply drawImage, no clip
+g.save(); g.globalCompositeOperation='multiply'; g.drawImage(f,0,0); g.restore(); res.A=[...g.getImageData(10,10,1,1).data];
+// B: clip roundRect + multiply drawImage
+g.save(); g.beginPath(); g.roundRect(60,0,50,50,10); g.clip(); g.globalCompositeOperation='multiply'; g.drawImage(f,60,0); g.restore(); res.B=[...g.getImageData(80,20,1,1).data];
+// C: clip rect + multiply
+g.save(); g.beginPath(); g.rect(120,0,50,50); g.clip(); g.globalCompositeOperation='multiply'; g.drawImage(f,120,0); g.restore(); res.C=[...g.getImageData(140,20,1,1).data];
+// D: multiply fillRect gradient under transform with clip roundRect
+g.save(); g.beginPath(); g.roundRect(0,50,50,50,10); g.clip(); g.globalCompositeOperation='multiply'; g.fillStyle='rgb(128,128,128)'; g.fillRect(0,50,50,50); g.restore(); res.D=[...g.getImageData(20,70,1,1).data];
+window.__res=JSON.stringify(res); window.__done=true;
+</script></body></html>

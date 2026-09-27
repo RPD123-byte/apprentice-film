@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=2206, height=946">
+    <title>The Apprentice — drawn in code</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Archivo"; src: url("assets/fonts/Archivo-Var.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Var.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Fraunces"; src: url("assets/fonts/Fraunces-Variable.ttf") format("truetype"); font-weight: 100 900; }
+      @font-face { font-family: "Shrikhand"; src: url("assets/fonts/Shrikhand.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Fraunces Soft"; src: url("assets/fonts/FrauncesSoft-Black.ttf") format("truetype"); font-weight: 900; }
+      @font-face { font-family: "Satoshi"; src: url("assets/fonts/Satoshi-Variable.woff2") format("woff2"); font-weight: 300 900; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-500.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-600.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-700.woff2") format("woff2"); font-weight: 700; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 2206px; height: 946px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 100%; height: 100%; background: #000; }
+      #film { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-2vjs" id="root" data-composition-id="main" data-start="0" data-duration="4" data-fps="25" data-width="2206" data-height="946">
+      <canvas id="film" width="2206" height="946"></canvas>
+    </div>
+    <script type="module">
+      // scratch: proj time P renders film time 22.96 + P (s04's tail into s05 and s05's end into s06 via P >= 3.0: 23.72 + P)
+      import { renderAt } from "./src/main.js";
+      const map = (p) => (Math.round(p * 30) + 570) / 25;   // P = n/30 -> exact frame time (574 + n)/25 (the snapshot tool quantizes to 1/30 s)
+      const clock = { _t: 0, get t() { return this._t; }, set t(v) { this._t = v; renderAt(map(v)); const d = document.getElementById('dbg') || Object.assign(document.body.appendChild(document.createElement('div')), { id: 'dbg' }); d.style.cssText = 'position:absolute;left:20px;top:20px;color:#f0f;font:30px monospace;z-index:9'; d.textContent = ''; } };
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo(clock, { t: 0 }, { t: 4, duration: 4, ease: "none" }, 0);
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

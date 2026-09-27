@@ -1,0 +1,22 @@
+<!--#include head-->
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const q=new URLSearchParams(location.search);
+window.addEventListener('error',e=>{window.__info='ERR '+e.message;window.__done=true;});
+window.addEventListener('unhandledrejection',e=>{window.__info='ERR '+e.reason;window.__done=true;});
+const { drawTrace } = await import('/src/shots/s20/tracedraw.js?v='+Date.now());
+const { createPost } = await import('/src/lib/post.js');
+const T = await (await fetch('/'+q.get('j'))).json();
+const flat = (s)=>s.map(r=>r.flat());
+const D = { levels: T.levels.map(L=>({v:L.v, rings:L.rings.map(r=>r.flat())})), bright: flat(T.bright), dark: flat(T.dark) };
+const M=+(q.get('m')||60), t=+(q.get('t')||64.08);
+const paint=document.createElement('canvas'); paint.width=2206; paint.height=946;
+const ctx=paint.getContext('2d'); ctx.fillStyle='#000'; ctx.fillRect(0,0,2206,946);
+const t0=performance.now();
+ctx.save(); ctx.translate(-M,-M); drawTrace(ctx, D, { blur: +(q.get('blur')||0), binned: !!q.get('bin'), wMul: +(q.get('wm')||1) }); ctx.restore(); ctx.getImageData(0,0,1,1);
+const t1=performance.now();
+const c=document.getElementById('c');
+if (q.get('raw')) c.getContext('2d').drawImage(paint,0,0); else createPost(c)(paint, t, {});
+window.__info=`draw ${(t1-t0).toFixed(0)}ms`;
+window.__done=true;
+</script>

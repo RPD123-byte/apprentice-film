@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face { font-family: "Geist"; src: url("/assets/fonts/Geist-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Geist Mono"; src: url("/assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+body{margin:0;background:#000}</style></head><body><canvas id="c" width="2206" height="946"></canvas>
+<script type="module">
+await Promise.all(["400 20px Geist","400 20px 'Geist Mono'","700 20px 'Geist Mono'","360 20px 'Geist Mono'"].map(f=>document.fonts.load(f)));
+await document.fonts.ready;
+const { createPost } = await import('/src/lib/post.js');
+const mod = await import('/src/shots/s04.js' + location.search.replace('?','?v='));
+const shot = mod.shot;
+const out = document.getElementById('c');
+const paint = document.createElement('canvas'); paint.width = 2206; paint.height = 946;
+const ctx = paint.getContext('2d');
+const grade = createPost(out);
+window.renderAt = (t, raw) => {
+  ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,2206,946);
+  const t0 = performance.now();
+  shot.draw(ctx, t - 19.12, t, shot);
+  const dt = performance.now() - t0;
+  if (raw) { const g = out.getContext ? null : null; }
+  grade(paint, t, { fade: 1, ...(shot.grade ? shot.grade(t - 19.12, t) : {}) });
+  return dt;
+};
+window.__ready = true;
+</script></body></html>

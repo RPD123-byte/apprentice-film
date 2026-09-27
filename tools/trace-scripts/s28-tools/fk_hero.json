@@ -1,0 +1,7 @@
+{"t":132.4,
+ "palette":{"sage":"#aaae98","sageD":"#8f937f","sageL":"#c9c7af","skin":"#f0ceb2","skinD":"#dea38f","blush":"#d88c80","black":"#100909","hp":"#8f8b84","lip":"#b56e6c"},
+ "room":{"wall":"#ece4cc","wallW":"#e8d4ab","wood":"#e3b690","yellow":"#e4c071","pink":"#d8a1a4","magenta":"#cf7a98","lid":"#5c5656","white":"#f3efe0","teal":"#90b8a2","leaf":"#8f9a62","purple":"#a47bb0","slat":"#c9a092","desk":"#e6cfae","paper":"#eeecdc","shadowbrown":"#6a4a40"},
+ "seeds":[[760,400],[1400,300],[1180,560],[1100,770],[1450,760]],
+ "exclude":[[[118,508],[870,508],[920,946],[200,946]]],
+ "clip":[[470,100],[1640,100],[1640,880],[470,880]],
+ "close":4}

@@ -1,0 +1,1 @@
+window.LAB={"times": [50.0, 52.0], "crop": [0, 0, 2206, 946], "scale": 1.0, "cols": 1, "grade": true};

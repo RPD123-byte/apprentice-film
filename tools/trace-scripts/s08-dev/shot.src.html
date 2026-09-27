@@ -1,0 +1,15 @@
+<!--#include head-->
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const q=new URLSearchParams(location.search); const t=+(q.get('t')||31);
+const { shot } = await import('/src/shots/s08.js');
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+ctx.fillStyle='#000';ctx.fillRect(0,0,2206,946);
+const t0=performance.now();
+shot.draw(ctx, t-30.56, t); ctx.getImageData(0,0,1,1);
+const t1=performance.now();
+for (let k=0;k<10;k++){ shot.draw(ctx, t-30.56+k*0.04, t+k*0.04); ctx.getImageData(0,0,1,1); }
+shot.draw(ctx, t-30.56, t);
+window.__info=`first ${(t1-t0).toFixed(0)}ms, next avg ${((performance.now()-t1)/10).toFixed(1)}ms`;
+window.__done=true;
+</script>

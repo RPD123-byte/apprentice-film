@@ -1,0 +1,11 @@
+<!--#include head-->
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const { createPost } = await import('/src/lib/post.js');
+const paint=document.createElement('canvas'); paint.width=2206; paint.height=946;
+const ctx=paint.getContext('2d'); ctx.fillStyle='rgb(30,30,30)'; ctx.fillRect(0,0,2206,946);
+ctx.fillStyle='rgb(230,230,230)'; ctx.fillRect(1000,400,200,150);
+const c=document.getElementById('c');
+createPost(c)(paint, 64.08, {grain:0});
+window.__done=true;
+</script>

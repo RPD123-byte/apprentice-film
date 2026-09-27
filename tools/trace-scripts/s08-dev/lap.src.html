@@ -1,0 +1,13 @@
+<!--#include head-->
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const q=new URLSearchParams(location.search); const t=+(q.get('t')||26);
+const { purePageCanvas, pureStateAt, drawPureOverlay } = await import('/src/lib/pureimg.js');
+const c=document.getElementById('c'); c.width=1600; c.height=1000; const ctx=c.getContext('2d');
+const st=pureStateAt(t);
+const t0=performance.now();
+ctx.drawImage(purePageCanvas(1600,1000,st.page),0,0);
+drawPureOverlay(ctx, st.overlay);
+window.__info=JSON.stringify(st)+' '+(performance.now()-t0).toFixed(0)+'ms';
+window.__done=true;
+</script>

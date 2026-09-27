@@ -1,0 +1,18 @@
+<!--#include head-->
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+ctx.fillStyle='#1c241b';ctx.fillRect(0,0,2206,946);
+ctx.lineJoin='round';
+function t(txt,font,x,y){ctx.font=font;ctx.lineWidth=10;ctx.strokeStyle='#2a1010';ctx.strokeText(txt,x,y);ctx.fillStyle='#e8e8dc';ctx.fillText(txt,x,y);}
+t('Pure',"900 300px 'Fraunces Soft'",40,300);
+ctx.letterSpacing='-12px'; t('Pure',"900 300px 'Fraunces Soft'",760,300); ctx.letterSpacing='0px';
+t('Imagination',"900 150px 'Fraunces Soft'",40,500);
+t('Wonder Camp',"400 90px Shrikhand",1300,500);
+ctx.font="600 60px Poppins";ctx.fillStyle='#e8e8dc';ctx.fillText('April 24 – April 26, 2025',40,650);
+ctx.font="500 50px 'Geist Mono'";ctx.fillStyle='#333';ctx.fillRect(1300,560,800,200);ctx.fillStyle='#555';ctx.fillText('This is really good',1320,650);
+ctx.font="400 50px Fraunces";ctx.fillStyle='#e8e8dc';ctx.fillText('Pure Imagination (Fraunces 400)',40,780);
+ctx.font="900 120px Fraunces";ctx.fillText('Pure',40,920);
+ctx.font="400 120px Shrikhand";ctx.fillText('Pure',400,920);
+window.__done=true;
+</script>

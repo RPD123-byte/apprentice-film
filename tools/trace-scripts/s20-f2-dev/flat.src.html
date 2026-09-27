@@ -1,0 +1,14 @@
+<!--#include head-->
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const q=new URLSearchParams(location.search);
+const { createPost } = await import('/src/lib/post.js');
+const paint=document.createElement('canvas'); paint.width=2206; paint.height=946;
+const ctx=paint.getContext('2d');
+const vals=(q.get('v')||'0,20,40,60,80,100,120,140').split(',').map(Number);
+const bw=2206/vals.length;
+vals.forEach((v,i)=>{ctx.fillStyle=`rgb(${v},${v},${v})`; ctx.fillRect(Math.round(i*bw),0,Math.ceil(bw),946);});
+const c=document.getElementById('c');
+createPost(c)(paint, +(q.get('t')||64.08), {grain: q.get('g')?+q.get('g'):undefined});
+window.__done=true;
+</script>

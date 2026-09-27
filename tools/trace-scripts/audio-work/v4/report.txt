@@ -1,0 +1,68 @@
+0.5 s windows: 281  |err| mean 1.83 dB, median 1.50 dB
+  within 2 dB: 65.1 %
+  within 3 dB: 80.4 %
+  within 4 dB: 89.0 %
+  within 6 dB: 97.2 %
+  overall loudness: source -27.03 dBFS rms, score -26.71 dBFS rms
+
+per section (mean of 0.5 s errors, score - source, dB; |err| mean; worst window):
+  s01   0.00-  6.04  bias  -0.3  |err|  0.8  worst  -4.4 @ 6.0s
+  s02   6.04- 19.12  bias  -0.9  |err|  1.8  worst  -4.4 @ 6.0s
+  s04  19.12- 23.12  bias  -1.1  |err|  1.9  worst  -4.8 @ 22.5s
+  s05  23.12- 26.72  bias  +1.2  |err|  2.0  worst  +3.5 @ 25.5s
+  s06  26.72- 29.04  bias  -0.9  |err|  1.9  worst  -4.1 @ 27.0s
+  s07  29.04- 30.56  bias  -0.4  |err|  0.6  worst  -2.0 @ 29.5s
+  s08  30.56- 32.60  bias  -1.0  |err|  1.1  worst  -2.6 @ 32.5s
+  s09  32.60- 33.60  bias  -1.9  |err|  1.9  worst  -2.6 @ 32.5s
+  s12  33.60- 35.36  bias  -0.2  |err|  1.6  worst  -2.2 @ 34.0s
+  s13  35.36- 36.92  bias  +2.0  |err|  2.0  worst  +4.2 @ 35.5s
+  s14  36.92- 40.72  bias  -0.2  |err|  0.6  worst  -1.4 @ 39.0s
+  s15  40.72- 45.72  bias  -1.0  |err|  2.0  worst  -4.4 @ 44.5s
+  s16  45.72- 47.84  bias  -1.0  |err|  2.2  worst  -5.0 @ 46.5s
+  s17  47.84- 53.24  bias  -0.1  |err|  1.5  worst  -4.4 @ 48.5s
+  s18  53.24- 57.32  bias  +2.4  |err|  2.4  worst  +4.8 @ 55.5s
+  s19  57.32- 63.12  bias  -0.5  |err|  2.0  worst  -5.0 @ 58.5s
+  s20  63.12- 69.44  bias  -1.2  |err|  1.4  worst  -7.1 @ 68.0s
+  s21  69.44- 74.52  bias  -1.1  |err|  2.3  worst  -6.8 @ 74.0s
+  s22  74.52- 84.04  bias  +1.5  |err|  2.6  worst  +8.0 @ 81.5s
+  s23  84.04- 97.08  bias  +0.6  |err|  2.0  worst  +4.7 @ 88.5s
+  s24  97.08-100.48  bias  +0.8  |err|  2.3  worst  +4.5 @ 99.5s
+  s25 100.48-110.52  bias  +0.1  |err|  1.1  worst  -2.9 @ 107.0s
+  s26 110.52-117.52  bias  +0.5  |err|  1.8  worst  +4.2 @ 112.0s
+  s27 117.52-129.30  bias  -0.4  |err|  1.7  worst  -3.9 @ 128.0s
+  s28 129.30-136.00  bias  -1.5  |err|  3.0  worst -10.9 @ 134.0s
+  s40 136.00-140.80  bias  +0.8  |err|  1.0  worst  +3.1 @ 136.0s
+
+worst 0.5 s windows:
+     6.0s  source  -15.7  score  -20.1  err  -4.4
+    22.5s  source  -17.8  score  -22.6  err  -4.8
+    44.5s  source  -27.6  score  -32.0  err  -4.4
+    46.5s  source  -24.0  score  -29.0  err  -5.0
+    48.5s  source  -27.9  score  -32.3  err  -4.4
+    55.5s  source  -25.4  score  -20.6  err  +4.8
+    58.0s  source  -24.1  score  -28.4  err  -4.2
+    58.5s  source  -40.8  score  -45.7  err  -5.0
+    68.0s  source  -33.6  score  -40.8  err  -7.1
+    69.5s  source  -41.8  score  -47.5  err  -5.7
+    72.0s  source  -35.6  score  -40.4  err  -4.8
+    73.0s  source  -38.6  score  -33.6  err  +4.9
+    74.0s  source  -35.7  score  -42.6  err  -6.8
+    81.5s  source  -38.1  score  -30.0  err  +8.0
+    82.0s  source  -38.7  score  -31.1  err  +7.6
+    82.5s  source  -39.7  score  -31.9  err  +7.8
+    83.0s  source  -40.0  score  -33.8  err  +6.2
+    83.5s  source  -39.6  score  -31.8  err  +7.8
+    88.5s  source  -25.4  score  -20.7  err  +4.7
+    99.5s  source  -42.6  score  -38.2  err  +4.5
+   129.5s  source  -28.7  score  -33.5  err  -4.8
+   130.0s  source  -32.4  score  -36.6  err  -4.2
+   132.5s  source  -43.3  score  -38.7  err  +4.6
+   134.0s  source  -33.3  score  -44.3  err -10.9
+   135.0s  source  -32.6  score  -37.1  err  -4.5
+
+onsets: source 384 (strong 230), score 501
+  strong source onsets with a score onset within 20 ms: 73.5 %
+  strong source onsets with a score onset within 40 ms: 86.1 %
+  strong source onsets with a score onset within 80 ms: 93.0 %
+  unmatched strong source onsets (>40 ms): 0.03 2.78 38.63 38.79 40.44 42.86 43.03 51.65 54.08 54.19 54.54 55.23 55.50 55.69 55.80 55.94 56.81 64.91 67.88 70.86 72.65 87.68 88.01 96.85 98.37 99.27 101.37 111.18 112.73 126.75 127.06 135.26
+  score onsets with no source onset within 60 ms: 157: 2.06 2.94 8.78 19.10 19.49 19.94 23.95 24.13 25.50 25.55 28.02 29.21 29.51 29.69 30.45 31.02 31.28 31.88 32.70 32.74 32.90 33.07 33.21 33.43 36.10 37.13 39.47 40.30 40.97 41.46 43.27 43.82 44.21 44.27 44.38 44.76 44.91 45.15 50.56 50.63 50.76 51.07 57.10 57.46 59.96 61.62 61.70 63.86 65.39 67.67 67.81 69.69 72.24 72.36 72.81 75.35 75.45 75.53 75.95 76.17

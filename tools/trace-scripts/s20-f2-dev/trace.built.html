@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face { font-family: "Archivo"; src: url("/assets/fonts/Archivo-Var.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+@font-face { font-family: "Geist"; src: url("/assets/fonts/Geist-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Geist Mono"; src: url("/assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Fraunces"; src: url("/assets/fonts/Fraunces-Variable.ttf") format("truetype"); font-weight: 100 900; }
+@font-face { font-family: "Shrikhand"; src: url("/assets/fonts/Shrikhand.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "Fraunces Soft"; src: url("/assets/fonts/FrauncesSoft-Black.ttf") format("truetype"); font-weight: 900; }
+@font-face { font-family: "Satoshi"; src: url("/assets/fonts/Satoshi-Variable.woff2") format("woff2"); font-weight: 300 900; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-500.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-600.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-700.woff2") format("woff2"); font-weight: 700; }
+body{margin:0;background:#000}</style></head><body><canvas id="c" width="2206" height="946"></canvas>
+<script type="module">
+await Promise.all(["900 100px Archivo","400 20px Geist","600 20px Geist","500 20px 'Geist Mono'","400 20px Fraunces","700 20px Fraunces","900 100px 'Fraunces Soft'","800 40px Satoshi","400 40px Shrikhand","500 20px Poppins","600 20px Poppins","700 20px Poppins"].map(f=>document.fonts.load(f)));
+await document.fonts.ready;
+window.__fontsReady = true;
+</script>
+
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const q=new URLSearchParams(location.search);
+window.addEventListener('error',e=>{window.__info='ERR '+e.message;window.__done=true;});
+window.addEventListener('unhandledrejection',e=>{window.__info='ERR '+e.reason;window.__done=true;});
+const { drawTrace } = await import('/src/shots/s20/tracedraw.js?v='+Date.now());
+const { createPost } = await import('/src/lib/post.js');
+const T = await (await fetch('/'+q.get('j'))).json();
+const flat = (s)=>s.map(r=>r.flat());
+const D = { levels: T.levels.map(L=>({v:L.v, rings:L.rings.map(r=>r.flat())})), bright: flat(T.bright), dark: flat(T.dark) };
+const M=+(q.get('m')||60), t=+(q.get('t')||64.08);
+const paint=document.createElement('canvas'); paint.width=2206; paint.height=946;
+const ctx=paint.getContext('2d'); ctx.fillStyle='#000'; ctx.fillRect(0,0,2206,946);
+const t0=performance.now();
+ctx.save(); ctx.translate(-M,-M); drawTrace(ctx, D, { blur: +(q.get('blur')||0), binned: !!q.get('bin'), wMul: +(q.get('wm')||1) }); ctx.restore(); ctx.getImageData(0,0,1,1);
+const t1=performance.now();
+const c=document.getElementById('c');
+if (q.get('raw')) c.getContext('2d').drawImage(paint,0,0); else createPost(c)(paint, t, {});
+window.__info=`draw ${(t1-t0).toFixed(0)}ms`;
+window.__done=true;
+</script>

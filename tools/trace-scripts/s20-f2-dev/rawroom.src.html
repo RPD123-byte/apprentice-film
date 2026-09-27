@@ -1,0 +1,20 @@
+<!--#include head-->
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const q=new URLSearchParams(location.search);
+window.addEventListener('error',e=>{window.__info='ERR '+e.message;window.__done=true;});
+window.addEventListener('unhandledrejection',e=>{window.__info='ERR '+e.reason;window.__done=true;});
+const TD = await import('/src/shots/s20/tracedata.js?v='+Date.now()); const { decode, traceCanvas } = TD;
+if (q.get('dkm')) TD.TRACE_OPTS.dk.wMul=+q.get('dkm'); if (q.get('brm')) TD.TRACE_OPTS.br.wMul=+q.get('brm');
+if (q.get('order')) TD.TRACE_OPTS.order=q.get('order');
+if (q.get('wmin')) { TD.TRACE_OPTS.dk.wMin=+q.get('wmin'); TD.TRACE_OPTS.br.wMin=+q.get('wmin'); }
+const mod = await import((q.get('dir')||'/src/shots/s20/data/')+q.get('f')+'.js?v='+Date.now());
+const D = decode(Object.values(mod)[0]);
+const c=document.getElementById('c'); const M=60; c.width=2206+2*M; c.height=946+2*M;
+const t0=performance.now();
+if (q.get('nob')) D.bright=[]; if (q.get('nod')) D.dark=[];
+const cv = traceCanvas(D, -M, -M, c.width, c.height, {});
+c.getContext('2d').drawImage(cv,0,0);
+window.__info=`paint ${(performance.now()-t0).toFixed(0)}ms`;
+window.__done=true;
+</script>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=2206, height=946">
+<title>s15 scratch</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+@font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+* { margin: 0; padding: 0; } html, body { width: 2206px; height: 946px; overflow: hidden; background: #000; }
+#root { position: relative; width: 100%; height: 100%; } canvas { position: absolute; inset: 0; }
+</style>
+</head>
+<body>
+<div data-hf-id="hf-s15x" id="root" data-composition-id="main" data-start="0" data-duration="140.8" data-fps="25" data-width="2206" data-height="946">
+<canvas data-hf-id="hf-s15c" id="film" width="2206" height="946"></canvas>
+</div>
+<script type="module">
+import { shot } from "./src/shots/s15.js";
+import { createPost } from "./src/lib/post.js";
+const W = 2206, H = 946;
+const out = document.getElementById("film");
+const paint = document.createElement("canvas"); paint.width = W; paint.height = H;
+const ctx = paint.getContext("2d");
+const grade = createPost(out);
+await document.fonts.load("500 18px 'Geist Mono'").catch(() => {});
+function frame(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+  try { shot.draw(ctx, t - 40.72, t); } catch (e) { ctx.fillStyle = "#300"; ctx.fillRect(0, 0, W, 90); ctx.fillStyle = "#f66"; ctx.font = "22px monospace"; ctx.fillText(String(e && e.stack || e).slice(0, 200), 30, 56); console.error(e); }
+}
+const clock = { _t: 0, get t() { return this._t; }, set t(v) { this._t = v;
+  if (v < 2) {
+    // benchmark page: ms per frame for a spread of s15 frames
+    const ts = [41.0, 41.08, 41.8, 42.3, 43.0, 43.5, 44.2, 44.6, 45.0, 45.3];
+    const res = [];
+    for (const t of ts) { frame(t); const t0 = performance.now(); frame(t); res.push([t, performance.now() - t0]); }
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H); ctx.fillStyle = "#ddd"; ctx.font = "30px monospace";
+    res.forEach(([t, ms], i) => ctx.fillText(t.toFixed(2) + ": " + ms.toFixed(1) + " ms", 60, 80 + i * 44));
+    grade(paint, 0, { fade: 1 }); return;
+  }
+  frame(Math.max(40.72, Math.min(45.7199, v))); grade(paint, v, { fade: 1 }); } };
+const tl = gsap.timeline({ paused: true });
+tl.fromTo(clock, { t: 0 }, { t: 140.8, duration: 140.8, ease: "none" }, 0);
+window.__timelines = window.__timelines || {}; window.__timelines["main"] = tl;
+</script>
+</body>
+</html>

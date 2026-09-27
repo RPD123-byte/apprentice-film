@@ -1,0 +1,15 @@
+<!--#include head-->
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const { drawNoteCard, noteCardCanvas, drawSelection } = await import('/src/lib/notecard.js');
+const c=document.getElementById('c'); c.width=1800; c.height=800; const ctx=c.getContext('2d');
+ctx.fillStyle='#111'; ctx.fillRect(0,0,1800,800);
+drawNoteCard(ctx,{x:60,y:60,w:465,text:'This is really good',caret:true,notch:true});
+drawNoteCard(ctx,{x:640,y:60,w:465,text:'This is really good',theme:'room',edge:6});
+drawNoteCard(ctx,{x:1220,y:60,w:300,text:'This is really good',theme:'ink'});
+drawNoteCard(ctx,{x:1220,y:500,w:150,placeholder:'Tell us what you\nthink...',smiley:0,notch:true});
+drawNoteCard(ctx,{x:1420,y:500,w:150,appear:0.5});
+drawSelection(ctx,{x0:1560,y0:100,x1:1760,y1:400,drag:0.6});
+const nc=noteCardCanvas(200,{text:'This is really good',theme:'room'}); ctx.drawImage(nc,1580,420);
+window.__done=true;
+</script>

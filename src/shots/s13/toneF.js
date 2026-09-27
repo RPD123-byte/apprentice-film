@@ -1,0 +1,4 @@
+// s13 value study (fix pass 1b refit by snapshots/s13-fix1-tools/tonefit.py): per part, a cubic polynomial in
+// u = (x - 1300) / 300, v = (y - 470) / 300 (frame px) giving the pre-grade tone correction added to the part's base
+// plumage before its strokes: [1, u, v, u^2, uv, v^2, u^3, u^2 v, u v^2, v^3]. Iterated render -> residual -> fit.
+export const TONE = {"head": [-0.05001, -0.02746, -0.04151, -0.00478, -0.01104, -0.02356, -0.00605, 0.0196, -0.00164, 0.0132], "body": [-0.07772, 0.02163, 0.11662, 0.03805, 0.00185, -0.02123, 0.012, 0.01173, -0.00995, -0.03139], "wing": [0.13445, -0.15034, -0.19327, -0.0096, 0.02346, 0.01599, 0.01896, 0.02831, 0.00502, 0.00251], "tail": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "nub": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "headF": [-0.03427, -0.02837, -0.00757, 0.00254, -0.02217, -0.00512, -0.00362, 0.01361, 0.00152, 0.00256], "feet": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]};

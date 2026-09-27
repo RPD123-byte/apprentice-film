@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#000}</style></head><body><canvas id="c" width="2206" height="946"></canvas>
+<script type="module">
+const k = await import('/src/lib/owlInk.js');
+const out = document.getElementById('c');
+const ctx = out.getContext('2d');
+window.renderAt = (t) => { ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle='#000'; ctx.fillRect(0,0,2206,946); k.paintGallery(ctx, Math.round(t)); return 0; };
+window.__ready = true;
+</script></body></html>

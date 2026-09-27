@@ -1,0 +1,53 @@
+ 19.04  blurMAE   3.3  mean r/s  97.5/ 98.6
+ 19.08  blurMAE   3.3  mean r/s  98.2/ 99.3
+ 19.12  blurMAE   3.6  mean r/s 101.7/103.0
+ 19.16  blurMAE   2.7  mean r/s 104.5/104.7
+  19.2  blurMAE   4.1  mean r/s 105.0/104.7
+ 19.24  blurMAE   3.5  mean r/s 103.8/104.1
+ 19.28  blurMAE   2.8  mean r/s 103.6/103.2
+ 19.32  blurMAE   3.5  mean r/s 102.6/102.1
+ 19.36  blurMAE   3.4  mean r/s  99.5/ 99.1
+  19.4  blurMAE   3.2  mean r/s  98.5/ 98.6
+ 19.44  blurMAE   3.9  mean r/s  98.8/ 99.2
+ 19.48  blurMAE   4.0  mean r/s  99.7/100.2
+ 19.52  blurMAE   3.9  mean r/s 100.1/100.5
+ 19.56  blurMAE   4.4  mean r/s 100.2/100.3
+  19.6  blurMAE   4.4  mean r/s 100.0/100.0
+ 19.64  blurMAE   4.0  mean r/s 100.0/100.0
+ 19.68  blurMAE   4.5  mean r/s  99.5/ 99.3
+ 19.72  blurMAE   4.5  mean r/s  98.3/ 98.4
+ 19.76  blurMAE   4.0  mean r/s  97.5/ 97.2
+  19.8  blurMAE   4.7  mean r/s  96.0/ 96.1
+ 19.84  blurMAE   4.5  mean r/s  94.4/ 95.0
+ 19.88  blurMAE   4.2  mean r/s  94.1/ 94.5
+ 19.92  blurMAE   4.4  mean r/s  93.8/ 94.1
+ 19.96  blurMAE   4.6  mean r/s  93.2/ 94.3
+    20  blurMAE   4.1  mean r/s  94.4/ 94.5
+ 20.04  blurMAE   4.3  mean r/s  94.7/ 94.8
+ 20.08  blurMAE   4.3  mean r/s  95.0/ 95.0
+ 20.12  blurMAE   4.5  mean r/s  94.5/ 94.6
+ 20.16  blurMAE   4.3  mean r/s  94.1/ 94.1
+  20.2  blurMAE   4.3  mean r/s  93.4/ 93.8
+ 20.24  blurMAE   4.2  mean r/s  93.2/ 93.4
+ 20.28  blurMAE   4.3  mean r/s  93.3/ 93.6
+ 20.32  blurMAE   4.2  mean r/s  93.4/ 93.8
+ 20.36  blurMAE   4.2  mean r/s  93.8/ 94.1
+  20.4  blurMAE   4.1  mean r/s  94.5/ 94.3
+ 20.44  blurMAE   4.2  mean r/s  94.7/ 94.4
+ 20.48  blurMAE   4.1  mean r/s  94.6/ 94.1
+ 20.52  blurMAE   4.1  mean r/s  94.2/ 93.8
+ 20.56  blurMAE   4.1  mean r/s  93.6/ 93.0
+  20.6  blurMAE   4.1  mean r/s  92.0/ 92.1
+ 20.64  blurMAE   4.1  mean r/s  91.2/ 91.3
+ 20.68  blurMAE   4.0  mean r/s  90.6/ 90.7
+ 20.72  blurMAE   4.1  mean r/s  90.4/ 90.2
+ 20.76  blurMAE   4.1  mean r/s  90.3/ 90.6
+  20.8  blurMAE   4.1  mean r/s  91.0/ 91.0
+ 20.84  blurMAE   4.0  mean r/s  90.1/ 90.4
+ 20.88  blurMAE   3.8  mean r/s  90.6/ 90.8
+ 20.92  blurMAE   3.6  mean r/s  91.1/ 91.2
+ 20.96  blurMAE   3.9  mean r/s  91.2/ 91.1
+    21  blurMAE   3.9  mean r/s  90.8/ 90.9
+ 21.04  blurMAE   3.5  mean r/s  90.6/ 90.4
+ 21.08  blurMAE   3.5  mean r/s  90.4/ 90.4
+avg 3.99

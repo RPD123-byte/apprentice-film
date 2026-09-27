@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face { font-family: "Archivo"; src: url("/assets/fonts/Archivo-Var.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+@font-face { font-family: "Geist"; src: url("/assets/fonts/Geist-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Geist Mono"; src: url("/assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Fraunces"; src: url("/assets/fonts/Fraunces-Variable.ttf") format("truetype"); font-weight: 100 900; }
+@font-face { font-family: "Shrikhand"; src: url("/assets/fonts/Shrikhand.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "Fraunces Soft"; src: url("/assets/fonts/FrauncesSoft-Black.ttf") format("truetype"); font-weight: 900; }
+@font-face { font-family: "Satoshi"; src: url("/assets/fonts/Satoshi-Variable.woff2") format("woff2"); font-weight: 300 900; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-500.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-600.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-700.woff2") format("woff2"); font-weight: 700; }
+body{margin:0;background:#000}</style></head><body><canvas id="c" width="2206" height="946"></canvas>
+<script type="module">
+await Promise.all(["900 100px Archivo","400 20px Geist","600 20px Geist","500 20px 'Geist Mono'","400 20px Fraunces","700 20px Fraunces","900 100px 'Fraunces Soft'","800 40px Satoshi","400 40px Shrikhand","500 20px Poppins","600 20px Poppins","700 20px Poppins"].map(f=>document.fonts.load(f)));
+await document.fonts.ready;
+window.__fontsReady = true;
+</script>
+
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const q=new URLSearchParams(location.search); const t=+(q.get('t')||26);
+const { purePageCanvas, pureStateAt, drawPureOverlay } = await import('/src/lib/pureimg.js');
+const c=document.getElementById('c'); c.width=1600; c.height=1000; const ctx=c.getContext('2d');
+const st=pureStateAt(t);
+const t0=performance.now();
+ctx.drawImage(purePageCanvas(1600,1000,st.page),0,0);
+drawPureOverlay(ctx, st.overlay);
+window.__info=JSON.stringify(st)+' '+(performance.now()-t0).toFixed(0)+'ms';
+window.__done=true;
+</script>

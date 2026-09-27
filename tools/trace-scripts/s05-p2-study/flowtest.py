@@ -1,0 +1,15 @@
+import sys; sys.path.insert(0,'/Users/computer/rootline/apprentice-film/src/shots/s05/trace')
+import numpy as np,cv2,frames,time
+S=frames.static_target().mean(2)
+k=int(sys.argv[1])
+F=frames.pre(k).mean(2)
+u8=lambda x: np.clip(x*255,0,255).astype(np.uint8)
+t0=time.time()
+dis=cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_ULTRAFAST+2)
+dis.setFinestScale(1); dis.setPatchSize(12); dis.setPatchStride(4); dis.setGradientDescentIterations(25); dis.setVariationalRefinementIterations(5)
+# flow from frame -> static? we want for each settled pixel p where it is in frame k: flow(S -> F)
+fl=dis.calc(u8(S),u8(F),None)
+print('time',time.time()-t0)
+np.save(f'flow_{k}.npy',fl)
+for name,(x0,y0,x1,y1) in {'spkC':(1130,200,1330,510),'boxTop':(700,0,1060,180),'boxL':(0,60,240,470),'spkL':(40,330,280,840),'face':(1280,250,1420,500),'beanie':(1400,20,1850,200),'owl':(1450,280,1650,600),'back':(1600,550,2000,900),'lap':(400,550,1000,800)}.items():
+  f=fl[y0:y1,x0:x1].reshape(-1,2); print(name, np.median(f,0).round(1))

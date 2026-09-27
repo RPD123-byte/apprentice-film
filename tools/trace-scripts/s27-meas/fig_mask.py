@@ -1,0 +1,21 @@
+# Figure silhouette at 125.0 by GrabCut from a rough polygon (measuring aid). Saves fig125.png mask + overlay.
+import cv2, numpy as np
+from common import load
+f=load(125.0)
+m=np.full(f.shape[:2],cv2.GC_BGD,np.uint8)
+rough=np.int32([[0,440],[60,360],[180,285],[330,250],[440,240],[480,160],[600,150],[640,100],[760,75],[900,75],[1010,130],[1090,250],[1095,420],[1050,520],[1050,640],[1045,720],[980,775],[900,800],[820,870],[700,946],[0,946]])
+cv2.fillPoly(m,[rough],cv2.GC_PR_FGD)
+inner=np.int32([[40,560],[200,330],[430,300],[620,160],[900,130],[1030,300],[1000,600],[900,700],[700,860],[300,900],[40,900]])
+cv2.fillPoly(m,[inner],cv2.GC_FGD)
+cv2.fillPoly(m,[np.int32([[520,250],[560,215],[600,210],[610,260],[560,280]])],cv2.GC_FGD)
+cv2.fillPoly(m,[np.int32([[600,150],[700,108],[728,122],[692,163],[645,188],[612,203]])],cv2.GC_BGD)
+cv2.fillPoly(m,[np.int32([[1045,440],[1100,440],[1100,620],[1040,620]])],cv2.GC_BGD)
+cv2.fillPoly(m,[np.int32([[700,946],[900,800],[1000,800],[1000,946]])],cv2.GC_BGD)
+bg=np.zeros((1,65),np.float64); fg=np.zeros((1,65),np.float64)
+cv2.grabCut(f,m,None,bg,fg,6,cv2.GC_INIT_WITH_MASK)
+fm=np.where((m==cv2.GC_FGD)|(m==cv2.GC_PR_FGD),255,0).astype(np.uint8)
+fm=cv2.morphologyEx(fm,cv2.MORPH_OPEN,np.ones((5,5),np.uint8)); fm=cv2.morphologyEx(fm,cv2.MORPH_CLOSE,np.ones((9,9),np.uint8))
+n,cc,st,_=cv2.connectedComponentsWithStats(fm); k=1+np.argmax(st[1:,4]); fm=np.where(cc==k,255,0).astype(np.uint8)
+cv2.imwrite('fig125.png',fm)
+ov=f.copy(); cnts,_=cv2.findContours(fm,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE); cv2.drawContours(ov,cnts,-1,(0,0,255),2)
+cv2.imwrite('fig125_ov.jpg',cv2.resize(ov[0:946,0:1200],(900,710)))

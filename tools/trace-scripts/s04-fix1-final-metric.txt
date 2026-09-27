@@ -1,0 +1,27 @@
+ 19.12  blurMAE  23.8  mean r/s 104.6/103.0
+ 19.32  blurMAE  21.1  mean r/s 104.7/102.1
+ 19.52  blurMAE  20.6  mean r/s 102.8/100.5
+ 19.72  blurMAE  20.4  mean r/s 101.7/ 98.4
+ 19.92  blurMAE  19.2  mean r/s  97.2/ 94.1
+ 20.12  blurMAE  18.5  mean r/s  97.3/ 94.6
+ 20.32  blurMAE  17.9  mean r/s  96.2/ 93.8
+ 20.52  blurMAE  18.0  mean r/s  96.9/ 93.8
+ 20.72  blurMAE  17.2  mean r/s  93.1/ 90.2
+ 20.92  blurMAE  17.8  mean r/s  96.2/ 91.2
+ 21.12  blurMAE  19.3  mean r/s  94.1/ 90.4
+ 21.32  blurMAE  19.3  mean r/s 100.1/ 95.1
+ 21.36  blurMAE  20.1  mean r/s 101.8/ 95.6
+ 21.44  blurMAE  21.0  mean r/s 101.3/ 95.6
+ 21.52  blurMAE  21.8  mean r/s  95.4/ 94.0
+ 21.72  blurMAE  24.5  mean r/s  95.3/ 95.9
+ 21.92  blurMAE  28.8  mean r/s  80.7/ 85.1
+ 22.12  blurMAE  29.3  mean r/s  77.5/ 80.5
+ 22.32  blurMAE  32.3  mean r/s  82.6/ 79.9
+ 22.52  blurMAE  32.2  mean r/s  82.9/ 80.4
+ 22.72  blurMAE  37.8  mean r/s  83.9/ 79.6
+ 22.92  blurMAE  35.0  mean r/s  80.1/ 77.5
+ 23.04  blurMAE  25.5  mean r/s  75.7/ 80.8
+ 23.08  blurMAE  25.5  mean r/s  75.8/ 80.9
+ 23.12  blurMAE  23.6  mean r/s  76.2/ 81.0
+ 23.16  blurMAE  22.5  mean r/s  76.7/ 81.5
+avg 23.58

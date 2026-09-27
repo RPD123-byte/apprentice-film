@@ -1,0 +1,32 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face { font-family: "Archivo"; src: url("/assets/fonts/Archivo-Var.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+@font-face { font-family: "Geist"; src: url("/assets/fonts/Geist-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Geist Mono"; src: url("/assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Fraunces"; src: url("/assets/fonts/Fraunces-Variable.ttf") format("truetype"); font-weight: 100 900; }
+@font-face { font-family: "Shrikhand"; src: url("/assets/fonts/Shrikhand.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "Fraunces Soft"; src: url("/assets/fonts/FrauncesSoft-Black.ttf") format("truetype"); font-weight: 900; }
+@font-face { font-family: "Satoshi"; src: url("/assets/fonts/Satoshi-Variable.woff2") format("woff2"); font-weight: 300 900; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-500.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-600.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-700.woff2") format("woff2"); font-weight: 700; }
+body{margin:0;background:#000}</style></head><body><canvas id="c" width="2206" height="946"></canvas>
+<script type="module">
+await Promise.all(["900 100px Archivo","400 20px Geist","600 20px Geist","500 20px 'Geist Mono'","400 20px Fraunces","700 20px Fraunces","900 100px 'Fraunces Soft'","800 40px Satoshi","400 40px Shrikhand","500 20px Poppins","600 20px Poppins","700 20px Poppins"].map(f=>document.fonts.load(f)));
+await document.fonts.ready;
+window.__fontsReady = true;
+</script>
+
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const { drawNoteCard, noteCardCanvas, drawSelection } = await import('/src/lib/notecard.js');
+const c=document.getElementById('c'); c.width=1800; c.height=800; const ctx=c.getContext('2d');
+ctx.fillStyle='#111'; ctx.fillRect(0,0,1800,800);
+drawNoteCard(ctx,{x:60,y:60,w:465,text:'This is really good',caret:true,notch:true});
+drawNoteCard(ctx,{x:640,y:60,w:465,text:'This is really good',theme:'room',edge:6});
+drawNoteCard(ctx,{x:1220,y:60,w:300,text:'This is really good',theme:'ink'});
+drawNoteCard(ctx,{x:1220,y:500,w:150,placeholder:'Tell us what you\nthink...',smiley:0,notch:true});
+drawNoteCard(ctx,{x:1420,y:500,w:150,appear:0.5});
+drawSelection(ctx,{x0:1560,y0:100,x1:1760,y1:400,drag:0.6});
+const nc=noteCardCanvas(200,{text:'This is really good',theme:'room'}); ctx.drawImage(nc,1580,420);
+window.__done=true;
+</script>

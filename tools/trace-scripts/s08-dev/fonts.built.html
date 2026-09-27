@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face { font-family: "Archivo"; src: url("/assets/fonts/Archivo-Var.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+@font-face { font-family: "Geist"; src: url("/assets/fonts/Geist-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Geist Mono"; src: url("/assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Fraunces"; src: url("/assets/fonts/Fraunces-Variable.ttf") format("truetype"); font-weight: 100 900; }
+@font-face { font-family: "Shrikhand"; src: url("/assets/fonts/Shrikhand.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "Fraunces Soft"; src: url("/assets/fonts/FrauncesSoft-Black.ttf") format("truetype"); font-weight: 900; }
+@font-face { font-family: "Satoshi"; src: url("/assets/fonts/Satoshi-Variable.woff2") format("woff2"); font-weight: 300 900; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-500.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-600.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-700.woff2") format("woff2"); font-weight: 700; }
+body{margin:0;background:#000}</style></head><body><canvas id="c" width="2206" height="946"></canvas>
+<script type="module">
+await Promise.all(["900 100px Archivo","400 20px Geist","600 20px Geist","500 20px 'Geist Mono'","400 20px Fraunces","700 20px Fraunces","900 100px 'Fraunces Soft'","800 40px Satoshi","400 40px Shrikhand","500 20px Poppins","600 20px Poppins","700 20px Poppins"].map(f=>document.fonts.load(f)));
+await document.fonts.ready;
+window.__fontsReady = true;
+</script>
+
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+ctx.fillStyle='#1c241b';ctx.fillRect(0,0,2206,946);
+ctx.lineJoin='round';
+function t(txt,font,x,y){ctx.font=font;ctx.lineWidth=10;ctx.strokeStyle='#2a1010';ctx.strokeText(txt,x,y);ctx.fillStyle='#e8e8dc';ctx.fillText(txt,x,y);}
+t('Pure',"900 300px 'Fraunces Soft'",40,300);
+ctx.letterSpacing='-12px'; t('Pure',"900 300px 'Fraunces Soft'",760,300); ctx.letterSpacing='0px';
+t('Imagination',"900 150px 'Fraunces Soft'",40,500);
+t('Wonder Camp',"400 90px Shrikhand",1300,500);
+ctx.font="600 60px Poppins";ctx.fillStyle='#e8e8dc';ctx.fillText('April 24 – April 26, 2025',40,650);
+ctx.font="500 50px 'Geist Mono'";ctx.fillStyle='#333';ctx.fillRect(1300,560,800,200);ctx.fillStyle='#555';ctx.fillText('This is really good',1320,650);
+ctx.font="400 50px Fraunces";ctx.fillStyle='#e8e8dc';ctx.fillText('Pure Imagination (Fraunces 400)',40,780);
+ctx.font="900 120px Fraunces";ctx.fillText('Pure',40,920);
+ctx.font="400 120px Shrikhand";ctx.fillText('Pure',400,920);
+window.__done=true;
+</script>

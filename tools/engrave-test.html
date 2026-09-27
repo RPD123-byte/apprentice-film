@@ -1,0 +1,21 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>engrave test</title>
+<style>html,body{margin:0;background:#000}canvas{display:block;width:1103px;height:473px}</style></head>
+<body><canvas id="out" width="2206" height="946"></canvas>
+<script type="module">
+import { Plate } from "../src/lib/engrave.js";
+const P = new Plate(2206, 946, 1);
+// desk: horizontal grain, lit from a point
+P.fill((c) => c.rect(200, 300, 1300, 300), (g) => { const r = g.createRadialGradient(850, 420, 30, 850, 450, 700); r.addColorStop(0, "#f2f2f2"); r.addColorStop(0.5, "#b0b0b0"); r.addColorStop(1, "#1a1a1a"); return r; }, 0.02, { spacing: 0.3 });
+// box face: vertical lines, value falling off
+P.fill((c) => c.rect(1600, 100, 350, 500), (g) => { const r = g.createLinearGradient(1600, 0, 1950, 0); r.addColorStop(0, "#7a7a7a"); r.addColorStop(1, "#0d0d0d"); return r; }, 1.57, { spacing: 0.35 });
+// cross-hatched face
+P.fill((c) => c.rect(1600, 640, 350, 250), (g) => { const r = g.createLinearGradient(0, 640, 0, 890); r.addColorStop(0, "#9a9a9a"); r.addColorStop(1, "#151515"); return r; }, 0.5, { spacing: 0.4, style: 1 });
+// knit dome
+P.fill((c) => c.ellipse(500, 780, 140, 130, 0, 0, 7), (g) => { const r = g.createRadialGradient(500, 700, 10, 500, 780, 160); r.addColorStop(0, "#9c9c9c"); r.addColorStop(1, "#2a2a2a"); return r; }, 1.2, { spacing: 0.3, style: 3 });
+// white hoodie: bright with dark creases
+P.fill((c) => c.ellipse(1050, 800, 260, 140, 0, 0, 7), (g) => { const r = g.createLinearGradient(800, 700, 1300, 900); r.addColorStop(0, "#f4f4f4"); r.addColorStop(0.6, "#d9d9d9"); r.addColorStop(1, "#6a6a6a"); return r; }, 0.9, { spacing: 0.25 });
+const cut = P.engrave({ spacing: 5.5, seed: 3 });
+document.getElementById("out").getContext("2d").drawImage(cut, 0, 0);
+window.__done = true;
+</script></body></html>

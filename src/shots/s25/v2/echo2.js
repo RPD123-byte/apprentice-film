@@ -1,0 +1,52 @@
+// s25 v2 — fix pass 2: the echo owls, placed by their HEAD (read off grid crops of the source frames; the earlier keys
+// were blob centroids, which include the smoke). Each echo is one of the chaos drawings (with its head kit), drawn
+// translucent, optionally softened ("~s"), with a trail of elongated smoke puffs behind it along its path.
+// Rows: [frame, headX, headY, scale, rotation, alpha]; mirror = drawn mirrored (a left-flying drawing flying right).
+// Head anchors in the drawings: dive (776, 430), eTR (1686, 178), eSt (253, 640).
+export const ANCHOR = { dive: [776, 430], eTR: [1686, 178], eSt: [253, 640] };
+
+export const ECHOES2 = [
+  // the bottom-centre echo (100.64–101.00): a translucent copy of the dive, flying right under the main owl; its head
+  // read off 0.9x grid crops (headphone cup 2517 (932, 665), 2519 (1054, 740), 2521 (1093, 751), 2523 (1110, 742),
+  // 2525 (1127, 764); head centre ~55 px on along the body axis, ~13° down); it merges into the main owl by 101.04
+  { key: "dive", soft: true, rows: [[2516, 940, 660, 0.72, 0.4, 0.13], [2517, 1000, 690, 0.72, 0.4, 0.28], [2518, 1052, 722, 0.72, 0.41, 0.29], [2519, 1100, 750, 0.72, 0.41, 0.29], [2520, 1120, 760, 0.72, 0.41, 0.29], [2521, 1138, 770, 0.72, 0.41, 0.28], [2522, 1144, 768, 0.72, 0.41, 0.27], [2523, 1150, 765, 0.72, 0.41, 0.24], [2524, 1160, 770, 0.72, 0.41, 0.21], [2525, 1170, 775, 0.72, 0.41, 0.14]] },
+  // the left echo (101.04–101.48): flies in from the left edge with its scissors forward (the top-right echo's
+  // drawing, mirrored), slows, smears and fades; head offsets from 101.20 read off 1.4x grid crops (ring positions)
+  { key: "eTR", mirror: true, trail: 0.65, trailA: 0.6, rows: [[2526, -18, 734, 0.9, 0, 0.8], [2527, 64, 739, 0.9, 0, 0.8], [2528, 139, 721, 0.9, 0, 0.8], [2529, 200, 724, 0.9, 0, 0.8], [2530, 265, 742, 0.9, 0, 0.8], [2531, 314, 744, 0.9, 0, 0.8], [2532, 341, 735, 0.9, 0, 0.78], [2533, 374, 739, 0.9, 0, 0.75], [2534, 394, 739, 0.92, 0, 0.62], [2535, 408, 739, 0.94, 0, 0.46], [2536, 418, 739, 0.96, 0, 0.32], [2537, 424, 739, 0.98, 0, 0.18]], softFrom: 2534 },
+  // the four converging echoes (102.36–102.68); 102.64–102.68 read off a 0.42x grid sheet of the burst (they grow
+  // as they close in on the centre)
+  { key: "dive", trail: 0.9, soft: true, rows: [[2559, 580, 135, 0.45, 0.1, 0.32], [2560, 560, 140, 0.45, 0.1, 0.49], [2561, 504, 150, 0.45, 0.1, 0.54], [2562, 458, 140, 0.45, 0.1, 0.54], [2563, 430, 144, 0.45, 0.1, 0.54], [2564, 424, 144, 0.45, 0.1, 0.54], [2565, 448, 174, 0.506, 0.2, 0.54], [2566, 590, 270, 0.65, 0.3, 0.5], [2567, 793, 333, 0.7, 0.3, 0.3]] },
+  { key: "eTR", trail: 0.9, soft: true, rows: [[2559, 1960, 70, 0.78, -0.45, 0.32], [2560, 1920, 110, 0.78, -0.5, 0.49], [2561, 1864, 190, 0.8, -0.55, 0.54], [2562, 1818, 220, 0.8, -0.6, 0.54], [2563, 1760, 270, 0.8, -0.6, 0.54], [2564, 1754, 264, 0.8, -0.6, 0.54], [2565, 1568, 334, 0.82, -0.55, 0.54], [2566, 1405, 393, 0.95, 0.25, 0.5], [2567, 1245, 381, 1.0, 0.2, 0.3]] },
+  { key: "dive", trail: 0.9, soft: true, rows: [[2560, 80, 770, 0.427, 0, 0.45], [2561, 134, 750, 0.427, 0, 0.54], [2562, 188, 750, 0.427, 0, 0.54], [2563, 260, 744, 0.427, 0, 0.54], [2564, 274, 744, 0.427, 0, 0.54], [2565, 488, 694, 0.473, -0.2, 0.54], [2566, 667, 595, 0.65, -0.25, 0.5], [2567, 793, 583, 0.7, -0.2, 0.3]] },
+  { key: "dive", trail: 0.9, soft: true, rows: [[2560, 1750, 600, 0.495, 0.9, 0.41], [2561, 1794, 660, 0.506, 0.9, 0.54], [2562, 1828, 680, 0.517, 0.9, 0.54], [2563, 1855, 705, 0.517, 0.9, 0.54], [2564, 1834, 674, 0.517, 0.85, 0.54], [2565, 1838, 654, 0.517, 0.8, 0.54]] },
+  { key: "eTR", trail: 0.9, soft: true, rows: [[2566, 1548, 571, 0.95, 0.25, 0.5], [2567, 1364, 571, 1.0, 0.2, 0.3]] },
+];
+
+// the affine placing drawing `key` with its head at (hx, hy), scale s, rotation rot, mirrored or not
+export function echoAffine(key, hx, hy, s, rot, mirror = false) {
+  const [ax, ay] = ANCHOR[key], c = Math.cos(rot), n = Math.sin(rot), sx = mirror ? -s : s;
+  const a = c * sx, b = n * sx, cc = -n * s, d = c * s;
+  return [a, b, cc, d, hx - (a * ax + cc * ay), hy - (b * ax + d * ay)];
+}
+
+// elongated soft puffs trailing behind a moving echo (frame px): along the direction from the previous row's head
+export function drawTrail(g, rows, i, alpha) {
+  const r = rows[i], p = rows[Math.max(0, i - 1)], q = rows[Math.min(rows.length - 1, i + 1)];
+  let dx = r[1] - p[1], dy = r[2] - p[2];
+  if (Math.hypot(dx, dy) < 4) { dx = q[1] - r[1]; dy = q[2] - r[2]; }
+  const L = Math.hypot(dx, dy);
+  if (L < 4) return;
+  const ux = dx / L, uy = dy / L, ang = Math.atan2(uy, ux), s = r[3];
+  g.save();
+  const kk = rows.trail || 1;
+  for (let k = 0; k < 6; k++) {
+    const d = (80 + k * 62) * s / 0.45 * kk, x = r[1] - ux * d, y = r[2] - uy * d, rx = (70 + 16 * k) * s / 0.45 * kk, ry = rx / (rows.trailA ? 3 : 4);
+    const a = Math.min(rows.trailA || 0.25, alpha * (rows.trailA ? 0.95 - 0.1 * k : 0.45 - 0.07 * k));
+    g.save(); g.translate(x, y); g.rotate(ang); g.scale(1, ry / rx);
+    const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+    gr.addColorStop(0, `rgba(226,226,224,${a.toFixed(3)})`); gr.addColorStop(0.5, `rgba(222,222,220,${(a * 0.5).toFixed(3)})`); gr.addColorStop(1, "rgba(220,220,218,0)");
+    g.fillStyle = gr; g.fillRect(-rx, -rx, 2 * rx, 2 * rx);
+    g.restore();
+  }
+  g.restore();
+}

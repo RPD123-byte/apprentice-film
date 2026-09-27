@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=2206, height=946" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>* { margin: 0; padding: 0; } html, body { width: 2206px; height: 946px; overflow: hidden; background: #000; } canvas { position: absolute; inset: 0; }</style>
+</head><body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="2" data-fps="25" data-width="2206" data-height="946">
+<canvas id="c" width="2206" height="946"></canvas></div>
+<script type="module">
+const c = document.getElementById("c"), g = c.getContext("2d");
+g.fillStyle = "#fff"; g.font = "22px monospace";
+const lines = [];
+const t0 = performance.now();
+const L = await import("./src/shots/s05/layers.js");
+lines.push("import " + (performance.now() - t0).toFixed(0) + " ms");
+let tot = 0;
+for (const n of ["room", "desk", "lh", "rh", "rhB", "arm", "armB", "fig", "owl", "owlD"]) { const a = performance.now(); L.inkLayer(n); const d = performance.now() - a; tot += d; lines.push(n + " " + d.toFixed(0) + " ms"); }
+lines.push("total build " + tot.toFixed(0) + " ms");
+lines.forEach((l, i) => g.fillText(l, 20, 40 + i * 30));
+const tl = gsap.timeline({ paused: true }); tl.to({}, { duration: 2 });
+window.__timelines = window.__timelines || {}; window.__timelines["main"] = tl;
+</script></body></html>

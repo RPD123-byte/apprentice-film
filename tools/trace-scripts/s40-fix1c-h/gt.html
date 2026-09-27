@@ -1,0 +1,19 @@
+<!doctype html><html><body><script type="module">
+import { drawGrain } from "../../src/shots/s40/grain.js";
+import { W, H } from "../../src/config.js";
+const base = document.createElement("canvas"); base.width = W; base.height = H;
+const bg = base.getContext("2d");
+const levels = [30, 80, 128, 180, 230];
+levels.forEach((v, i) => { bg.fillStyle = `rgb(${v},${v},${v})`; bg.fillRect(0, i * H / 5, W, H / 5); });
+const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
+window.res = [];
+for (const t of [138.0, 138.04, 138.08]) {
+  g.globalCompositeOperation = "copy"; g.drawImage(base, 0, 0); g.globalCompositeOperation = "source-over";
+  drawGrain(g, t, () => base, 1);
+  const d = g.getImageData(0, 0, W, H).data;
+  const out = [];
+  levels.forEach((v, i) => { let s = 0, s2 = 0, n = 0; for (let y = Math.round(i * H / 5) + 5; y < Math.round((i + 1) * H / 5) - 5; y += 2) for (let x = 0; x < W; x += 2) { const q = d[(y * W + x) * 4 + 1]; s += q; s2 += q * q; n++; } const m = s / n; out.push([v, +(m - v).toFixed(2), +Math.sqrt(s2 / n - m * m).toFixed(2)]); });
+  window.res.push(out);
+}
+window.ready = true;
+</script></body></html>

@@ -1,0 +1,1 @@
+window.LAB={"times": [47.84, 48.2], "crop": [0, 0, 2206, 946], "dbg": {}, "grade": false};

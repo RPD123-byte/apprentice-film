@@ -1,0 +1,26 @@
+<!--#include head-->
+<script type="module">
+while(!window.__fontsReady) await new Promise(r=>setTimeout(r,20));
+const q=new URLSearchParams(location.search); const t=+(q.get('t')||64);
+window.addEventListener('error',e=>{window.__info='ERR '+e.message;window.__done=true;});
+window.addEventListener('unhandledrejection',e=>{window.__info='ERR '+e.reason;window.__done=true;});
+const { shot } = await import('/src/shots/s20.js?v='+Date.now());
+if (q.get('noowl')) shot.debug.noOwl = true;
+if (q.get('nodust')) shot.debug.noDust = true;
+const { createPost } = await import('/src/lib/post.js');
+const paint=document.createElement('canvas'); paint.width=2206; paint.height=946;
+const ctx=paint.getContext('2d');
+const c=document.getElementById('c');
+const grade=q.get('raw')?null:createPost(c);
+ctx.fillStyle='#000';ctx.fillRect(0,0,2206,946);
+const t0=performance.now();
+shot.draw(ctx, t-63.12, t); ctx.getImageData(0,0,1,1);
+const t1=performance.now();
+let n=+(q.get('bench')||0);
+for (let k=0;k<n;k++){ ctx.fillStyle='#000';ctx.fillRect(0,0,2206,946); shot.draw(ctx, t-63.12+k*0.04, t+k*0.04); ctx.getImageData(0,0,1,1); }
+const t2=performance.now();
+if(n){ctx.fillStyle='#000';ctx.fillRect(0,0,2206,946); shot.draw(ctx, t-63.12, t);}
+if (grade) grade(paint, t, {}); else c.getContext('2d').drawImage(paint,0,0);
+window.__info=`first ${(t1-t0).toFixed(0)}ms` + (n?`, next avg ${((t2-t1)/n).toFixed(1)}ms`:'');
+window.__done=true;
+</script>

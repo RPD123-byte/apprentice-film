@@ -1,0 +1,9 @@
+{"jacket":{"seed":[800,350],"tol":14},
+ "beanie_crown":{"seed":[1320,200],"tol":14},
+ "beanie_cuff":{"seed":[1400,400],"tol":14},
+ "hair":{"seed":[1080,330],"tol":22},
+ "face":{"seed":[1150,520],"tol":18},
+ "forearm":{"seed":[1050,690],"tol":18},
+ "tee":{"seed":[980,610],"tol":20},
+ "sleeve":{"seed":[1450,720],"tol":14},
+ "hand":{"seed":[1300,650],"tol":16}}

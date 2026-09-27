@@ -1,0 +1,764 @@
+// The owl on the end card, in frame pixels (traced on the source at 138.0 s): a plump white owl in red headphones,
+// a bandage on its crown, perched on the full stop with its left toes curled over the "t".
+// Timeline (film time, read off the source frame by frame at 25 fps):
+//   the lids come down 136.48-136.68 (sleepy, then slits), shut 136.72-136.92 (a curved lash line on a pale lid),
+//   reopen 136.96-137.08, open with worried eyes from 137.12; the right lid starts to drop 139.04-139.12 and the left one's
+//   inner side 139.08-139.16; 139.08-139.20 the bandage becomes a tan stain; the smug beak is in at 139.20, the right brow
+//   leads the left, the lids sink per eye to 139.36-139.44 and the eyes keep their round look until 139.28-139.36 turns them
+//   into the smug ringed eyes; the head tilts -3.4 deg 139.04-139.52 (the smug features ride along with it) and the body
+//   leans ~2.4 deg on the left foot, whose toes uncurl and hang down (fix passes 4-5, all measured per source frame).
+// Colours are pre-grade (post.js adds halation, the S-curve and the vignette); they were inverse-graded from the source.
+import { clamp, lerp, smooth, span } from "../../lib/rng.js";
+
+const LINE = "#5a2018", EYE_LINE = "#5a1c1c", CREAM = "#f4e1c3", LID = "#d6c4b0", SHADOW = "#d0bca7";
+const DISC = "rgba(108,98,88,0.85)";
+const IRIS_TOP = "#2a1026", IRIS_BOT = "#6c2426", RING = "#dc8a6c", HL = "#fbf5ec";
+const BEAK = "#df7c2c", BEAK_LT = "#ee9c3c", BEAK_SH = "#b85a28";
+const CUP = "#cf3d26", CUP_CAP = "#d9542f", CUP_LINE = "#6a1a1c", CUP_HI = "#ee943e";
+const FLICK = "rgba(116,102,90,0.5)";
+const BAND = "#5a1c26";
+// smug eyes (fix pass 4; pre-grade, inverse-graded from the source at 139.8)
+const SM_RING = "#f58872", SM_DARK = "#3a0402", SM_RED = "#7c3030", SM_IRIS = "#2c091c", SM_IRIS_LO = "#3e0810";
+
+// ---------- helpers ----------
+// Catmull-Rom through pts; a point [x, y, 1] is a sharp corner.
+function path(g, pts, close = true) {
+  const n = pts.length, P = (i) => (close ? pts[(i + n) % n] : pts[Math.max(0, Math.min(n - 1, i))]);
+  g.moveTo(pts[0][0], pts[0][1]);
+  const last = close ? n : n - 1;
+  for (let i = 0; i < last; i++) {
+    const p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2), s = 1 / 6;
+    const c1 = p1[2] ? [p1[0] + (p2[0] - p1[0]) / 3, p1[1] + (p2[1] - p1[1]) / 3] : [p1[0] + (p2[0] - p0[0]) * s, p1[1] + (p2[1] - p0[1]) * s];
+    const c2 = p2[2] ? [p2[0] - (p2[0] - p1[0]) / 3, p2[1] - (p2[1] - p1[1]) / 3] : [p2[0] - (p3[0] - p1[0]) * s, p2[1] - (p3[1] - p1[1]) * s];
+    g.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], p2[0], p2[1]);
+  }
+  if (close) g.closePath();
+}
+function shape(g, pts, fill, lw = 0, stroke = LINE) {
+  g.beginPath(); path(g, pts);
+  if (fill) { g.fillStyle = fill; g.fill(); }
+  if (lw) { g.lineWidth = lw; g.strokeStyle = stroke; g.lineJoin = "round"; g.stroke(); }
+}
+function line(g, pts, lw, col = LINE) {
+  g.beginPath(); path(g, pts, false); g.lineWidth = lw; g.strokeStyle = col; g.lineCap = "round"; g.lineJoin = "round"; g.stroke();
+}
+// sample an open Catmull-Rom curve
+function sample(pts, per = 8) {
+  const n = pts.length, P = (i) => pts[Math.max(0, Math.min(n - 1, i))], out = [];
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2);
+    for (let j = 0; j < per; j++) {
+      const t = j / per, t2 = t * t, t3 = t2 * t;
+      const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+      out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+    }
+  }
+  out.push(pts[n - 1]);
+  return out;
+}
+// a stroke whose width follows wf(u), u = 0..1 along it (brush strokes: brows, lashes, flicks)
+function taper(g, pts, wf, col) {
+  const s = sample(pts, 8), n = s.length, L = [], R = [];
+  for (let i = 0; i < n; i++) {
+    const a = s[Math.max(0, i - 1)], b = s[Math.min(n - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1]; const d = Math.hypot(dx, dy) || 1; dx /= d; dy /= d;
+    const w = wf(i / (n - 1)) / 2;
+    L.push([s[i][0] - dy * w, s[i][1] + dx * w]); R.push([s[i][0] + dy * w, s[i][1] - dx * w]);
+  }
+  g.beginPath();
+  L.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+  for (let i = n - 1; i >= 0; i--) g.lineTo(R[i][0], R[i][1]);
+  g.closePath(); g.fillStyle = col; g.fill();
+}
+// resample a polyline to n points evenly by arc length (for morphing between two strokes)
+function resample(pts, n) {
+  const s = sample(pts, 6), cum = [0];
+  for (let i = 1; i < s.length; i++) cum.push(cum[i - 1] + Math.hypot(s[i][0] - s[i - 1][0], s[i][1] - s[i - 1][1]));
+  const out = [], T = cum[cum.length - 1];
+  let j = 0;
+  for (let k = 0; k < n; k++) {
+    const d = (T * k) / (n - 1);
+    while (j < s.length - 2 && cum[j + 1] < d) j++;
+    const u = (d - cum[j]) / (cum[j + 1] - cum[j] || 1);
+    out.push([lerp(s[j][0], s[j + 1][0], u), lerp(s[j][1], s[j + 1][1], u)]);
+  }
+  return out;
+}
+const mixPts = (a, b, t) => a.map(([x, y], i) => [lerp(x, b[i][0], t), lerp(y, b[i][1], t)]);
+
+// ---------- body (never moves) ----------
+// silhouette from under the left cup, round the bottom, up to under the right cup (the neck is hidden by the head)
+// (fix pass 5: the lower left flank 2-3 px further out over y 376-392, traced on the 137.2-138.8 mean)
+const BODY = [[1524, 330], [1514, 340], [1511.4, 350], [1511, 360], [1511.8, 371], [1515, 381], [1519.5, 392.5], [1525.8, 400.2],
+  [1535, 406.5], [1546, 413.5], [1560, 419.5], [1575, 423.6], [1590, 425.6], [1605, 425.6], [1620, 424.6], [1631, 421.6],
+  [1639, 418], [1645.5, 414], [1651, 409], [1656, 402.5], [1660.5, 395.5], [1663, 387.5], [1664.5, 377.5], [1664, 367.5],
+  [1661.5, 357.5], [1658, 347.5], [1653, 338], [1650, 320], [1600, 300], [1536, 312]];
+const BODY_OUT = 27; // the first 27 points are the visible outline
+// (fix pass 4: the left wing re-traced on the 137.6-138.36 mean: a broad soft grey flank from the outline to x ~1523-1528,
+// reaching up under the cup to y ~328 -- where the old wing stopped at 340 and left a pale wedge -- with the dark front line
+// running (1530,347) -> (1522,380) -> (1526,398))
+const WING_L = [[1524, 329], [1514, 340], [1511.4, 350], [1511, 360], [1511.8, 371], [1515, 381], [1519.5, 392.5], [1525.8, 400.2],
+  [1531, 396.5], [1527, 388], [1524.6, 378], [1524.2, 366], [1525.6, 354], [1527.6, 342], [1529, 332]];
+const WING_R = [[1653, 338], [1658, 347.5], [1661.5, 357.5], [1664, 367.5], [1664.5, 377.5], [1663, 387.5], [1660.5, 395.5],
+  [1656, 402.5], [1651, 409], [1645.5, 414], [1639, 418], [1634, 420.5], [1638, 415], [1642, 408.5], [1644.3, 400],
+  [1645, 390], [1645.3, 379], [1645, 366], [1646, 352]];
+// short fur strokes on the chest, traced
+const FLICKS = [
+  [[1545.5, 352], [1544.2, 356], [1546.3, 360.5]], [[1559, 363], [1560, 368], [1563, 371.5]], [[1572.5, 376], [1576, 381], [1579.8, 385]],
+  [[1593.5, 386.7], [1598, 382.5], [1602, 381.5], [1606.7, 378.3]], [[1627.3, 364], [1626, 369], [1623.3, 373]], [[1629, 391], [1627.3, 394.5], [1626.2, 397]],
+  [[1537.5, 381], [1542.5, 390], [1547.5, 397.5]],
+];
+const RIM = [[1525, 360], [1527.5, 370], [1529.5, 376], [1531.5, 381], [1534, 385.5], [1541, 390], [1546.5, 394], [1550, 401], [1555, 406],
+  [1560, 409.2], [1565, 412.2], [1570, 415], [1575, 417], [1580, 418.2], [1590, 419], [1600, 418.4], [1605, 416.5], [1610, 413.5], [1620, 413],
+  [1625, 411.2], [1630, 407.4], [1635, 402.2], [1640, 394], [1643, 385], [1644.5, 372]];
+function body(g) {
+  g.beginPath(); path(g, BODY); g.fillStyle = CREAM; g.fill();
+  g.save();
+  g.beginPath(); path(g, BODY); g.clip();
+  // (fix pass 5) the belly's lower rim is a flat pinkish-grey shade band with a crisp inner edge, as in cel shading --
+  // 14-17 px deep on the lower left, ~6 px under the middle, ~12 px on the lower right (inner edge traced per column on the
+  // 137.2-138.8 mean; graded ~(210,183,167), where the old soft gradient only reached it in the last 3 px)
+  g.save(); g.filter = "blur(0.7px)";
+  g.beginPath(); path(g, [...RIM, [1652, 445, 1], [1500, 445, 1]]); g.fillStyle = "#bba89c"; g.fill();
+  g.restore();
+  // form shade on the body just inside each wing
+  // (fix pass 3: the body beside the left wing is ~20 levels greyer than it was, sampled across y 350-392 at 138.0)
+  // (fix pass 4: in the source the body right of the wing's front line is clean cream down to y ~380; only the lower
+  // part of the flank, x 1523-1540, y 380-400, is a soft grey)
+  const fl = g.createLinearGradient(1523, 0, 1545, 0); fl.addColorStop(0, "rgba(166,146,134,0.45)"); fl.addColorStop(1, "rgba(166,146,134,0)");
+  g.save(); g.beginPath(); g.rect(1515, 372, 34, 45); g.clip();
+  g.filter = "blur(4px)"; g.fillStyle = fl; g.fillRect(1515, 378, 34, 40); g.filter = "none";
+  g.restore();
+  const fr = g.createLinearGradient(1647, 0, 1627, 0); fr.addColorStop(0, "rgba(170,152,140,0.2)"); fr.addColorStop(1, "rgba(170,152,140,0)");
+  g.fillStyle = fr; g.fillRect(1625, 350, 25, 72);
+  // folded wings down each side: grey-cream, darker toward the outer edge, feathered with a few long soft streaks
+  // the left wing: grey, darker toward the outline and under the cup, its inner edge soft (blurred into the body)
+  g.save(); g.filter = "blur(1.6px)"; g.beginPath(); path(g, WING_L);
+  const wl = g.createLinearGradient(1511, 0, 1530, 0);
+  wl.addColorStop(0, "#988c8e"); wl.addColorStop(0.35, "#b6acac"); wl.addColorStop(0.75, "#c0b2ac"); wl.addColorStop(1, "#cec0b8");
+  g.fillStyle = wl; g.fill(); g.filter = "none"; g.restore();
+  g.save(); g.beginPath(); path(g, WING_L); g.clip();
+  const wlt = g.createLinearGradient(0, 328, 0, 346); wlt.addColorStop(0, "rgba(150,122,112,0.7)"); wlt.addColorStop(1, "rgba(150,122,112,0)");
+  g.fillStyle = wlt; g.fillRect(1505, 326, 30, 22);
+  const wlv = g.createLinearGradient(0, 372, 0, 402); wlv.addColorStop(0, "rgba(120,100,96,0)"); wlv.addColorStop(1, "rgba(120,100,96,0.4)");
+  g.fillStyle = wlv; g.fillRect(1500, 370, 40, 40);
+  g.restore();
+  g.save(); g.beginPath(); path(g, WING_R); g.clip();
+  const wg = g.createLinearGradient(1666, 0, 1644, 0);
+  wg.addColorStop(0, "#aa988c"); wg.addColorStop(0.55, "#b8a79b"); wg.addColorStop(1, "#c6b5a6");
+  g.fillStyle = wg; g.fillRect(1640, 330, 30, 95);
+  const wrv = g.createLinearGradient(0, 380, 0, 418); wrv.addColorStop(0, "rgba(120,100,96,0)"); wrv.addColorStop(1, "rgba(120,100,96,0.5)");
+  g.fillStyle = wrv; g.fillRect(1636, 380, 34, 42);
+  g.restore();
+  for (const [pts, w, a] of [
+    [[[1519, 345], [1516.5, 360], [1516.8, 375], [1519.5, 388]], 1.6, 0.34],
+    [[[1526, 352], [1521.6, 364], [1520.6, 378]], 1.2, 0.3],
+    [[[1655, 350], [1658.5, 362], [1659.5, 378], [1657.5, 392]], 1.6, 0.36],
+    [[[1652, 366], [1653.2, 380], [1652.8, 394], [1650, 404]], 1.2, 0.3],
+  ]) line(g, pts, w, `rgba(112,96,86,${a})`);
+  g.restore();
+  // wing front edges: thin darker lines
+  // left wing front edge: a pale lit strip just outside a dark edge line (both as sampled at 138.0)
+  // left wing: the dark front line and a few soft feather strokes (traced at 137.6-138.36)
+  line(g, [[1531, 345], [1528.4, 353], [1525.6, 361.5], [1523.2, 370], [1522, 380], [1522.4, 390], [1525.6, 398]], 1.7, "rgba(84,56,54,0.9)");
+  line(g, [[1518.6, 350], [1516.8, 362], [1517, 374], [1519.2, 384]], 1.2, "rgba(120,96,88,0.35)");
+  line(g, [[1523.6, 336], [1521.4, 346], [1520.6, 356]], 1.1, "rgba(120,96,88,0.3)");
+  line(g, [[1528.6, 380], [1530.6, 389], [1533.6, 396]], 1.1, "rgba(120,96,88,0.3)");
+  line(g, [[1645.5, 364], [1645.3, 379], [1645, 390], [1644.3, 400], [1642, 408.5], [1638, 415], [1633, 419.8]], 1.6, "rgba(92,58,48,0.8)");
+  for (const f of FLICKS) taper(g, f, (u) => 0.5 + 1.1 * Math.sin(Math.PI * Math.min(1, u * 1.1)), FLICK);
+  // outline: only round the visible edge
+  g.beginPath(); path(g, BODY.slice(0, BODY_OUT), false);
+  g.lineWidth = 2.1; g.strokeStyle = LINE; g.lineJoin = "round"; g.lineCap = "round"; g.stroke();
+}
+
+// ---------- feet ----------
+// Fix pass 5: both feet re-traced on 21-frame (rest, 137.2-138.8) and 14-frame (smug, 139.6-140.12) source means, pixel by
+// pixel. Every toe is a peach-orange knuckle over a pale pink claw, keylined in dark red-brown; there are no dark claws and
+// no white glints. Colours are the source's, inverse-graded through post.js at the foot (pre-grade).
+const T_LINE = "#5c2219", T_BODY = "#6a2018", T_EDGE = "#a8583a";
+// a hanging toe: [knuckle centre x, top (outer keyline), length (to the claw tip), half-width, lean (px the tip sits left of
+// the knuckle), crease (fraction of the length where the knuckle ends), knuckle colour, claw colour]. It is a dark red-brown
+// silhouette with the knuckle inset as an oval and the claw inset as a narrow tapered hook, so the keyline is ~1.5 px round
+// the knuckle and thickens beside the claw, as in the source.
+function toe(g, x, top, len, hw, lean, crease, kc, cc, clawW = 0.78, inset = 1.1) {
+  const kb = top + len * crease, tipX = x - lean, tipY = top + len;
+  const pts = [[x - hw, top + hw * 0.95], [x - hw * 0.62, top + hw * 0.22], [x, top], [x + hw * 0.62, top + hw * 0.22],
+    [x + hw, top + hw * 0.95], [x + hw * 0.92, kb - 1], [x + hw * 0.45 - lean * 0.75, kb + (tipY - kb) * 0.45],
+    [tipX + hw * 0.22, tipY - 0.8], [tipX - hw * 0.12, tipY, 1], [tipX - hw * 0.5, tipY - (tipY - kb) * 0.4],
+    [x - hw * 0.98 - lean * 0.2, kb - 0.5]];
+  g.save();
+  g.beginPath(); path(g, pts); g.fillStyle = T_BODY; g.fill();
+  g.save(); g.clip();
+  const kcy = top + (kb - top) / 2 + 0.6, krx = hw - inset, kry = (kb - top) / 2 - inset * 0.6;
+  g.beginPath(); g.ellipse(x, kcy, krx, kry, 0, 0, Math.PI * 2);
+  const kg = g.createRadialGradient(x - 0.3, kcy - 0.8, 0.2, x, kcy, Math.max(krx, kry));
+  kg.addColorStop(0, kc); kg.addColorStop(0.8, kc); kg.addColorStop(1, T_EDGE);
+  g.fillStyle = kg; g.fill();
+  taper(g, [[x - lean * 0.6, kb + 1.1], [lerp(x - lean * 0.6, tipX + 0.1, 0.55), lerp(kb + 1.1, tipY - 2, 0.55)], [tipX + 0.1, tipY - 2]],
+    (u) => hw * clawW * (1 - 0.62 * u), cc);
+  g.restore();
+  g.restore();
+}
+// left foot at rest: the toes curl over the t's shoulder as three overlapping peach ovals on a diagonal [cx, cy, rx, ry,
+// angle] (outer keyline), their undersides a dark mass over the t's edge, each with a pale pink claw hooking down-left
+// ([root, mid, tip], width); in the smug pose they uncurl into three hanging toes (toe(): x, top, len, hw, lean, crease)
+const LTOES_REST = [[1534.7, 406.0, 4.7, 4.3, 0.6], [1542.3, 410.3, 6.0, 4.6, 0.55], [1552.3, 416.0, 4.3, 4.0, 0.5]];
+const LCLAWS = [[[1531, 408.2], [1528.6, 410.6], [1526.4, 413.8], 2.4, "#c47c80"], [[1538.8, 413.4], [1537.3, 416.6], [1535.7, 420.4], 2.7, "#c07c78"],
+  [[1551.9, 419.4], [1551.0, 422.4], [1549.9, 425.9], 2.5, "#c47a74"], [[1535.4, 421.6], [1536.3, 424.4], [1537.1, 427.6], 2.3, "#8c4e4c"]];
+// the dark undersides (graded ~(100,38,56), the t keyline's colour), bounded by the stop's face as measured row by row
+const LDARK = [[1525.2, 411], [1529, 409.6], [1533, 411.2], [1538, 413.2], [1545.5, 414.8], [1549.5, 413.2], [1556.8, 417.6], [1557.2, 421],
+  [1553.6, 422.6], [1549.2, 424.8], [1546, 426.2], [1543.4, 427.6], [1541.8, 430], [1540.8, 432.4], [1539.2, 435], [1537.8, 438.2],
+  [1536.6, 441.5], [1530, 441.5], [1529, 426], [1527.4, 416]];
+const LTOES_SMUG = [[1537.8, 413.3, 14.2, 4.1, 1.5, 0.61], [1546.8, 414.5, 20.5, 5.0, -0.5, 0.51], [1557.2, 417, 15.6, 4.7, -0.3, 0.56]];
+function feet(g, bodyT, lean = 0) {
+  if (lean < 0.99) {
+    g.save(); g.globalAlpha = 1 - lean;
+    // the dark mass and the claws stay where they are and fade; the knuckles slide toward the hanging toes' tops
+    g.beginPath(); path(g, LDARK); g.fillStyle = "#34122c"; g.fill();
+    for (const [p0, p1, p2, w, col] of LCLAWS) {
+      taper(g, [p0, p1, p2], (u) => w * (1 - 0.6 * u) + 0.3, col);
+    }
+    for (let i = 2; i >= 0; i--) {
+      const [cx, cy, rx, ry, a] = LTOES_REST[i], [sx, st] = LTOES_SMUG[i];
+      const x = lerp(cx, sx, lean), y = lerp(cy, st + 5, lean);
+      g.save(); g.translate(x, y); g.rotate(a);
+      g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+      const kg = g.createRadialGradient(0.2, -0.6, 0.3, 0, 0, Math.max(rx, ry));
+      kg.addColorStop(0, "#f0a866"); kg.addColorStop(0.55, "#e29458"); kg.addColorStop(1, "#c8764a");
+      g.fillStyle = kg; g.fill(); g.lineWidth = 1.5; g.strokeStyle = T_LINE; g.stroke();
+      g.restore();
+    }
+    g.restore();
+  }
+  if (lean > 0.01) {
+    g.save(); g.globalAlpha = lean;
+    const KC = ["#cf8463", "#de833e", "#df7b4f"], CC = ["#e48e90", "#de7c76", "#d77b78"];
+    for (let i = 0; i < 3; i++) {
+      const [x0, y0] = LTOES_REST[i], [sx, st, len, hw, ln, cr] = LTOES_SMUG[i];
+      toe(g, lerp(x0, sx, lean), lerp(y0 - 5, st, lean), len, hw, ln, cr, KC[i], CC[i], 1.25, 0.85);
+    }
+    g.restore();
+  }
+  // right foot: three toes hanging over the full stop, the first leaning left with its claw hooked down-left
+  // (it goes with the body's lean in the smug pose, and slides ~3.7 px right)
+  g.save(); if (bodyT) bodyT(g, 3.7);
+  for (const [x, top, len, hw, ln, cr, kc, cc] of [[1597, 424, 15.6, 5.0, 3.6, 0.52, "#ce7850", "#d8736e"], [1609.4, 424.2, 17.8, 4.6, 0.8, 0.53, "#d6783e", "#cc6c68"],
+    [1620.2, 424.6, 18.4, 4.3, 0.4, 0.57, "#d07d46", "#d88e86"]]) toe(g, x, top, len, hw, ln, cr, kc, cc, lerp(0.8, 1.1, lean), lerp(1.05, 0.9, lean));
+  g.restore();
+}
+
+// ---------- head group (tilts when smug) ----------
+// top and sides of the head; the ear tuft on the right is two feather points
+const HEAD = [[1537, 334], [1533, 318], [1532.5, 300], [1534, 283], [1537.5, 270], [1542, 261.5], [1550, 254.8], [1559, 249],
+  [1568, 245.7], [1580, 244], [1595, 244.4], [1606, 246.4], [1616, 249.6], [1626, 253.6], [1635, 257.3], [1641, 257.8, 1],
+  [1650.5, 252.6], [1660, 247.6, 1], [1656, 257], [1651.5, 261.8, 1], [1658, 264.6, 1], [1650.5, 270], [1654.5, 281],
+  [1656.5, 300], [1656.5, 320], [1654, 336], [1630, 347], [1592, 351], [1556, 347]];
+const HEAD_OUT = [4, 26]; // dark-outlined span (top and right side; the right cup covers most of that side)
+
+function headphones(g, back) {
+  if (back === true) {
+    // band (fix pass 3, traced radially at 138.0): a dark band between two dark rails, 10.5 px deep over the top
+    // (r 75.8-86.5 about (1596, 287)) with a lighter rail through it, narrowing to 8 px down the sides, where a pale
+    // slider strip shows between the rails; a pale hairline along its outer edge
+    const cx = 1596, cy = 287, ax = 82 / 84, a0 = Math.PI * 1.06, a1 = Math.PI * 1.975, N = 96;
+    const side = (a) => smooth((Math.abs(a - 1.5 * Math.PI) * 57.2958 - 25) / 30); // 0 over the top, 1 down the sides
+    // (fix pass 5: the outer edge over the top sits 1.5 px lower -- the band is dark from y 202 to 211 at x 1596, not 200)
+    const rin = (a) => 75.8 + 4.7 * side(a), rout = (a) => 85.2 + 3.1 * side(a);
+    const pt = (a, r) => [cx + Math.cos(a) * r * ax, cy + Math.sin(a) * r];
+    const A = []; for (let i = 0; i <= N; i++) A.push(a0 + ((a1 - a0) * i) / N);
+    const along = (rf, lw, col, alphaF) => {
+      g.lineWidth = lw; g.strokeStyle = col; g.lineCap = "round";
+      for (let i = 0; i < N; i++) {
+        const al = alphaF ? alphaF(A[i] * 0.5 + A[i + 1] * 0.5) : 1;
+        if (al < 0.02) continue;
+        g.globalAlpha = al;
+        const p = pt(A[i], rf(A[i])), q = pt(A[i + 1], rf(A[i + 1]));
+        g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.stroke();
+      }
+      g.globalAlpha = 1;
+    };
+    // (fix pass 5) the sky just inside the arc is in shadow: 13-20 levels darker (graded, mostly green) for ~20 px under the
+    // band (x 1570-1640, y 212-232); a soft warm-dark stroke inside the band (the head covers the rest of it)
+    g.save(); g.filter = "blur(4px)"; g.globalAlpha = 0.22; g.strokeStyle = "#bc3c14"; g.lineWidth = 20; g.lineCap = "butt";
+    g.beginPath(); A.forEach((a, i) => { const [x, y] = pt(a, rin(a) - 9); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+    g.restore();
+    g.beginPath();
+    A.forEach((a, i) => { const [x, y] = pt(a, rout(a)); i ? g.lineTo(x, y) : g.moveTo(x, y); });
+    for (let i = N; i >= 0; i--) { const [x, y] = pt(A[i], rin(A[i])); g.lineTo(x, y); }
+    g.closePath(); g.fillStyle = "#4e1524"; g.fill();
+    g.save(); g.clip();
+    along((a) => (rin(a) + rout(a)) / 2 - 0.4, 3.0, "#e6b2a8", (a) => 0.85 * smooth((Math.abs(a - 1.5 * Math.PI) * 57.2958 - 52) / 10));
+    along((a) => rin(a) + 0.64 * (rout(a) - rin(a)), 1.9, "#a3404c", (a) => 1 - side(a));
+    g.restore();
+    along((a) => rout(a) + 0.7, 1, "rgba(246,204,184,0.45)");
+    along(rout, 1.6, "#43101e");
+    along(rin, 1.6, "#43101e");
+    return;
+  }
+  // each cup seen from the side: a tall cushion against the head, then the shell, then the outer cap, stepping out and
+  // down in size; bright red with dark keylines and a lit stripe on the shell (traced at 138.0)
+  const part = (pts, fill, lw = 1.9) => { g.beginPath(); path(g, pts); g.fillStyle = fill; g.fill(); g.lineWidth = lw; g.strokeStyle = CUP_LINE; g.lineJoin = "round"; g.stroke(); };
+  if (back === "left") {
+  // left cup (the head's edge overlaps its block: drawn before the head). Fix pass 4, re-traced on the 137.6-138.36 mean:
+  // an oval cap (outline x ~1501 at mid height) with an orange highlight at x 1509-1513, a thin shell, then the bright red
+  // block (cushion) x 1518-1532 with its top at y 262; its lower right corner is rounded, and a lit rim runs down the cap's
+  // lower right edge into the dark under the cup
+  part([[1508, 269], [1512.5, 268], [1514, 290], [1513.5, 312], [1509.5, 318.5], [1503.5, 313], [1500.6, 300], [1501, 284], [1503.6, 274]], CUP_CAP);
+  g.save(); g.beginPath(); path(g, [[1509.2, 276], [1512.2, 275], [1512.8, 290], [1512.2, 301], [1510, 301], [1509.2, 290]]); g.fillStyle = CUP_HI; g.globalAlpha = 0.85; g.fill(); g.restore();
+  line(g, [[1507, 274], [1506.4, 292], [1507, 309]], 1.2, "rgba(106,26,28,0.75)");
+  part([[1513.6, 267], [1518.6, 266], [1518.8, 300], [1518.6, 326], [1515.4, 327], [1513.4, 318], [1513.6, 296], [1513.4, 276]], "#b83424", 1.6);
+  const BLOCK = [[1518.2, 262.4], [1532.2, 261.6], [1532.6, 280], [1532.4, 300], [1532.2, 317], [1530.6, 323.6], [1526.4, 327], [1520, 327.4], [1518.4, 318], [1518.2, 290]];
+  part(BLOCK, "#dc4c34", 1.9);
+  g.save(); g.beginPath(); path(g, BLOCK); g.clip();
+  const cg = g.createLinearGradient(0, 262, 0, 328); cg.addColorStop(0, "rgba(120,30,34,0)"); cg.addColorStop(0.6, "rgba(120,30,34,0.08)"); cg.addColorStop(1, "rgba(110,40,44,0.35)");
+  g.fillStyle = cg; g.fillRect(1515, 258, 22, 74); g.restore();
+  line(g, [[1522.4, 268], [1522.2, 300], [1522.6, 322]], 1.0, "rgba(120,24,20,0.4)");
+  line(g, [[1505, 316.5], [1510.6, 322], [1516, 326.4], [1521, 329.6]], 1.8, "rgba(208,104,92,0.7)");
+  return;
+  }
+  // right cup
+  part([[1681, 289], [1685, 293], [1686.5, 306], [1685.5, 319], [1681, 325.5], [1679.5, 306]], CUP_CAP);
+  part([[1671, 281], [1677.5, 281.5], [1680.8, 290], [1681.3, 307], [1680.5, 325], [1677, 333.5], [1670.5, 334], [1669.5, 306]], CUP);
+  line(g, [[1675.5, 285], [1676.5, 307], [1675.5, 329]], 2.2, "rgba(236,120,64,0.55)");
+  part([[1658.5, 275.5], [1666.5, 273.5], [1670.8, 277], [1671.8, 306], [1671, 336], [1667, 341.5], [1658, 341], [1655.5, 336], [1656.8, 320], [1657.2, 300], [1657, 285]], CUP, 2);
+  line(g, [[1663, 279], [1664, 307], [1663, 336]], 1.3, "rgba(120,24,20,0.45)");
+}
+
+// ---------- eyes ----------
+// Normal eyes (138.0): outline ellipses, the dark plum iris set toward the beak inside a salmon ring that is thin at the top
+// and thicker at the bottom and outer side, a big and a small highlight. Smug eyes (139.8): wider, lower, a double ring.
+const EYES = {
+  n: [
+    { cx: 1564.5, cy: 305.3, rx: 14.6, ry: 15.3, ix: 1.0, iy: -0.8, irx: 11, iry: 12, hl: [[-2.8, -5.3, 3.6, 3.6, 0], [6.5, 5, 2.2, 2.2, 0]] },
+    { cx: 1620.0, cy: 311.5, rx: 15.0, ry: 15.5, ix: -1.5, iy: -0.5, irx: 11, iry: 11.6, hl: [[-4.5, -5.7, 3.8, 3.8, 0], [5, 6.5, 2.2, 2.2, 0]] },
+  ],
+  s: [
+    { cx: 1555.5, cy: 307, rx: 16.5, ry: 16.3, ix: 1.5, iy: 1.5, irx: 12, iry: 11, hl: [[-5.5, -0.5, 4.0, 2.3, -0.25]] },
+    { cx: 1612.6, cy: 307.6, rx: 17, ry: 16.6, ix: 1.3, iy: 1.5, irx: 12.5, iry: 11.5, hl: [[-5.6, 1.5, 4.0, 1.8, -0.08]] },
+  ],
+};
+// smug upper lids (frame px): lash line and the grey shadow above it
+const SMUG_LID = [
+  { lash: [[1536, 301.5], [1546, 301], [1555, 302], [1564, 305], [1571, 308.4], [1572.8, 309.8]], sh: [1554.5, 302, 18, 17.5] },
+  { lash: [[1595, 310.4], [1600, 307.8], [1606.7, 305.6], [1620.4, 303.4], [1632.2, 303.8], [1634.5, 303.4]], sh: [1613.5, 304, 18.5, 16.5] },
+];
+// blink lids, per source frame: the lid line's y at dx = -12, 0, +12 from each eye's centre (measured column by column)
+const BLINK = [
+  [136.44, null, null],
+  [136.48, [300, 300, 305], [311, 310, 311]],
+  [136.52, [301, 301, 305], [312, 310.5, 312]],
+  [136.56, [301, 301, 305], [312, 310.5, 312]],
+  [136.60, [304, 306, 309], [314, 314, 315]],
+  [136.64, [308, 311, 313], [318, 319, 320]],
+  [136.68, [308, 311, 313], [318, 319, 320]],
+  [136.72, [312, 317, 316.5], [321, 324, 321]],
+  [136.84, [312, 316.5, 316], [321, 323.5, 321]],
+  [136.88, [311, 315.5, 316], [320, 323, 320]],
+  [136.92, [310, 315, 315], [319, 322, 319]],
+  [136.96, [303, 306, 310], [311, 311, 314]],
+  [137.00, [303, 306, 309], [311, 311, 313]],
+  [137.04, [298, 299, 304], [305, 304, 308]],
+  [137.08, [296, 295, 302], [304, 302, 306]],
+  [137.12, null, null],
+];
+// (fix pass 5) before the smug face the lids already start to drop: the right lid 139.04-139.12 (its lash line at the eye's
+// centre 296 -> 299 -> 300 -> 301, flat across the eye), the left lid on its inner side 139.08-139.16 (x 1576: 295 -> 300),
+// read per source frame on the first dark row at x = centre -12 / 0 / +12. The smug lids (SMUG_LIDS_*) carry on from these.
+const LIDS2 = [
+  [139.0, null, null],
+  [139.04, null, [303, 298.8, 302.2]],
+  [139.08, [296.5, 292.2, 298.5], [304.5, 300.2, 303.2]],
+  [139.12, [297, 294, 301], [305, 301, 303.6]],
+  [139.16, [297, 294.5, 302], [305, 301.4, 303.6]],
+  [139.18, [297, 295, 302], [305, 301.6, 303.8]],
+];
+function blinkAt(t, k) {
+  const BLINK_ = t > 138 ? LIDS2 : BLINK;
+  return blinkIn(BLINK_, t, k);
+}
+function blinkIn(BLINK, t, k) {
+  if (t <= BLINK[0][0] || t >= BLINK[BLINK.length - 1][0]) return null;
+  let i = 1; while (BLINK[i][0] < t) i++;
+  const [ta, A] = [BLINK[i - 1][0], BLINK[i - 1][1 + k]], [tb, B] = [BLINK[i][0], BLINK[i][1 + k]];
+  const u = (t - ta) / (tb - ta);
+  const e = EYES.n[k], open = [e.cy - e.ry * 0.62 - 1, e.cy - e.ry - 1.5, e.cy - e.ry * 0.62 - 1];
+  const a = A ?? open, b = B ?? open;
+  return a.map((v, j) => lerp(v, b[j], u));
+}
+const lerpEye = (a, b, s) => {
+  const o = {};
+  for (const k of ["cx", "cy", "rx", "ry", "ix", "iy", "irx", "iry"]) o[k] = lerp(a[k], b[k], s);
+  return o;
+};
+
+// one eye. E: geometry; lid: lid line y at dx = -12, 0, +12 (or null); smug: 0..1; outer: -1 (left eye) / +1 (right eye)
+function eye(g, E, lid, smug, outer, hls, lidCol, lash, style = smug) {
+  const { cx, cy, rx, ry } = E;
+  g.save();
+  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.clip();
+  // the salmon ring; lighter and pinker in the smug eyes
+  g.fillStyle = RING; g.fillRect(cx - rx - 2, cy - ry - 2, 2 * rx + 4, 2 * ry + 4);
+  // (fix pass 3: the smug ring is the same saturated salmon, not a paler pink, and there is no second pale ring: the
+  // iris reaches down to the ring and warms to a red-brown band along its bottom; sampled at 139.8)
+  const icx = cx + E.ix, icy = cy + E.iy;
+  const ig = g.createLinearGradient(0, icy - E.iry, 0, icy + E.iry);
+  ig.addColorStop(0, IRIS_TOP); ig.addColorStop(0.55, "#33122a"); ig.addColorStop(1, IRIS_BOT);
+  g.beginPath(); g.ellipse(icx, icy, E.irx, E.iry, 0, 0, Math.PI * 2); g.fillStyle = ig; g.fill();
+  if (style > 0.01) {
+    // fix pass 4: the smug eye is concentric rings about the outline (traced column by column on the mean of
+    // 139.60-140.12): salmon ring to 5 px in, a thin dark line, a 2 px red band, a thin dark line, then a flat dark maroon
+    // iris (graded ~(92,37,38), browner at the very bottom). The inner rings sit ~1 px lower (thinner at the bottom).
+    g.globalAlpha = style;
+    const ell = (ins, col) => {
+      g.beginPath(); g.ellipse(cx + (ins > 0 ? (outer < 0 ? 0.7 : -0.3) : 0), cy + (ins > 0 ? 0.9 : 0), Math.max(0.5, rx - ins), Math.max(0.5, ry - ins), 0, 0, Math.PI * 2);
+      g.fillStyle = col; g.fill();
+    };
+    ell(-3, SM_RING); ell(5.0, SM_DARK); ell(6.0, SM_RED); ell(7.9, SM_DARK);
+    const ig2 = g.createLinearGradient(0, cy - ry, 0, cy + ry);
+    ig2.addColorStop(0, SM_IRIS); ig2.addColorStop(0.7, SM_IRIS); ig2.addColorStop(1, SM_IRIS_LO);
+    ell(8.9, ig2);
+    g.globalAlpha = 1;
+  }
+  for (const [dx, dy, hx, hy, rot, a] of hls) {
+    g.globalAlpha = a ?? 1;
+    g.beginPath(); g.ellipse(cx + dx, cy + dy, hx, hy, rot, 0, Math.PI * 2); g.fillStyle = HL; g.fill();
+  }
+  g.globalAlpha = 1;
+  g.restore();
+  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.lineWidth = 1.5; g.strokeStyle = EYE_LINE; g.stroke();
+  // the dark top of the ring reads heavier than the bottom
+  g.beginPath(); g.ellipse(cx, cy, rx + 0.4, ry + 0.4, 0, Math.PI * 1.12, Math.PI * 1.88); g.lineWidth = 0.8; g.stroke();
+  // open eyes: a heavier upper lash line over the outer top of each ring (it thins out toward the inner side)
+  if (smug < 0.99 && (!lid || lid[1] < cy - ry * 0.55)) {
+    const [a0, a1, pk] = outer < 0 ? [2.9, 5.2, 3.75] : [4.25, 6.5, 5.5];
+    const pts = [];
+    for (let k = 0; k <= 16; k++) { const t = a0 + ((a1 - a0) * k) / 16; pts.push([cx + Math.cos(t) * (rx + 0.2), cy + Math.sin(t) * (ry + 0.2)]); }
+    g.save(); g.globalAlpha = 1 - smug;
+    taper(g, pts, (u) => { const t = a0 + (a1 - a0) * u; return 0.9 + 1.7 * Math.max(0, 1 - Math.abs(t - pk) / 1.1); }, EYE_LINE);
+    g.restore();
+  }
+  if (!lid && !lash) return;
+  // upper lid: everything above the lid line is pale lid (it hides the ring), with a dark lash line along its edge
+  const pts = lash ?? (() => {
+    // quadratic through the three measured heights, extended a little past the outer side
+    const [a, b, c] = lid, q = (dx) => b + ((c - a) / 24) * dx + ((a + c - 2 * b) / 288) * dx * dx;
+    const out = [];
+    for (let dx = -rx - (outer < 0 ? 2.5 : 0); dx <= rx + (outer > 0 ? 2.5 : 0) + 0.01; dx += 2) out.push([cx + dx, q(dx)]);
+    return out;
+  })();
+  // shut: the lash has reached the bottom of the eye, and the lid covers all of it (no ring below the lash)
+  const shut = !lash && lid && lid[1] > cy + ry * 0.6;
+  g.save();
+  g.beginPath(); g.ellipse(cx, cy, rx + 1.4, ry + 1.4, 0, 0, Math.PI * 2); g.clip();
+  if (shut) { g.fillStyle = lidCol; g.fillRect(cx - rx - 4, cy - ry - 4, 2 * rx + 8, 2 * ry + 8); }
+  g.beginPath(); g.moveTo(cx - rx - 4, cy - ry - 4); g.lineTo(cx - rx - 4, pts[0][1]);
+  for (const [x, y] of pts) g.lineTo(x, y);
+  g.lineTo(cx + rx + 4, pts[pts.length - 1][1]); g.lineTo(cx + rx + 4, cy - ry - 4); g.closePath();
+  g.fillStyle = lidCol; g.fill();
+  g.restore();
+  // lash: only where the lid edge is over the eye (plus the little outer overhang)
+  const inside = pts.filter(([x, y]) => {
+    const u = (x - cx) / (rx + 3), v = (y - cy) / (ry + 1.5);
+    return u * u + v * v <= 1 || (Math.sign(x - cx) === outer && Math.abs(x - cx) <= rx + 3.5 && Math.abs(y - cy) < ry * 0.8);
+  });
+  if (inside.length > 1) {
+    const w = lash ? 2.9 : 2.5;
+    taper(g, inside, (u) => { const o = outer < 0 ? u : 1 - u; return w * (0.55 + 0.45 * Math.min(1, o * 3)) * (0.7 + 0.3 * Math.min(1, (1 - o) * 4)); }, EYE_LINE);
+  }
+}
+
+// facial disc (grey): two arcs over the eyes meeting in a V above the beak, then down the sides to the beak
+const DISC_TOP_L = [[1535.5, 293], [1538.5, 283.5], [1545, 276.5], [1555, 271.3], [1568, 271], [1579, 274.3], [1588.5, 281], [1595, 289]];
+const DISC_TOP_R = [[1595, 289], [1599.5, 283], [1609, 278], [1623.5, 277], [1636, 280.3], [1645.5, 287], [1650, 297.5]];
+// (fix pass 5: the lower ends re-traced -- they rise into the beak's shoulders at (1579.5,331) and (1599.5,334) instead of
+// stopping 3-5 px short and 4-7 px low)
+const DISC_SIDE_L = [[1535.5, 293], [1533.7, 307], [1535.7, 320], [1541, 328.8], [1549.5, 336], [1558, 339], [1566, 338.8], [1573, 337], [1577, 334.5], [1579.5, 331]];
+const DISC_SIDE_R = [[1650, 297.5], [1650.6, 311], [1649, 325.7], [1645, 337], [1633, 344.5], [1614, 345.2], [1608, 343], [1603, 339.5], [1599.5, 334.5]];
+// smug brows (frame px at 139.8): the top arcs pulled down at the inner ends into heavy brows -- a warm grey band
+// with a dark lower edge; BROW_*_TOP is the band's upper edge
+// (fix pass 3: both re-traced at x10. The left line sits ~2 px lower on its inner half; on the right brow the dark line is
+// the long lower edge of a wedge whose short steep side rises from the inner point, BROW_R_SIDE)
+const BROW_L = [[1530, 286], [1536, 283], [1542, 281], [1550, 280.2], [1557, 281.2], [1563, 283.4], [1569, 286.6], [1574.5, 289.4], [1581, 292.4]];
+const BROW_R = [[1589.5, 289.5], [1595, 284.5], [1600, 281], [1605, 278.8], [1610, 277.4], [1615, 276.9], [1620, 277.2], [1625, 278.2], [1630, 280.2], [1634.5, 283.3], [1638.5, 287.5], [1641, 292]];
+const BROW_R_SIDE = [[1589, 290], [1591.4, 283.6], [1594.6, 276.6], [1598.6, 273.6]];
+const BROW_L_TOP = [[1531, 284.2], [1538, 279.2], [1546, 276.3], [1555, 275.8], [1564, 277.5], [1572, 282], [1579.5, 290.8]];
+const BROW_R_TOP = [[1589, 289], [1591.5, 282], [1595, 276], [1600, 272.8], [1607, 271.8], [1615, 271.8], [1622, 273], [1628, 275.2], [1633, 278.5], [1637.5, 284.5]];
+// (fix pass 4: the disc's sides re-traced on the 139.60-140.12 mean: they bulge further out, run round under the eyes at
+// y ~340 and rise into the mouth corners)
+const SMUG_SIDE_L = [[1529.8, 285.6], [1526.4, 294], [1525.2, 305], [1525.4, 315], [1526.4, 323], [1529, 328.6], [1533.4, 333.4], [1539, 337.4], [1546, 340], [1553, 340.6], [1559.6, 339.4], [1565, 337], [1570, 334.6]];
+const SMUG_SIDE_R = [[1640.4, 289.6], [1644, 300], [1645, 312], [1643, 322], [1638.6, 328.4], [1632.4, 334.6], [1626, 339.2], [1619, 341.4], [1611, 341.6], [1605, 340], [1600.2, 337.4], [1595.6, 335]];
+
+// beaks: the calm one is a small shield pointing down; the smug one a rounded diamond with the smirk through it
+const BEAK_N = [[1582, 323.8], [1588.6, 321.2], [1596.2, 323.2], [1598.2, 329.5], [1594.5, 336.5], [1588.3, 346.6, 1], [1583.2, 337], [1580.5, 329.5]];
+// fix pass 3: the smug beak re-traced at 139.8 (x10 zoom). The upper beak's lower edge is the mouth, curving down to a
+// point; under it the lower mandible shows as a pale peach crescent with its own outline (an open grin); the smirk lines
+// run out from the two corners.
+// fix pass 4: re-traced again on the 139.60-140.12 mean, column by column. The upper beak is a diamond (top 1583.5,319.8,
+// corners 1572.2,330 and 1593.4,330.2) whose lower edges are the dark mouth line, meeting at a point at (1582.6,340.2); the
+// mouth line runs on out of the left corner into the smirk. Below it the lower mandible is a pale peach crescent whose
+// outline bottoms out at y 345.4.
+const BEAK_S = [[1583.5, 319.8], [1589.4, 323.6], [1593.4, 330.2, 1], [1590.5, 334.4], [1586.6, 337.4], [1582.6, 340.2, 1], [1578.8, 337.6], [1575.2, 334.2], [1572.2, 330, 1], [1577, 323.8]];
+const JAW_S = [[1572.2, 334.2], [1574.2, 340.2], [1578, 343.8], [1583, 345.4], [1587.8, 343.6], [1591.2, 339.8], [1594.2, 334.6], [1589, 337.6], [1582.6, 341.4], [1576.4, 337.2]];
+const JAW_LOW = [[1572.4, 335.2], [1574.4, 340.4], [1578, 343.8], [1583, 345.3], [1587.8, 343.6], [1591.2, 339.9], [1594, 335.4]];
+const MOUTH = [[1564.5, 330.6], [1569, 332.4], [1573.4, 334.6], [1577.6, 337.4], [1582.6, 340.4], [1586.4, 337.8], [1590, 335.4], [1593.4, 332.8]];
+const SMIRK_L = [[1556.6, 328.6], [1561, 329], [1566.5, 329.3], [1572.4, 329.8]];
+const SMIRK_R = [[1593.2, 330.2], [1597, 330.7], [1600.6, 330.8]];
+
+function beak(g, pts, a, smugBeak) {
+  if (a < 0.01) return;
+  g.save(); g.globalAlpha = a;
+  g.beginPath(); path(g, pts); g.fillStyle = BEAK; g.fill();
+  g.save(); g.clip();
+  // lit on the upper right, shaded on the left
+  const b = pts.reduce((m, [x, y]) => [Math.min(m[0], x), Math.min(m[1], y), Math.max(m[2], x), Math.max(m[3], y)], [1e9, 1e9, -1e9, -1e9]);
+  const gr = g.createLinearGradient(b[0], b[1], b[2], b[3]);
+  gr.addColorStop(0, "rgba(184,90,40,0.75)"); gr.addColorStop(0.45, "rgba(223,124,44,0)"); gr.addColorStop(0.7, "rgba(238,156,60,0.35)"); gr.addColorStop(1, "rgba(238,156,60,0)");
+  g.fillStyle = gr; g.fillRect(b[0] - 2, b[1] - 2, b[2] - b[0] + 4, b[3] - b[1] + 4);
+  g.restore();
+  g.lineWidth = 1.7; g.strokeStyle = EYE_LINE; g.lineJoin = "round"; g.stroke();
+  g.restore();
+}
+
+function face(g, t, smug, inv) {
+  const invAll = (pts) => pts.map(([x, y]) => inv(x, y));
+  // facial disc: the top arcs morph into the smug brows; the V fades as they part
+  const n = 18;
+  // (fix pass 4: the brow lines sit ~0.8 px higher than traced in pass 3, measured on the core's darkest row per column)
+  const up = (pts, d) => pts.map(([x, y]) => [x, y - d]);
+  // (fix pass 5) the brows come in unevenly, read per source frame: the right one is a dark line already at 139.20 and
+  // nearly in place by 139.24, the left disc arc is still almost where it was at 139.20 and darkens and drops over .24-.36
+  const smL = lookup(BROW_L_T, t), smR = lookup(BROW_R_T, t), dkL = lookup(BROW_L_D, t), dkR = lookup(BROW_R_D, t);
+  const topL = mixPts(resample(DISC_TOP_L, n), resample(invAll(up(BROW_L, 0.8)), n), smL);
+  const topR = mixPts(resample(DISC_TOP_R, n), resample(invAll(up(BROW_R, 0.8)), n), smR);
+  const sideL = mixPts(resample(DISC_SIDE_L, 16), resample(invAll(SMUG_SIDE_L), 16), smug);
+  const sideR = mixPts(resample(DISC_SIDE_R, 16), resample(invAll(SMUG_SIDE_R), 16), smug);
+  // (fix pass 5: lighter and thinner through the middle (graded L ~170 against 160), dark only where it meets the beak)
+  const sideCol = `rgba(108,98,88,${lerp(0.78, 0.85, smug)})`;
+  line(g, sideL, lerp(1.75, 2, smug), sideCol);
+  line(g, sideR, lerp(1.75, 2, smug), sideCol);
+  if (smug < 0.99) {
+    g.save(); g.globalAlpha = 1 - smug;
+    line(g, sideL.slice(-2), 1.4, "rgba(90,52,40,0.7)"); line(g, sideR.slice(-2), 1.4, "rgba(90,52,40,0.7)");
+    g.restore();
+  }
+  if (dkL < 0.99 || dkR < 0.99) { g.save(); g.globalAlpha = 1 - dkL; line(g, topL, 2, DISC); g.globalAlpha = 1 - dkR; line(g, topR, 2, DISC); g.restore(); }
+  // eyes
+  const lids = [blinkAt(t, 0), blinkAt(t, 1)];
+  for (let k = 0; k < 2; k++) {
+    const N = EYES.n[k], S = EYES.s[k];
+    const Sc = { ...S }; [Sc.cx, Sc.cy] = inv(S.cx, S.cy);
+    const E = lerpEye(N, Sc, smug);
+    // (fix pass 4: the eyes keep their round worried look -- two highlights, no ring structure -- while the lids come down;
+    // the smug ring structure and single highlight come in 139.28-139.36, read off the source frame by frame)
+    const style = lookup(SMUG_STYLE, t);
+    const hls = style < 0.5 ? N.hl : S.hl;
+    const outer = k === 0 ? -1 : 1;
+    let lash = null, lidCol = LID;
+    if (smug > 0.01) {
+      // grey lid shadow up toward the brow, then the heavy lid line
+      const L = SMUG_LID[k], [sx, sy] = inv(L.sh[0], L.sh[1]);
+      const sl = invAll(L.lash);
+      const openLash = sl.map(([x]) => [x, E.cy - E.ry - 1]);
+      // the brows and beak are in by 139.24 but the lids keep sinking to 139.32 (read off the source frame by frame)
+      // (lid travel: 0.7 at 139.20, 0.87 at 139.24, 0.94 at 139.28, full at 139.32)
+      // (fix pass 4: the lash line measured per frame at x 1550/1560: 0.33 / 0.52 / 0.71 / 0.9 / 1 of its travel from the
+      // eye's top at 139.20 / .24 / .28 / .32 / .36)
+      const lidA = lookup(k === 0 ? SMUG_LIDS_L : SMUG_LIDS_R, t);
+      lash = mixPts(openLash, sl, lidA);
+      g.save(); g.globalAlpha = clamp(lidA * 1.6) * lerp(0.6, 1, smug);
+      g.beginPath(); g.moveTo(lash[0][0] - 3, lash[0][1]);
+      for (const [x, y] of lash) g.lineTo(x, y);
+      g.lineTo(lash[lash.length - 1][0] + 3, lash[lash.length - 1][1]); g.lineTo(sx + 30, sy - 40); g.lineTo(sx - 30, sy - 40); g.closePath(); g.clip();
+      g.beginPath(); g.ellipse(sx, sy, L.sh[2], L.sh[3], 0, 0, Math.PI * 2); g.fillStyle = SHADOW; g.fill();
+      g.restore();
+      lidCol = lidA > 0.3 ? SHADOW : LID;
+    }
+    eye(g, E, smug > 0.01 ? null : lids[k], smug, outer, hls, lidCol, lash, style);
+  }
+  // worried eyes: a small lash flick rising from the inner top of each ring
+  if (smug < 0.99) {
+    // (the flicks are already gone at 139.12, a couple of frames before the smug face)
+    const open = (k) => { const l = lids[k]; return (l ? clamp(1 - (l[1] - (EYES.n[k].cy - EYES.n[k].ry)) / 4) : 1) * (1 - span(t, 139.08, 139.12)); };
+    g.save();
+    g.globalAlpha = (1 - smug) * open(0); taper(g, [[1566.5, 291.2], [1571, 289], [1576.2, 287.4]], (u) => 2.1 * (1 - u) + 0.5, EYE_LINE);
+    g.globalAlpha = (1 - smug) * open(1); taper(g, [[1622.3, 296.6], [1617.5, 293.8], [1613.4, 291.6]], (u) => 2.1 * (1 - u) + 0.5, EYE_LINE);
+    g.restore();
+  }
+  // smug brows over the disc arcs
+  if (Math.max(smL, smR, dkL, dkR) > 0.01) {
+    g.save();
+    for (const [low, top, a] of [[topL, invAll(BROW_L_TOP), smL], [topR, invAll(BROW_R_TOP), smR]]) {
+      g.globalAlpha = a;
+      g.beginPath(); path(g, [...resample(top, 14), ...low.slice().reverse()]); g.fillStyle = "#bf9f92"; g.fill();
+      line(g, resample(top, 14), 0.9, "rgba(120,86,76,0.55)");
+    }
+    // fix pass 4: the brow line is a thin (~1.8 px), very dark core (graded ~(90,45,28)) on its inner 60%, fading to a
+    // lighter grey-brown toward the outer ends, with a pale pinkish rim just under it (sampled on the 139.60-140.12 mean)
+    const [ax, ay] = inv(1530, 284), [bx, by] = inv(1580, 292), [cx2, cy2] = inv(1589, 290), [dx2, dy2] = inv(1640, 290);
+    const gl = g.createLinearGradient(ax, ay, bx, by);
+    gl.addColorStop(0, "#7a5a50"); gl.addColorStop(0.12, "#5a3830"); gl.addColorStop(0.36, "#3a1410"); gl.addColorStop(0.7, "#3a1410"); gl.addColorStop(0.84, "#50261e"); gl.addColorStop(1, "#6a4034");
+    const gr = g.createLinearGradient(cx2, cy2, dx2, dy2);
+    gr.addColorStop(0, "#3a1410"); gr.addColorStop(0.42, "#3a1410"); gr.addColorStop(0.56, "#5a3228"); gr.addColorStop(0.86, "#5e362c"); gr.addColorStop(1, "#8a6a5e");
+    g.globalAlpha = dkL;
+    line(g, topL.map(([x, y]) => [x, y + 1.7]), 1.1, "rgba(255,216,194,0.55)");
+    taper(g, topL, (u) => 1.9 * (0.6 + 0.4 * Math.min(1, u * 5)) * (0.5 + 0.5 * Math.min(1, (1 - u) * 5)), gl);
+    g.globalAlpha = dkR;
+    line(g, topR.map(([x, y]) => [x, y + 1.6]), 1.1, "rgba(255,216,194,0.55)");
+    taper(g, topR, (u) => 1.9 * (0.65 + 0.35 * Math.min(1, u * 4)) * (0.5 + 0.5 * Math.min(1, (1 - u) * 3)), gr);
+    g.globalAlpha = dkR * smR;
+    taper(g, invAll(BROW_R_SIDE), (u) => 2.1 - 1.0 * u, "#3a1410");
+    g.restore();
+  }
+  // beak
+  // (fix pass 5: the beak is already the smug one at 139.20, while the brows are only a third of the way in)
+  if (t < 139.18) beak(g, BEAK_N, 1, false);
+  else {
+    g.beginPath(); path(g, invAll(JAW_S)); g.fillStyle = "#dda07b"; g.fill();
+    line(g, invAll(JAW_LOW), 1.6, "rgba(66,34,24,0.9)");
+    // upper beak: yellow-orange and lightest in its upper middle, deepening to red-orange toward the mouth
+    const bp = invAll(BEAK_S), [, by0] = inv(1583, 319.8), [, by1] = inv(1583, 340.2);
+    g.beginPath(); path(g, bp);
+    const bg = g.createLinearGradient(0, by0, 0, by1);
+    bg.addColorStop(0, "#ec842c"); bg.addColorStop(0.35, "#ff9227"); bg.addColorStop(0.6, "#f58432"); bg.addColorStop(1, "#e46a30");
+    g.fillStyle = bg; g.fill();
+    g.save(); g.clip();
+    const [lx0, ly0] = inv(1572, 330), [lx1, ly1] = inv(1581, 330);
+    const sg = g.createLinearGradient(lx0, ly0, lx1, ly1); sg.addColorStop(0, "rgba(200,96,40,0.55)"); sg.addColorStop(1, "rgba(200,96,40,0)");
+    g.fillStyle = sg; g.fillRect(lx0 - 4, by0 - 4, 30, 30);
+    g.restore();
+    g.save(); g.clip(); g.globalAlpha = 0.6; line(g, invAll(MOUTH).map(([x, y]) => [x, y - 1.6]), 3.2, "#c04a2a"); g.restore();
+    line(g, [bp[8], bp[9], bp[0], bp[1], bp[2]], 1.6, EYE_LINE);
+    // the mouth: a dark maroon line along the upper beak's lower edges, heaviest on the left, running out into the smirk
+    taper(g, invAll(MOUTH), (u) => (u < 0.5 ? 2.5 - 0.9 * (u / 0.5) : 1.6 + 0.2 * ((u - 0.5) / 0.5)), "#4a0a06");
+    taper(g, invAll(SMIRK_L), (u) => 0.9 + 1.3 * Math.min(1, u * 1.6), EYE_LINE);
+    taper(g, invAll(SMIRK_R), (u) => 2.4 - 1.3 * u, EYE_LINE);
+  }
+}
+
+const STAIN = [[1532.5, 259], [1541, 252], [1548, 247], [1556, 244.5], [1566, 243.5], [1572, 244.5], [1575, 247.5], [1575, 252],
+  [1573.5, 256], [1574, 260], [1573, 264], [1571, 267.5], [1568, 268.8], [1565, 267.2], [1562.5, 265.6], [1560, 268], [1556, 269.2],
+  [1552, 267.4], [1550, 264.8], [1547, 267.2], [1542, 269.4], [1538, 268.2], [1535.5, 265.2], [1533.5, 262]];
+function bandage(g, gone, inv) {
+  if (gone < 0.99) {
+    g.save(); g.globalAlpha = 1 - gone;
+    // two crossed strips (the long one on top), a padded centre with dots
+    for (const [cx, cy, rot, len] of [[1573.6, 256.2, 0.47, 36], [1570.3, 254.2, -0.345, 45.5]]) {
+      g.save(); g.translate(cx, cy); g.rotate(rot);
+      g.beginPath(); g.roundRect(-len / 2, -5, len, 10, 5); g.fillStyle = "#f0c7a8"; g.fill(); g.lineWidth = 1.6; g.strokeStyle = "#8a3a2c"; g.stroke();
+      g.restore();
+    }
+    g.save(); g.translate(1571, 255.5); g.rotate(-0.345);
+    g.beginPath(); g.roundRect(-6.5, -4.2, 13, 8.4, 2); g.fillStyle = "#e6ae8e"; g.fill();
+    g.fillStyle = "rgba(160,90,70,0.55)";
+    for (const [x, y] of [[-3.5, -1.8], [0, -1.8], [3.5, -1.8], [-3.5, 1.8], [0, 1.8], [3.5, 1.8]]) g.fillRect(x - 0.6, y - 0.6, 1.2, 1.2);
+    g.restore();
+    g.restore();
+  }
+  if (gone > 0.01) {
+    // what is left (fix pass 5, traced on the 139.60-140.12 mean): a flat tan stain in the bandage's place, hugging the head's
+    // upper-left edge, with three lobes along its bottom and a soft darker rim, and a scrap of the upper strip (frame px)
+    g.save(); g.globalAlpha = gone;
+    const stain = STAIN.map(([x, y]) => inv(x, y));
+    g.save(); g.beginPath(); path(g, HEAD); g.clip();
+    g.filter = "blur(0.6px)";
+    g.beginPath(); path(g, stain); g.fillStyle = "#d49f78"; g.fill();
+    g.lineWidth = 1.1; g.strokeStyle = "rgba(160,112,80,0.55)"; g.stroke();
+    g.filter = "none";
+    // a paler patch in its lower left
+    const [px, py] = inv(1539, 265);
+    g.beginPath(); g.ellipse(px, py, 4.5, 3, -0.5, 0, Math.PI * 2); g.fillStyle = "rgba(236,204,170,0.55)"; g.fill();
+    g.restore();
+    const scrap = [[1557, 250.5], [1563, 246.5], [1571, 245.6], [1576.8, 247.4], [1575.5, 252.4], [1566, 253.8]].map(([x, y]) => inv(x, y));
+    g.beginPath(); path(g, scrap); g.fillStyle = "rgba(236,190,160,0.8)"; g.fill();
+    g.lineWidth = 1.3; g.strokeStyle = "rgba(130,58,42,0.75)"; g.stroke();
+    g.restore();
+  }
+}
+
+function head(g, t, smug, gone, inv) {
+  headphones(g, true);
+  headphones(g, "left");
+  g.beginPath(); path(g, HEAD); g.fillStyle = CREAM; g.fill();
+  // cool grey at the very sides of the head
+  g.save(); g.beginPath(); path(g, HEAD); g.clip();
+  const gr = g.createLinearGradient(1533, 0, 1655, 0);
+  gr.addColorStop(0, "rgba(170,154,144,0.3)"); gr.addColorStop(0.12, "rgba(170,154,144,0)"); gr.addColorStop(0.9, "rgba(170,154,144,0)"); gr.addColorStop(1, "rgba(170,154,144,0.18)");
+  g.fillStyle = gr; g.fillRect(1520, 240, 150, 115);
+  g.restore();
+  g.beginPath(); path(g, HEAD.slice(HEAD_OUT[0], HEAD_OUT[1]), false);
+  g.lineWidth = 2; g.strokeStyle = LINE; g.lineJoin = "round"; g.lineCap = "round"; g.stroke();
+  // where the head's edge crosses the left cushion it reads as a pale pink line
+  // (fix pass 4: a faint grey-pink line only, stopping above the body; it was a bright pink line down to y 334)
+  line(g, [[1533, 318], [1532.5, 300], [1534, 283], [1537.5, 270], [1542, 261.5]], 1.1, "rgba(200,160,150,0.55)");
+  // feather notches on the tuft and a couple of faint ticks on the crown
+  line(g, [[1640, 262], [1647.5, 258.6], [1654, 256.6]], 1.1, "rgba(110,80,70,0.45)");
+  line(g, [[1609.5, 263.5], [1612.5, 259.5]], 1.1, "rgba(120,104,92,0.35)");
+  line(g, [[1614.5, 263], [1617.5, 259]], 1.1, "rgba(120,104,92,0.35)");
+  face(g, t, smug, inv);
+  bandage(g, gone, inv);
+  headphones(g, false);
+}
+
+// head tilt progress per source frame (fraction of the final pose), fix pass 4
+const TILT_ANG = [[139.08, 0], [139.12, 0.044], [139.16, 0.088], [139.2, 0.278], [139.24, 0.327], [139.28, 0.482], [139.32, 0.579],
+  [139.36, 0.825], [139.4, 0.854], [139.44, 0.971], [139.48, 0.994], [139.52, 1]];
+const TILT_DRIFT = [[139.0, 0], [139.04, 0.075], [139.08, 0.095], [139.12, 0.183], [139.16, 0.216], [139.2, 0.447], [139.24, 0.57],
+  [139.28, 0.74], [139.32, 0.852], [139.36, 0.953], [139.4, 0.981], [139.44, 1]];
+const LFOOT = [[139.0, 0], [139.04, 0.08], [139.12, 0.25], [139.2, 0.45], [139.28, 0.7], [139.36, 1]];
+const BODY_LEAN = [[139.08, 0], [139.12, 0.16], [139.2, 0.45], [139.28, 0.66], [139.36, 0.9], [139.44, 0.96], [139.52, 0.97], [139.64, 0.99], [139.8, 1]];
+// (fix pass 5) per eye, the lash line's travel from the eye's top to the final smug lash, read per source frame: the left lid
+// at x 1560-1564 (lash 297 / 298 / 300 / 302 / 303 at 139.20 / .24 / .28 / .32 / .36, final 304), the right lid is nearly down
+// by 139.20 (302 at x 1620 against 303.4 final)
+const SMUG_LIDS_L = [[139.16, 0.35], [139.2, 0.52], [139.24, 0.59], [139.28, 0.72], [139.32, 0.86], [139.36, 0.94], [139.44, 1]];
+const SMUG_LIDS_R = [[139.16, 0.82], [139.2, 0.9], [139.24, 0.97], [139.28, 1]];
+// the smug amount (brows, disc, eye shape): a face-region least-squares progress from the 139.0 face to the 139.6 face reads
+// 0.37 / 0.47 / 0.68 / 0.80 / 0.94 on the source at 139.20 / .24 / .28 / .32 / .36 (the render had jumped to 0.56 at 139.20)
+const BROW_R_T = [[139.16, 0], [139.2, 0.5], [139.24, 0.75], [139.28, 0.9], [139.32, 1]];
+const BROW_R_D = [[139.16, 0], [139.2, 0.8], [139.24, 1]];
+const BROW_L_T = [[139.16, 0], [139.2, 0.12], [139.24, 0.4], [139.28, 0.65], [139.32, 0.85], [139.36, 1]];
+const BROW_L_D = [[139.16, 0], [139.2, 0.3], [139.24, 0.8], [139.28, 1]];
+const SMUG_AMT = [[139.16, 0], [139.2, 0.26], [139.24, 0.44], [139.28, 0.7], [139.32, 0.87], [139.36, 1]];
+const SMUG_STYLE = [[139.24, 0], [139.28, 0.35], [139.32, 0.8], [139.36, 1]];
+// (the vertical drift lags the horizontal one: the source's head centre has not dropped at all by 139.08)
+const TILT_DY = [[139.08, 0], [139.12, 0.05], [139.16, 0.1], [139.2, 0.36], [139.24, 0.4], [139.28, 0.57], [139.32, 0.64], [139.36, 0.86],
+  [139.4, 0.86], [139.44, 0.95], [139.48, 1]];
+const lookup = (T, x) => {
+  if (x <= T[0][0]) return T[0][1];
+  if (x >= T[T.length - 1][0]) return T[T.length - 1][1];
+  let i = 1; while (T[i][0] < x) i++;
+  const [xa, a] = T[i - 1], [xb, b] = T[i];
+  return a + (b - a) * (x - xa) / (xb - xa);
+};
+
+export function drawOwl(g, t) {
+  // the bandage turns into its stain 139.08-139.20, the smug face comes in 139.16-139.36, the head tilt runs 139.04-139.52
+  // (fix pass 5: the bandage turns into its stain over 139.08-139.20 -- at 139.16 the source still shows part of its outline)
+  const gone = smooth(span(t, 139.08, 139.2));
+  const smug = lookup(SMUG_AMT, t);
+  // fix pass 4: the head tilt, per source frame (ECC on the head and headphones against 138.96, face and bandage masked):
+  // it lands at -3.4 deg with the head centre (1596,290) moved (-10.5,-4.2) and the band top (-15.5,-4.0). The rotation
+  // and the drift progress differently (the drift leads), so each has its own measured curve.
+  const tiltA = lookup(TILT_ANG, t), tiltD = lookup(TILT_DRIFT, t), tiltY = lookup(TILT_DY, t);
+  g.save();
+  // fix pass 4: in the smug pose the body is redrawn leaning: measured by ECC on the body (138.96 against each frame) it
+  // turns ~2.4 deg (the render needs -2.95 to measure the same) about (1522, 429) -- the left foot, which stays put -- as the head tilts (0.16 / 0.45 / 0.66 / 0.90 /
+  // 0.96 of the way at 139.12 / .20 / .28 / .36 / .44), and the right toes slide ~3.7 px right
+  const lean = lookup(BODY_LEAN, t), la = (-2.95 * Math.PI / 180) * lean;
+  const bodyT = lean > 0 ? (c, dx = 0) => { c.translate(1522 + dx * lean, 429); c.rotate(la); c.translate(-1522, -429); } : null;
+  g.save(); if (bodyT) bodyT(g); body(g); g.restore();
+  feet(g, bodyT, lookup(LFOOT, t));
+  g.save();
+  // head tilt about the neck
+  const tx = 1590 - 4.84 * tiltD, ty = 380 - 3.57 * tiltY, ang = -0.068 * tiltA, ca = Math.cos(ang), sa = Math.sin(ang);
+  g.translate(tx, ty); g.rotate(ang); g.translate(-1590, -380);
+  // frame -> head space through the FINAL head pose, so features measured in the frame at the smug pose land where they were
+  // measured once the tilt is done, and ride along with the head while it tilts (fix pass 5: this used the current pose, which
+  // pinned the smug beak, brows and lids to their final frame positions during 139.20-139.44 while the source's move with
+  // the head -- the beak centre drifts from x ~1587 to ~1583 over 139.20-139.36)
+  const ftx = 1590 - 4.84, fty = 380 - 3.57, fa = -0.068, fca = Math.cos(fa), fsa = Math.sin(fa);
+  const inv = (x, y) => { const dx = x - ftx, dy = y - fty; return [dx * fca + dy * fsa + 1590, -dx * fsa + dy * fca + 380]; };
+  void ca; void sa;
+  head(g, t, smug, gone, inv);
+  g.restore();
+  g.restore();
+}

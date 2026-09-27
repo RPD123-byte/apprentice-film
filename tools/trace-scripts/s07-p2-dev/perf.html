@@ -1,0 +1,8 @@
+<!doctype html><html><body><canvas id="c" width="2206" height="946"></canvas>
+<script type="module">
+const { shot } = await import("/src/shots/s07.js");
+const c = document.getElementById("c"), ctx = c.getContext("2d");
+const out = [];
+for (const t of [29.6, 29.64, 29.68, 29.72, 30.0, 30.52, 29.04]) { const a = performance.now(); ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 2206, 946); shot.draw(ctx, t - 29.04, t); out.push((performance.now() - a).toFixed(1)); }
+window.__info = out.join(" "); window.__done = true;
+</script></body></html>

@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><title>s18 harness</title></head><body>
+<script>window.onerror=(m,u,l)=>{console.log("ERR "+m+" "+u+":"+l)}; window.addEventListener("unhandledrejection",e=>console.log("REJ "+(e.reason&&e.reason.stack||e.reason)));</script>
+<script type="module">
+import { createPost } from "../../src/lib/post.js";
+const q = new URLSearchParams(location.search);
+let mod; try { mod = await import(q.get("m") || "../../src/shots/s18.js"); } catch (e) { console.log("IMPORT FAIL " + e.message); document.title = "FAIL"; throw e; }
+const shot = mod.shot;
+const W = 2206, H = 946;
+const paint = document.createElement("canvas"); paint.width = W; paint.height = H;
+const ctx = paint.getContext("2d");
+const out = document.createElement("canvas"); out.width = W; out.height = H;
+const grade = createPost(out);
+window.renderFrame = (n, raw) => {
+  const t = n / 25 + 0.012;
+  ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=1; ctx.globalCompositeOperation="source-over"; ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H);
+  const a = performance.now();
+  shot.draw(ctx, t - 53.24, t);
+  ctx.restore();
+  ctx.getImageData(0,0,1,1);
+  const ms = performance.now() - a;
+  if (raw) return { ms, url: paint.toDataURL("image/png") };
+  const tg = (n % 10000) / 25 + 0.012;   // variants (n >= 10000) are graded at their base frame's time
+  grade(paint, tg, { fade: 1, ...(shot.grade ? shot.grade(tg - 53.24, tg) : {}) });
+  return { ms, url: out.toDataURL("image/png") };
+};
+window.timeFrames = (list) => {
+  const out = [];
+  for (const n of list) {
+    const t = n / 25 + 0.012;
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H);
+    const a = performance.now(); shot.draw(ctx, t - 53.24, t); ctx.getImageData(0,0,1,1); out.push([n, performance.now() - a]); ctx.restore();
+  }
+  return out;
+};
+document.title = "READY";
+</script></body></html>

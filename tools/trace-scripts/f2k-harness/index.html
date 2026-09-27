@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=2206, height=946">
+    <title>The Apprentice — drawn in code</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Archivo"; src: url("assets/fonts/Archivo-Var.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Var.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Fraunces"; src: url("assets/fonts/Fraunces-Variable.ttf") format("truetype"); font-weight: 100 900; }
+      @font-face { font-family: "Shrikhand"; src: url("assets/fonts/Shrikhand.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Fraunces Soft"; src: url("assets/fonts/FrauncesSoft-Black.ttf") format("truetype"); font-weight: 900; }
+      @font-face { font-family: "Satoshi"; src: url("assets/fonts/Satoshi-Variable.woff2") format("woff2"); font-weight: 300 900; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-500.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-600.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-700.woff2") format("woff2"); font-weight: 700; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 2206px; height: 946px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 100%; height: 100%; background: #000; }
+      #film { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-4l55" id="root" data-composition-id="main" data-start="0" data-duration="140.8" data-fps="25" data-width="2206" data-height="946">
+      <canvas data-hf-id="hf-mule" id="film" width="2206" height="946"></canvas>
+    </div>
+    <script type="module">
+      // F2 scratch harness (not part of the film): the colour page alone, through the film's grade.
+      //   t >= 112.7: hippiePageCanvas() under pageArrival(t)      t < 112.7: the banner strip alone at the framed slot
+      import { createPost } from "./src/lib/post.js";
+      import { hippiePageCanvas, pageArrival, hippieBannerCanvas, hippieLayer, hippiePageSmall } from "./src/lib/hippie.js";
+      await Promise.all(["400 100px Shrikhand", "600 20px Poppins", "500 20px Poppins", "600 27px Archivo"].map((f) => document.fonts.load(f)));
+      const out = document.getElementById("film");
+      const paint = document.createElement("canvas"); paint.width = 2206; paint.height = 946;
+      const ctx = paint.getContext("2d");
+      const grade = createPost(out);
+      function renderAt(t) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 2206, 946);
+        if (t >= 2 && t < 3) {
+          ctx.fillStyle = "#777"; ctx.fillRect(0, 0, 2206, 946);
+          const names = ["illustration", "backdrop", "scene", "designer", "headline", "nav"];
+          names.forEach((n, i) => ctx.drawImage(hippieLayer(n), (i % 3) * 735, Math.floor(i / 3) * 473, 735, 315));
+          ctx.drawImage(hippiePageCanvas({ headline: false, nav: false }), 0, 320, 735, 315);
+          ctx.drawImage(hippiePageSmall(755), 735, 320);
+          grade(paint, t, {}); return;
+        }
+        if (t < 2) {
+          const T0 = Date.now(); const c = hippiePageCanvas(); const T1 = Date.now(); hippieBannerCanvas(); const T2 = Date.now();
+          ctx.fillStyle = "#fff"; ctx.font = "40px sans-serif"; ctx.fillText(`page ${T1 - T0} ms, banner ${T2 - T1} ms`, 100, 200);
+          const T3 = Date.now(); for (let i = 0; i < 20; i++) ctx.drawImage(c, 0, 300, 400, 170); ctx.fillText(`blit ${(Date.now() - T3) / 20} ms`, 100, 260);
+          grade(paint, t, {}); return;
+        }
+        if (t >= 112.7) { const { s, tx, ty } = pageArrival(t); ctx.setTransform(s, 0, 0, s, tx, ty); ctx.drawImage(hippiePageCanvas(), 0, 0); }
+        else { ctx.setTransform(0.8444, 0, 0, 0.8462, 161.16, 132.76); ctx.drawImage(hippieBannerCanvas(), 38, 62, 2110, 208); }
+        grade(paint, t, {});
+      }
+      const clock = { _t: 0, get t() { return this._t; }, set t(v) { this._t = v; renderAt(v); } };
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo(clock, { t: 0 }, { t: 140.8, duration: 140.8, ease: "none" }, 0);
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

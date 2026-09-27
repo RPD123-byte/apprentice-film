@@ -1,0 +1,16 @@
+k7 e2 72.8 e8 67.7 meanR 21.1 meanS 75.7
+k12 e2 19.6 e8 13.5 meanR 62.9 meanS 67.8
+k19 e2 38.2 e8 34.7 meanR 96.5 meanS 101.2
+k20 e2 15.2 e8 14.7 meanR 201.7 meanS 202.5
+k23 e2 26.3 e8 21.7 meanR 145.9 meanS 161.3
+k25 e2 29.4 e8 18.2 meanR 59.1 meanS 66.8
+k40 e2 27.7 e8 17.1 meanR 65.7 meanS 62.2
+k45 e2 30.2 e8 17.4 meanR 66.6 meanS 71.2
+k54 e2 18.8 e8 15.3 meanR 57.6 meanS 66.9
+k57 e2 19.2 e8 15.7 meanR 58.9 meanS 68.4
+k60 e2 35.5 e8 23.7 meanR 74.9 meanS 86.7
+k64 e2 56.8 e8 43.2 meanR 64.5 meanS 75.4
+k66 e2 43.3 e8 30.2 meanR 58.5 meanS 69.9
+k75 e2 32.0 e8 17.9 meanR 70.9 meanS 72.2
+k85 e2 37.6 e8 22.3 meanR 81.2 meanS 89.4
+k91 e2 43.1 e8 29.2 meanR 90.1 meanS 106.7

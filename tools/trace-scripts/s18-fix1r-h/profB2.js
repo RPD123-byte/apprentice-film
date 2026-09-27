@@ -1,0 +1,32 @@
+import { shot as S } from "../../src/shots/s18.js";
+import { platesB } from "../../src/shots/s18/shotB.js";
+import { decodeInk, drawInk, softHalf, fillCanvas } from "../../src/shots/s18/inkdraw.js";
+import { OWL_B } from "../../src/shots/s18/data/owlB.js";
+import { boilMap, boilTone } from "../../src/shots/s18/boil.js";
+const T = (f, n = 3) => { const a = performance.now(); for (let i = 0; i < n; i++) f(); return (performance.now() - a) / n; };
+let out = null;
+export const shot = { draw(ctx) {
+  if (out) { console.log(out); return; }
+  const r = {}, flush = () => ctx.getImageData(0, 0, 1, 1);
+  S.draw(ctx, 0, 1395 / 25 + 0.012); flush();
+  r.full = T(() => { S.draw(ctx, 0, 1395 / 25 + 0.012); flush(); });
+  const P = platesB();
+  r.bg = T(() => { ctx.drawImage(P.bg, 0, 0); flush(); });
+  r.kb = T(() => { ctx.drawImage(P.kb, -260, 0); flush(); });
+  const L = document.createElement("canvas"); L.width = 2206; L.height = 946; const g = L.getContext("2d");
+  g.clearRect(0, 0, 2206, 946); ctx.drawImage(L, 0, 0); flush();
+  r.clearBlit = T(() => { g.clearRect(0, 0, 2206, 946); ctx.drawImage(L, 0, 0); flush(); });
+  const bl = decodeInk(OWL_B.belly), fc = fillCanvas(bl);
+  const m = boilMap(1300, 0.8), tn = boilTone(1300, 0.08);
+  g.setTransform(1, 0, 0, 1, -146, -40);
+  r.bellyFill = T(() => { g.drawImage(fc.c, fc.x, fc.y); ctx.drawImage(L, 0, 0); flush(); });
+  r.bellyStrokes = T(() => { drawInk(g, bl, { fills: false, map: m, tone: tn }); ctx.drawImage(L, 0, 0); flush(); });
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  const pt = decodeInk(OWL_B.parts["1395"]);
+  r.partsLow = T(() => { drawInk(g, pt, { cache: false, low: 4, map: m, tone: tn }); ctx.drawImage(L, 0, 0); flush(); });
+  r.partsFillsOnly = T(() => { drawInk(g, pt, { cache: false, low: 4, strokes: false }); ctx.drawImage(L, 0, 0); flush(); });
+  r.soft = T(() => { softHalf(L, 1); ctx.drawImage(L, 0, 0); flush(); });
+  r.blit = T(() => { ctx.drawImage(L, 0, 0); flush(); });
+  r.parts = [pt.base.length, pt.m.length, pt.s.length, pt.d.length, pt.b.length, bl.d.length];
+  out = JSON.stringify(r, (k, v) => (typeof v === "number" ? Math.round(v * 10) / 10 : v)); console.log(out);
+} };

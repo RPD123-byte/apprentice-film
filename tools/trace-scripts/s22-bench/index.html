@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=2206, height=946">
+<title>s22 bench scratch</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+@font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+* { margin: 0; padding: 0; } html, body { width: 2206px; height: 946px; overflow: hidden; background: #000; }
+#root { position: relative; width: 100%; height: 100%; } canvas { position: absolute; inset: 0; }
+</style>
+</head>
+<body>
+<div data-hf-id="hf-2vjs" id="root" data-composition-id="main" data-start="0" data-duration="4" data-fps="25" data-width="2206" data-height="946">
+<canvas data-hf-id="hf-jv0z" id="c" width="2206" height="946"></canvas>
+</div>
+<script type="module">
+import { shot } from "./src/shots/s22.js";
+const c = document.getElementById("c"), g = c.getContext("2d");
+const work = document.createElement("canvas"); work.width = 2206; work.height = 946;
+const w = work.getContext("2d");
+await document.fonts.load("500 18px 'Geist Mono'").catch(() => {});
+function bench() {
+  const times = [74.52, 75.0, 76.0, 76.8, 77.6, 78.4, 79.2, 79.6, 79.84, 80.0, 80.4, 80.64, 80.84, 81.0, 81.3, 81.6, 82.0, 82.4, 83.0, 83.6, 83.96];
+  const out = [];
+  // first pass: builds (cold), second pass: steady state
+  for (const t of times) { const t0 = performance.now(); w.setTransform(1, 0, 0, 1, 0, 0); w.fillStyle = "#000"; w.fillRect(0, 0, 2206, 946); shot.draw(w, t - 74.52, t); out.push([t, performance.now() - t0]); }
+  const warm = [];
+  for (const t of times) { const t0 = performance.now(); w.setTransform(1, 0, 0, 1, 0, 0); w.fillStyle = "#000"; w.fillRect(0, 0, 2206, 946); shot.draw(w, t - 74.52, t); warm.push(performance.now() - t0); }
+  return out.map(([t, ms], i) => [t, ms, warm[i]]);
+}
+let done = false;
+const clock = { _t: 0, get t() { return this._t; }, set t(v) { this._t = v; if (v > 1 && !done) { done = true; const r = bench(); g.fillStyle = "#000"; g.fillRect(0, 0, 2206, 946); g.fillStyle = "#ddd"; g.font = "26px monospace"; r.forEach(([t, cold, warm], i) => g.fillText(`${t.toFixed(2)}  cold ${cold.toFixed(0)} ms   warm ${warm.toFixed(1)} ms`, 60 + (i >= 11 ? 1000 : 0), 70 + (i % 11) * 44)); } } };
+const tl = gsap.timeline({ paused: true });
+tl.fromTo(clock, { t: 0 }, { t: 4, duration: 4, ease: "none" }, 0);
+window.__timelines = window.__timelines || {}; window.__timelines["main"] = tl;
+</script>
+</body>
+</html>

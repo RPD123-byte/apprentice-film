@@ -1,0 +1,18 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=2206, height=946"><title>s02 timing lab</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>* { margin: 0; padding: 0; } html, body { width: 2206px; height: 946px; overflow: hidden; background: #000; } canvas { position: absolute; inset: 0; }
+#log { position: absolute; left: 20px; top: 20px; color: #0f0; font: 28px monospace; background: rgba(0,0,0,.8); white-space: pre; z-index: 5; }</style></head>
+<body><div data-hf-id="hf-r2lab2" id="root" data-composition-id="main" data-start="0" data-duration="8" data-fps="25" data-width="2206" data-height="946"><canvas data-hf-id="hf-r2film2" id="film" width="2206" height="946"></canvas><div id="log" data-hf-id="hf-r2log"></div></div>
+<script type="module">
+import { SHOTS } from "./src/shots/index.js";
+const s02 = SHOTS.find((s) => s.id === "s02");
+const ctx = document.createElement("canvas"); ctx.width = 2206; ctx.height = 946; const g = ctx.getContext("2d");
+const log = document.getElementById("log"); const lines = [];
+function T(label, f) { const t0 = performance.now(); g.setTransform(1,0,0,1,0,0); g.fillStyle="#000"; g.fillRect(0,0,2206,946); s02.draw(g, f/25 - 6.04, f/25); const dt = performance.now() - t0; lines.push(label + ": " + dt.toFixed(0) + " ms"); }
+T("cold f151", 151); T("warm f152", 152); T("warm f175", 175); T("f270 pan", 270); T("f300 pan blur", 300); T("f330", 330); T("f380 boxes", 380); T("f420 fly", 420); T("f460 ret", 460); T("f470", 470);
+s02.release(); T("cold f300 after release", 300); s02.release(); T("cold f460 after release", 460);
+log.textContent = lines.join("\n");
+const clock = { _t: 0, get t() { return this._t; }, set t(v) { this._t = v; } };
+const tl = gsap.timeline({ paused: true }); tl.fromTo(clock, { t: 0 }, { t: 8, duration: 8, ease: "none" }, 0);
+window.__timelines = window.__timelines || {}; window.__timelines["main"] = tl;
+</script></body></html>

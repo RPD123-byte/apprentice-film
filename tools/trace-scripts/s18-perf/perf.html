@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset="utf-8"><title>s18 perf</title></head><body><pre id="out">running</pre>
+<script>window.onerror=(m,u,l)=>{console.log("ERR "+m+" "+u+":"+l)}; window.addEventListener("unhandledrejection",e=>console.log("REJ "+e.reason));</script>
+<script type="module">
+console.log("module start");
+import { shot } from "../../src/shots/s18.js";
+const c = document.createElement("canvas"); c.width = 2206; c.height = 946;
+const ctx = c.getContext("2d");
+const out = [];
+const frames = [];
+for (let n = 1331; n <= 1432; n++) frames.push(n);
+// warm-up: first draw of each shot builds caches (timed separately)
+let t0 = performance.now(); ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 2206, 946); shot.draw(ctx, 0, 1331 / 25 + 0.01); ctx.getImageData(0, 0, 1, 1);
+out.push(`build A ${(performance.now() - t0).toFixed(0)} ms`);
+t0 = performance.now(); ctx.fillRect(0, 0, 2206, 946); shot.draw(ctx, 0, 1382 / 25 + 0.01); ctx.getImageData(0, 0, 1, 1);
+out.push(`build B ${(performance.now() - t0).toFixed(0)} ms`);
+const times = [];
+for (const n of frames) {
+  const t = n / 25 + 0.01;
+  const a = performance.now();
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 2206, 946);
+  shot.draw(ctx, t - 53.24, t);
+  ctx.getImageData(0, 0, 1, 1);   // flush
+  times.push([n, performance.now() - a]);
+}
+times.sort((a, b) => b[1] - a[1]);
+out.push("slowest: " + times.slice(0, 12).map(([n, v]) => `${n}:${v.toFixed(0)}`).join(" "));
+out.push("mean: " + (times.reduce((s, x) => s + x[1], 0) / times.length).toFixed(1));
+document.getElementById("out").textContent = out.join("\n");
+document.title = "DONE"; console.log("RESULT\n" + out.join("\n"));
+</script></body></html>

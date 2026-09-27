@@ -1,0 +1,14 @@
+<!doctype html><html><body><script>
+const mk=(w,h,cpu)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d',cpu?{willReadFrequently:true}:undefined);return [c,g];};
+const out=[];
+for (const [ca,cb] of [[0,0],[1,0],[0,1],[1,1]]) {
+  const [A,a]=mk(4412,1892,ca), [B,b]=mk(2206,946,cb);
+  a.fillStyle='#888';a.fillRect(0,0,4412,1892); for(let i=0;i<200;i++){a.fillStyle=`rgb(${i},${i},${i})`;a.fillRect(i*20,i*9,300,200);}
+  b.getImageData(0,0,1,1);
+  let t0=performance.now();
+  for(let k=0;k<3;k++){b.setTransform(0.6,0,0,0.6,100,50);b.drawImage(A,0,0,2206,946);}
+  b.getImageData(0,0,1,1); const t1=performance.now();
+  out.push(`A${ca?'cpu':'gpu'} B${cb?'cpu':'gpu'}: ${Math.round(t1-t0)}ms`);
+}
+document.title='R '+out.join(' ; ');
+</script></body></html>

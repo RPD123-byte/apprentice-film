@@ -1,0 +1,13 @@
+# edgeov.py render.png src.png x0 y0 x1 y1 scale out.jpg : source edges red, render edges green, over the source (dim)
+import cv2, sys, numpy as np
+f=cv2.cvtColor(cv2.imread(sys.argv[1]),cv2.COLOR_BGR2GRAY); r=cv2.cvtColor(cv2.imread(sys.argv[2]),cv2.COLOR_BGR2GRAY)
+x0,y0,x1,y1=map(int,sys.argv[3:7]); s=float(sys.argv[7])
+def E(im): return cv2.Canny(cv2.GaussianBlur(im[y0:y1,x0:x1],(0,0),2.0),30,80)
+ef,er=E(f),E(r)
+base=(r[y0:y1,x0:x1]*0.35).astype(np.uint8)
+v=cv2.cvtColor(base,cv2.COLOR_GRAY2BGR)
+v[er>0]=(0,0,255); v[ef>0]=(0,255,0); v[(ef>0)&(er>0)]=(0,255,255)
+v=cv2.resize(v,None,fx=s,fy=s,interpolation=cv2.INTER_NEAREST)
+for x in range((x0//50+1)*50,x1,50): cv2.putText(v,str(x),(int((x-x0)*s),12),0,0.4,(255,255,255),1)
+for y in range((y0//50+1)*50,y1,50): cv2.putText(v,str(y),(2,int((y-y0)*s)),0,0.4,(255,255,255),1)
+cv2.imwrite(sys.argv[8],v)

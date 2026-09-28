@@ -8,8 +8,12 @@ The page is an **original design** following the source page's composition and p
 a U-shaped rainbow ribbon with a pastel tail (top right), a big rainbow sweeping under the wordmark, petals and
 wedges behind "Pure", chunky cream wordmark with dark keylines, sparkles, clouds, a smiley ball, a daisy, nav
 links, two pill buttons, a marquee strip and a "Get your tickets" button. The source's top-left logo (a third-party
-brand mark) is replaced by an original two-line mark, "Wonder / Camp" in Shrikhand. The date/location line is kept
-as plain text because it is prominent in the close-up.
+brand mark) is replaced by an original two-line mark, "Wonder / Camp" in Shrikhand. The date/location line is plain
+text set in the source's layout: the same font, weight, size, colour and position. The source's line gave a real
+event's dates and city. On 2026-09-28 it was replaced with invented text, "April 24 - April 26, 2025" and "Linden
+Hollow" (`PURE_DATE`, below). The render no longer uses the real text anywhere. Archived build copies under `tracing/`
+(17 files: old copies of `s05/pure.js`, `s07/page.js` and `s08.js`, and some of s08's measuring scripts and font test
+pages) and one review input in `process/` are kept as they ran, and still contain it. So does the git history.
 
 ## Page units
 
@@ -29,7 +33,7 @@ The page is drawn in **page units, 1600 × 1000** (the laptop screen rectified t
 
 ```js
 import { drawPurePage, purePageCanvas, purePageRegion, drawPureOverlay, pureStateAt, releasePure,
-         PAGE_W, PAGE_H, PURE_SEL, PURE_CARD, PC, PURE_TICKET_TEXT, PURE_PLACEHOLDER } from "../lib/pureimg.js";
+         PAGE_W, PAGE_H, PURE_SEL, PURE_CARD, PURE_DATE, PC, PURE_TICKET_TEXT, PURE_PLACEHOLDER } from "../lib/pureimg.js";
 ```
 
 - `drawPurePage(ctx, opts)` paints the page in page units under the current transform (≈10 ms at 1600 × 1000).
@@ -49,6 +53,14 @@ import { drawPurePage, purePageCanvas, purePageRegion, drawPureOverlay, pureStat
   ```
 - `releasePure()` clears the caches. `PURE_SEL` and `PURE_CARD` give the selection and card rectangles in page units.
   `PC` is the palette. Its colours are pre-grade: the global grade lifts and warms them a little.
+- `PURE_DATE` is the date/location line: `{ size, lines, x2 }`.
+  - `size` is the font size in page units (Poppins 600), fitted to the source's line. Line 2 is set at 0.72 of it.
+  - Line 1 is right-aligned at page x 981, baseline 275.5.
+  - Line 2 starts at `x2`, baseline 309.5. That centres its ink on page x 797, where the source's second line sat.
+  - Line 2 must have no descenders (g, j, p, q, y). In the close-up the red selection line covers its baseline, so a
+    descender would hang below the line.
+  - It is the only copy. s08 redraws both lines from it with its own measured fits. The page copies in s05 and s07
+    (`dateLine` in `src/shots/s05/pure.js` and `src/shots/s07/page.js`) import it.
 
 ### Laptop timeline, measured frame by frame on the rectified screen
 

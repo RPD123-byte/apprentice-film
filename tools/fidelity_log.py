@@ -40,10 +40,10 @@ traced geometry for some layers.
 
 METHOD = {
     "s02": "drawn", "s05": "drawn", "s13": "drawn", "s19": "drawn", "s20": "drawn", "s21": "drawn", "s23": "drawn",
-    "s25": "drawn",
     "s04": "traced", "s06": "traced", "s07": "traced", "s08": "traced", "s12": "traced", "s16": "traced", "s18": "traced",
     "s22": "traced", "s26": "traced", "s27": "traced", "s28": "traced",
     "s01": "mixed", "s09": "mixed", "s14": "mixed", "s15": "mixed", "s17": "mixed", "s24": "mixed",
+    "s25": "mixed",  # owl drawings in src/shots/s25/v2/data/ are measured outlines + ink lines (extract3.py)
     "s40": "mixed",
 }
 
@@ -65,14 +65,25 @@ def row_for(sid, a, b, title):
     return f"| [{sid}](fidelity/{sid}.md) | {float(a):.2f}–{float(b):.2f} | {title} | ? | {METHOD.get(sid, '?')} | (no table row in fidelity/{sid}.md) |", '?'
 
 
-rows, tally = [], {}
+def tally_line(keys):
+    n, sec = {}, {}
+    for k, (a, b) in keys:
+        n[k] = n.get(k, 0) + 1
+        sec[k] = sec.get(k, 0) + float(b) - float(a)
+    return ", ".join(f"{k}: {v} shots / {sec[k]:.1f} s" for k, v in n.items())
+
+
+rows, by_status, by_method = [], [], []
 for sid, a, b, title in PLAN:
     r, st = row_for(sid, a, b, title)
     rows.append(r)
-    tally[st] = tally.get(st, 0) + 1
-    tally.setdefault('_sec_' + st, 0)
-    tally['_sec_' + st] += float(b) - float(a)
+    by_status.append((st, (a, b)))
+    by_method.append((METHOD.get(sid, '?'), (a, b)))
 
-summary = ", ".join(f"{k}: {v} shots / {tally['_sec_' + k]:.1f} s" for k, v in tally.items() if not k.startswith('_'))
-(ROOT / "docs" / "FIDELITY.md").write_text(HEAD + "\n".join(rows) + f"\n\n**Totals** — {summary}.\n")
+summary = tally_line(by_status)
+order = {"traced": 0, "mixed": 1, "drawn": 2}
+methods = tally_line(sorted(by_method, key=lambda m: order.get(m[0], 3)))
+(ROOT / "docs" / "FIDELITY.md").write_text(HEAD + "\n".join(rows)
+                                           + f"\n\n**Totals** — {summary}. **By method** — {methods}.\n")
 print(summary)
+print(methods)

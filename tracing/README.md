@@ -38,6 +38,11 @@ These scripts are kept **as they ran**, not as a polished toolkit:
 - A folder keeps the layout it had where it was found, so scripts that import each other still sit side by side. Harness
   folders ran with `src/` and `assets/` **symlinked** next to them. Those links were not copied, so link the repo's own
   folders back in to use them.
+- **Old page text.** The Pure Imagination page's date and city line was a real event's until 2026-09-28. The film now
+  draws invented text (`PURE_DATE` in `src/lib/pureimg.js`, see [`../docs/pureimg.md`](../docs/pureimg.md)). The
+  archived copies here kept the old strings as they ran, and nothing in them is rendered. That is 17 files: older copies of
+  `s05/pure.js`, `s07/page.js` and `s08.js` under `s05/`, `s07/`, `s08/` and `render/scratch-build-*/`, s08's
+  `glyphedges.py` and `boxes.py`, and `s08/trace-scripts-s08-dev/fonts*.html`.
 
 ## How the pipeline works
 
@@ -57,7 +62,8 @@ cuts white lines whose width follows the value. The work is tuned by comparing b
 `s12/src-s12/trace/tone_fit.py`, `s02/src-s02/hand/trace/tone_fit.py`, `s05/snapshots-s05-fix1d-study/fitfield.py`,
 `s13/snapshots-s13-fix1-tools/tonefit.py`, `s20/snapshots-s20-b3-tools/tonecal.py`.
 
-**2. Vector tracing: colour segmentation + ink extraction (the traced shots and the colour site).** The steps are:
+**2. Vector tracing: colour segmentation + ink extraction (the traced shots, the traced layers of the mixed shots, and the
+colour site).** The steps are:
 
 - un-grade the source frame;
 - split it into colour classes or posterised value levels (k-means palettes);
@@ -166,7 +172,7 @@ Method is from [`docs/FIDELITY.md`](../docs/FIDELITY.md): **drawn** = authored d
 | [s22](s22/README.md) | 74.52–84.04 | traced | `src-s22/trace/` (`trace_lines.py`, `write_lines2.py`, `measure_rim2.py`; README), `snapshots-s22-p4-h/` |
 | [s23](s23/README.md) | 84.04–97.08 | drawn | `src-s23/trace/` (README), `scratch-build-s23g/` (vector cel tracer) |
 | [s24](s24/README.md) | 97.08–100.48 | mixed | `src-s24/trace/` (README), `snapshots-s24d-h/` (line data), `scratch-build-s24p2/` (speed-line trace) |
-| [s25](s25/README.md) | 100.48–110.52 | drawn | `snapshots-s25-tools/` (`extract3.py`, `crackfit.py`, `headtrack.py`, `lightfit.py`, `scisfit.py`, `smokefit.py`), `src-s25/trace/` (README) |
+| [s25](s25/README.md) | 100.48–110.52 | mixed | `snapshots-s25-tools/` (`extract3.py`, `crackfit.py`, `headtrack.py`, `lightfit.py`, `scisfit.py`, `smokefit.py`), `src-s25/trace/` (README) |
 | [s26](s26/README.md) | 110.52–117.52 | traced | `snapshots-end-s26-fix3-tools/` (`pagetrace.py`), `snapshots-end-s26-fix1-tools/` (`ztrace.py`, `export_js.py`), `trace-scripts-s26b-meas/` (owl rig fits) |
 | [s27](s27/README.md) | 117.52–129.30 | traced | `trace-scripts-s27-k-tools/` (`room_vec.py`, `codec.py`, `export3.py`), `trace-scripts-s27t-tools/` (see `README.txt`), `snapshots-end-s27-tfix-tools/` (`plate.py`) |
 | [s28](s28/README.md) | 129.30–136.00 | traced | `snapshots-s28t-tools/` (`faintink.py`, `retrace_fig.py`, `retrace_room.py`), `trace-scripts-s28-tools/` (`buildkeys.py`, `fitcam.py`, `depthgrids.py`, `traceview.py`), `trace-scripts-s28-k-tools/`, `snapshots-end-s28-fix1-tools/` |

@@ -5,6 +5,7 @@
 // Still an original design: the top-left mark is an original "Wonder Camp" mark, no third-party logo.
 import { sampleCurve } from "../../lib/paths.js";
 import { drawNoteCard, drawSelection } from "../../lib/notecard.js";
+import { PURE_DATE } from "../../lib/pureimg.js";
 import { IMAG_GLYPHS } from "./imagGlyphs.js";
 
 const PAGE_W = 1600, PAGE_H = 1000;
@@ -769,19 +770,19 @@ function pill(ctx, x0, x1, label, icon) {
   }
   ctx.textAlign = "left";
 }
-let _dateSize = null;
+// The date/location line: invented text (since 2026-09-28; the source's line gave a real event's dates and city), set
+// in the source's layout. The text and layout are F3's PURE_DATE (src/lib/pureimg.js), imported so the copies cannot
+// drift: Poppins 600 at the size fitted to the source's line, line 1 right-aligned at page x 981, line 2 (0.72 of the
+// size) from PURE_DATE.x2, with its ink centred on page x 797.
 function dateLine(ctx) {
   ctx.save();
-  ctx.font = "600 100px Poppins";
-  if (!_dateSize) _dateSize = (100 * 249) / ctx.measureText("24 - April 26, 2025").width;
-  const s = _dateSize;
+  const s = PURE_DATE.size, [line1, line2] = PURE_DATE.lines;
   ctx.font = `600 ${s.toFixed(2)}px Poppins`;
-  const full = "April 24 - April 26, 2025";
-  const x = 981 - ctx.measureText(full).width;
+  const x = 981 - ctx.measureText(line1).width;
   ctx.shadowColor = "rgba(0,0,0,0.65)"; ctx.shadowBlur = 4; ctx.shadowOffsetX = 1.2; ctx.shadowOffsetY = 1.8;
-  ctx.fillStyle = "#e4e6db"; ctx.fillText(full, x, 275.5);
+  ctx.fillStyle = "#e4e6db"; ctx.fillText(line1, x, 275.5);
   ctx.font = `600 ${(s * 0.72).toFixed(2)}px Poppins`;
-  ctx.fillText("Linden Hollow", 717, 309.5);
+  ctx.fillText(line2, PURE_DATE.x2, 309.5);
   ctx.restore();
 }
 function ticketButton(ctx, text, caret) {

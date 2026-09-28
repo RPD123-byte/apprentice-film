@@ -9,7 +9,7 @@ render time by JavaScript on a 2D canvas and finished by a WebGL grade, and the 
 program. 11 shots (method **traced** in the shot table) are largely per-frame vector traces of the original: outlines,
 colour regions and ink strokes traced off its frames, stored as numbers in the shot's data files and painted by code.
 The other 15 are drawn in code from measurements of the original (positions, timing, camera moves, tone, some coarse
-shapes); 7 of them (method **mixed**) also paint some traced layers.
+shapes). 8 of them (method **mixed**) also paint some traced layers; the remaining 7 are method **drawn**.
 
 The repository also builds a stacked comparison video, the recreation above the original, if you have a copy of the
 original. The original is not part of this repository; see [The original film](#the-original-film).
@@ -228,7 +228,7 @@ which is about σ = 4 px at full size.
 | s05 | 23.12–26.72 | Over the shoulder: typing; the laptop goes from his site to Pure Imagination | drawn | approx | 12.90 | [`s05.js`](src/shots/s05.js) + [`s05/`](src/shots/s05/) |
 | s06 | 26.72–29.04 | Tired, head on hand, a small smile; owl on his shoulder | traced | close | 2.34 | [`s06.js`](src/shots/s06.js) + [`s06/`](src/shots/s06/) |
 | s07 | 29.04–30.56 | Over the shoulder again on Pure Imagination | traced | close | 3.47 | [`s07.js`](src/shots/s07.js) + [`s07/`](src/shots/s07/) |
-| s08 | 30.56–32.60 | Screen close-up: red selection, the note card types 'This is really good' | traced | close | 4.38 | [`s08.js`](src/shots/s08.js) + [`s08/`](src/shots/s08/) |
+| s08 | 30.56–32.60 | Screen close-up: red selection, the note card types 'This is really good' | traced | close | 5.10* | [`s08.js`](src/shots/s08.js) + [`s08/`](src/shots/s08/) |
 | s09 | 32.60–33.60 | Owl close-up, the room still behind it | mixed | approx | 6.66 | [`s09.js`](src/shots/s09.js) + [`s09/`](src/shots/s09/) |
 | s12 | 33.60–35.36 | The room drops away: the owl stares on black | traced | approx | 2.23 | [`s12.js`](src/shots/s12.js) + [`s12/`](src/shots/s12/) |
 | s13 | 35.36–36.92 | Owl startled | drawn | approx | 4.18 | [`s13.js`](src/shots/s13.js) + [`s13/`](src/shots/s13/) |
@@ -243,14 +243,20 @@ which is about σ = 4 px at full size.
 | s22 | 74.52–84.04 | It cuts round the header: dashed line, outline, the strip comes loose | traced | approx | 9.27 | [`s22.js`](src/shots/s22.js) + [`s22/`](src/shots/s22/) |
 | s23 | 84.04–97.08 | Carries the strip away, brings the colour banner, slaps it on, glows | drawn | approx | 10.66 | [`s23.js`](src/shots/s23.js) + [`s23/`](src/shots/s23/) |
 | s24 | 97.08–100.48 | Flurry of cuts, white flash, speed lines: the owl with scissors | mixed | approx | 11.59 | [`s24.js`](src/shots/s24.js) + [`s24/`](src/shots/s24/) |
-| s25 | 100.48–110.52 | The page cut into shards; the owl stands in the middle, hands on hips | drawn | approx | 12.87 | [`s25.js`](src/shots/s25.js) + [`s25/`](src/shots/s25/) |
+| s25 | 100.48–110.52 | The page cut into shards; the owl stands in the middle, hands on hips | mixed | approx | 12.87 | [`s25.js`](src/shots/s25.js) + [`s25/`](src/shots/s25/) |
 | s26 | 110.52–117.52 | The shards blow out into colour: the finished site | traced | close | 4.83 | [`s26.js`](src/shots/s26.js) + [`s26/`](src/shots/s26/) |
 | s27 | 117.52–129.30 | Pull back into the morning room; pan to him asleep; the owl on the laptop | traced | close | 6.54 | [`s27.js`](src/shots/s27.js) + [`s27/`](src/shots/s27/) |
 | s28 | 129.30–136.00 | From behind the laptop: asleep, smiling, in the sun | traced | close | 4.35 | [`s28.js`](src/shots/s28.js) + [`s28/`](src/shots/s28/) |
 | s40 | 136.00–140.80 | End card | mixed | close | 6.09 | [`s40_endcard.js`](src/shots/s40_endcard.js) + [`s40/`](src/shots/s40/) |
 
-Totals: 9 shots (42.4 s) close and 17 shots (98.4 s) approx. The first 110 s are black and white, in the style of
-hand-inked manga (white line on deep black); the last 30 s are in colour.
+\* On 2026-09-28 the page's date and city line, which showed a real event's details, was replaced with invented
+text ("April 24 - April 26, 2025" / "Linden Hollow"; see [`docs/pureimg.md`](docs/pureimg.md)). The original still
+shows the old text, so s08's distance to it rose from 4.38 to 5.10 on the full render; s05's and s07's changed by
+under 0.01.
+
+Totals: 9 shots (42.4 s) close and 17 shots (98.4 s) approx; by method, 11 traced (52.8 s), 8 mixed (39.5 s) and
+7 drawn (48.5 s). The first 110 s are black and white, in the style of hand-inked manga (white line on deep black); the
+last 30 s are in colour.
 
 ## How the data was made
 
@@ -322,6 +328,10 @@ workflow scripts are exactly what each agent was asked to do.
 - **Weakest shots** by measured distance from the original: s20 (21.8), s15 (21.4), s19 (14.2), s05 (12.9) and
   s25 (12.9). s15's corridor is shader drawing over measured tone, not the original's charcoal texture. The owls in
   s19, s20 and s25 are simpler drawings than the original's painterly bird.
+- **Render-order effect in s25.** Its last 1.9 s (108.60–110.48) depend very slightly on what was rendered before
+  them: two full renders of different code upstream differed there by up to 41 levels on scattered pixels (0.6
+  levels on average, invisible at viewing size). A full render of the same code is byte-reproducible; drawing
+  those frames one at a time, out of order, can differ a little from the published video.
 - The colour ending (s26–s28) is close, at 4.4–6.5, because it is traced.
 - 17 of 26 shots are **approx**: same staging, timing and camera, with visibly simpler drawing. Each log in
   `docs/fidelity/` lists that shot's gaps. For example, the s01→s02 cut lands one frame late, and the owl visibly

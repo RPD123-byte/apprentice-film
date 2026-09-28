@@ -21,6 +21,13 @@ export const PAGE_W = 1600, PAGE_H = 1000;
 // The red selection (drawn round "Pure Imagination") and the note card, in page units (measured).
 export const PURE_SEL = { x0: 352, y0: 311.5, x1: 1247.5, y1: 682, width: 5 };
 export const PURE_CARD = { x: 1278.2, y: 185.3, w: 193.9, h: 270.2 };
+// The date/location line under the logo: invented text (since 2026-09-28; the source's line gave a real event's dates
+// and city), set in the source's layout. Poppins 600 at the size fitted to the source's line (page units; line 2 at
+// 0.72 of it). Line 1 is right-aligned at page x 981, line 2 starts at x2 so that its ink is centred on page x 797,
+// where the source's second line sat. Baselines 275.5 and 309.5. Line 2 has no descenders: in the close-up (s08) it
+// sits on the red selection line, which covers its baseline, so a g or y would hang below the line (the source's only
+// had a comma tail there). The one copy: s05 (s05/pure.js), s07 (s07/page.js) and s08 all import it.
+export const PURE_DATE = { size: 30.57841594742536, lines: ["April 24 - April 26, 2025", "Linden Hollow"], x2: 719.4 };
 
 // Palette (pre-grade values: the film's finishing grade darkens and warms these a little).
 export const PC = {
@@ -428,19 +435,15 @@ function pill(ctx, x0, x1, label, icon) {
   }
   ctx.textAlign = "left";
 }
-let _dateSize = null;
 function dateLine(ctx) {
   ctx.save();
-  ctx.font = "600 100px Poppins";
-  if (!_dateSize) _dateSize = (100 * 249) / ctx.measureText("24 - April 26, 2025").width;
-  const s = _dateSize;
+  const s = PURE_DATE.size, [line1, line2] = PURE_DATE.lines;
   ctx.font = `600 ${s.toFixed(2)}px Poppins`;
-  const full = "April 24 - April 26, 2025";
-  const x = 981 - ctx.measureText(full).width;
+  const x = 981 - ctx.measureText(line1).width;
   ctx.shadowColor = "rgba(0,0,0,0.65)"; ctx.shadowBlur = 4; ctx.shadowOffsetX = 1.2; ctx.shadowOffsetY = 1.8;
-  ctx.fillStyle = "#e4e6db"; ctx.fillText(full, x, 275.5);
+  ctx.fillStyle = "#e4e6db"; ctx.fillText(line1, x, 275.5);
   ctx.font = `600 ${(s * 0.72).toFixed(2)}px Poppins`;
-  ctx.fillText("Linden Hollow", 717, 309.5);
+  ctx.fillText(line2, PURE_DATE.x2, 309.5);
   ctx.restore();
 }
 function ticketButton(ctx, text, caret) {

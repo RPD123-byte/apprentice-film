@@ -1,6 +1,6 @@
 # s25 — 100.48–110.52 s: The page cut into shards; the owl stands in the middle, hands on hips
 
-Status **approx**, method **drawn** (see `docs/FIDELITY.md` and `docs/fidelity/s25.md`). The render code is `src/shots/s25.js` and `src/shots/s25/`.
+Status **approx**, method **mixed** (see `docs/FIDELITY.md` and `docs/fidelity/s25.md`). The render code is `src/shots/s25.js` and `src/shots/s25/`.
 
 ## How the data in `src/shots/s25/` was made
 

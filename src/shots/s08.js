@@ -18,7 +18,7 @@
 // Everything is composed once at F0 resolution and the push-in scales that image (as the source does).
 import { W, H } from "../config.js";
 import { rng } from "../lib/rng.js";
-import { purePageRegion, releasePure, PURE_SEL, PURE_CARD, PC } from "../lib/pureimg.js";
+import { purePageRegion, releasePure, PURE_SEL, PURE_CARD, PURE_DATE, PC } from "../lib/pureimg.js";
 import { sampleCurve } from "../lib/paths.js";
 import { MARK } from "./s08/mark.js";
 import { drawTrash2, TRASH2, drawSmiley2, SMILEY2, drawNub2, drawCardBody } from "./s08/card.js";
@@ -341,7 +341,7 @@ function redrawStars(g) {
 // ---------------------------------------------------------------- redrawn page regions (F0 px)
 // Softness of the page layers (Gaussian sigma, F0 px, on top of the drawing's own antialiasing). Fix pass 1: the source's
 // page art is softer than the card (erf fits across strong edges, frames 764/765: 'ure' 1.20, date line 1 1.37,
-// 'Linden Hollow' 1.27, lobes 1.29, fan 1.13, ribbon 1.21, stars 1.25, cloud 1.13; card 0.51); the card, typed text and
+// date line 2 1.27, lobes 1.29, fan 1.13, ribbon 1.21, stars 1.25, cloud 1.13; card 0.51); the card, typed text and
 // selection stay sharp.
 const SOFT = { page: 1.0, orn: 1.1, cloud: 1.1, cloudEdge: 0.7, rib: 1.2, pills: 1.4, stars: 1.2 };
 const STRIP_Y = 10.1;
@@ -357,20 +357,21 @@ function ornPath(g, flat, straight) {
   for (let i = 1; i < s.length; i++) g.lineTo(s[i][0], s[i][1]);
   g.closePath();
 }
-// The date lines, measured against the source's first frame: bold (Poppins 700) with a thin dark rim; line 1 is
-// 2.2% wider than the page's own layout about page x 836.9 with 6% taller glyphs; "Linden Hollow" is 5.25% larger
-// about page x 697.8 and sits 2 units lower (its feet go under the red selection line, as in the source).
-let _dateSize = null;
+// The date lines (the page's PURE_DATE: invented text since 2026-09-28, in the source's layout). The fits below were
+// measured against the source's first frame, whose line gave a real event's dates and city; only the ones that
+// describe the line as a whole (scale, position, levelling, colour, rim, the weight trend along line 1) are kept, and
+// the per-letter ones were dropped with the old text. Bold (Poppins 700) with a thin dark rim; line 1 is 2.2% wider
+// than the page's own layout about page x 836.9 with 6% taller glyphs; line 2 is 5.25% larger about page x 697.8 and
+// sits 2 units lower, so the red selection line covers its baseline, as in the source (hence a line 2 with no
+// descenders: see PURE_DATE).
 function dateLines(g) {
   g.save();
   pageToF0(g);
-  g.font = "600 100px Poppins";
-  if (!_dateSize) _dateSize = (100 * 249) / g.measureText("24 - April 26, 2025").width;
-  const s0 = _dateSize;
+  const s0 = PURE_DATE.size, [line1, line2] = PURE_DATE.lines;
   const lines = [
     // text, page-layout font size, page-layout left x, baseline, scale, fixed x, dy, colour
-    ["April 24 - April 26, 2025", s0, null, 275.5, DATE1.k, 836.9, DATE1.dy, DATE1.col, DATE1.v],
-    ["Linden Hollow", s0 * 0.72, 717, 309.5, DATE2.k, 697.8, DATE2.dy, DATE2.col, DATE2.v],
+    [line1, s0, null, 275.5, DATE1.k, 836.9, DATE1.dy, DATE1.col, DATE1.v],
+    [line2, s0 * 0.72, PURE_DATE.x2, 309.5, DATE2.k, 697.8, DATE2.dy, DATE2.col, DATE2.v],
   ];
   const glyphs = [];
   for (const [text, size, x0, base, k, fx, dy, col, v] of lines) {
@@ -391,19 +392,25 @@ function dateLines(g) {
   g.lineJoin = "round";
   g.shadowColor = "rgba(0,0,0,0.6)"; g.shadowBlur = 4; g.shadowOffsetX = 1; g.shadowOffsetY = 1.5;
   const at = (cx, by, v) => { pageToF0(g); g.translate(cx, by); g.scale(1, v); };
+  const lobes = lobeMask();
   g.filter = "blur(0.8px)";
   for (const [ch, cx, by, sz, , v, l1] of glyphs) { at(cx, by, v); g.font = `${DATE_W} ${sz.toFixed(2)}px Poppins`; g.lineWidth = DATE_RIM * (l1 ? 1 : 0.75); g.strokeStyle = DATE_RIM_COL; g.strokeText(ch, 0, 0); }
   g.shadowColor = "transparent";
-  // the source's letters are a touch see-through (they pick up the pink and purple lobes under "rch") and dimmer
-  // toward the left: fill alpha 0.93 at page x 670 rising to 0.99 at page x 990 (measured on the glyph cores)
+  // the source's letters are a touch see-through (they pick up the pink and purple lobes under line 1's left end) and
+  // dimmer toward the left: fill alpha 0.93 at page x 670 rising to 0.99 at page x 990 (measured on the glyph cores)
   for (const [ch, cx, by, sz, col, v, l1] of glyphs) {
     at(cx, by, v); g.font = `${DATE_W} ${sz.toFixed(2)}px Poppins`; g.fillStyle = col;
     g.globalAlpha = 0.93 + 0.06 * Math.min(1, Math.max(0, (cx - 670) / 320));
     g.fillText(ch, 0, 0);
-    // line 1 sits between Poppins 600 and 700 in the source, bolder toward "2023" (glyph area and mean level measured
-    // per word, early and late): the 600 glyphs are emboldened with a stroke of their own colour
-    if (l1) { g.lineWidth = DATE_FIX.bold * (1 - 0.7 * Math.min(1, Math.max(0, (cx - 880) / 50))) + (cx < 725 ? DATE_RCH_BOLD : Math.min(0.62, Math.max(0.15, 0.2 + ((cx - 790) / 170) * 0.38))); g.strokeStyle = col; g.strokeText(ch, 0, 0); }
-    else if (DATE_FIX.bold2) { g.lineWidth = cx < 846 ? DATE_FIX.bold2 : 0.1; g.strokeStyle = col; g.strokeText(ch, 0, 0); }
+    // line 1 sits between Poppins 600 and 700 in the source, bolder toward its right end (glyph area and mean level
+    // measured per word, early and late) and over the lobes at its left end (DATE_LOBE_BOLD, inside the lobes only):
+    // the 600 glyphs are emboldened with a stroke of their own colour; line 2 is emboldened evenly
+    if (l1) {
+      const lw = DATE_FIX.bold * (1 - 0.7 * Math.min(1, Math.max(0, (cx - 880) / 50))) + Math.min(0.62, Math.max(0.15, 0.2 + ((cx - 790) / 170) * 0.38));
+      if ((cx - TX) / A < lobes.x1) lobeBold(g, ch, col, lw, lobes);
+      else { g.lineWidth = lw; g.strokeStyle = col; g.strokeText(ch, 0, 0); }
+    }
+    else if (DATE_FIX.bold2) { g.lineWidth = DATE_FIX.bold2; g.strokeStyle = col; g.strokeText(ch, 0, 0); }
     // a thin dark edge over the fill: the source's glyphs are slimmer (the 0's counter is ~3 px wider) with the rim
     // eating into them
     if (DATE_ERODE[1]) { g.globalAlpha = DATE_ERODE[1]; g.lineWidth = DATE_ERODE[0]; g.strokeStyle = DATE_RIM_COL; g.strokeText(ch, 0, 0); }
@@ -413,15 +420,49 @@ function dateLines(g) {
   g.restore();
   lobeVeil(g, glyphs, at);
 }
-// Where the date lines cross the lobes ("rch" over the pink and purple lobes, "Colu" over the small ones) the source's
-// letters are washed with the lobe colour and have no dark rim: the lobes lie over the text. Measured on frames
-// 764-771 (F0): the rim there is lobe-coloured, and the glyph cores are pinker than the white line (source core
-// (152,142,145) against the render's (156,156,150) untinted). The lobes are laid over the rim at VEIL[1] and over the
-// glyph fills at VEIL[0] (swept on the "rch" box: blurred error 10.9 before, 4.85 with 0.1 / 1.0 and DATE_RCH_BOLD).
+// Where the date lines cross the lobes (line 1's left end over the pink and purple lobes, line 2's over the small
+// ones) the source's letters are washed with the lobe colour and have no dark rim: the lobes lie over the text.
+// Measured on frames 764-771 (F0): the rim there is lobe-coloured, and the glyph cores are pinker than the white line
+// (source core (152,142,145) against the render's (156,156,150) untinted). The lobes are laid over the rim at VEIL[1]
+// and over the glyph fills at VEIL[0] (swept on the box round line 1's left end with the source's text: blurred error
+// 10.9 before, 4.85 with 0.1 / 1.0).
 const VEIL = [0.1, 1.0], VEIL_LOBES = [3, 4, 8, 9];
-// "rch" (page x < 725) is bolder in the source: its glyph area above level 120 is 11% larger than the render's with
-// the rest of line 1's emboldening (frames 764-771); emboldened by DATE_RCH_BOLD page units
-const DATE_RCH_BOLD = 0.9;
+// Line 1 is bolder in the source where it crosses the pink and purple lobes (page x < ~725: glyph area above level 120
+// 11% larger than the render's with the rest of line 1's emboldening, frames 764-771), and without it the veiled
+// glyphs there read ~2 F0 px thinner than the rest of the line. DATE_LOBE_BOLD page units over the trend, applied inside
+// the veil's lobes (VEIL_LOBES) only, so the extra weight follows the lobe wash: a letter that straddles a lobe's edge
+// keeps the line's own weight where it lies on the dark ground. (The build had a step at page x 725, which fell between
+// two letters of the source's text; a page-x ramp put 0.37 units on the ground half of a letter there.)
+const DATE_LOBE_BOLD = 0.75;
+// The union of the veil's lobes as an F0 alpha mask, and its right edge (F0 x, plus a glyph's half-width and the blur):
+// letters left of it take lobeBold's split stroke, the rest the plain one. tmp: lobeBold's two scratch layers.
+function lobeMask() {
+  const mk = () => { const c = document.createElement("canvas"); c.width = W; c.height = H; return c; };
+  const c = mk(), cg = c.getContext("2d");
+  let x1 = -Infinity;
+  for (const i of VEIL_LOBES) {
+    const pts = ORN[i][1];
+    for (let k = 0; k < pts.length; k += 2) x1 = Math.max(x1, pts[k]);
+    ornPath(cg, pts, ORN[i][2] === 1); cg.fillStyle = "#fff"; cg.fill();
+  }
+  return { c, x1: x1 + 40, tmp: [mk(), mk()] };
+}
+// The emboldening stroke of one letter of line 1 (called under the letter's transform, with the pass's alpha and blur):
+// lw + DATE_LOBE_BOLD inside the lobes and lw outside, joined in one layer ("lighter" adds the two halves' coverage
+// across the lobe's antialiased edge, so no seam) and drawn as one stroke would be.
+function lobeBold(g, ch, col, lw, lobes) {
+  const [a, b] = lobes.tmp, m = g.getTransform();
+  for (const [c, w, op] of [[a, lw + DATE_LOBE_BOLD, "destination-in"], [b, lw, "destination-out"]]) {
+    const q = c.getContext("2d");
+    q.setTransform(1, 0, 0, 1, 0, 0); q.globalCompositeOperation = "source-over"; q.clearRect(0, 0, W, H);
+    q.setTransform(m); q.font = g.font; q.textAlign = "center"; q.lineJoin = "round";
+    q.lineWidth = w; q.strokeStyle = col; q.strokeText(ch, 0, 0);
+    q.setTransform(1, 0, 0, 1, 0, 0); q.globalCompositeOperation = op; q.drawImage(lobes.c, 0, 0);
+  }
+  const qa = a.getContext("2d");
+  qa.globalCompositeOperation = "lighter"; qa.drawImage(b, 0, 0); qa.globalCompositeOperation = "source-over";
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(a, 0, 0); g.restore();
+}
 function lobeVeil(g, glyphs, at) {
   const mk = () => { const c = document.createElement("canvas"); c.width = W; c.height = H; return c; };
   const fill = mk(), rim = mk(), fg = fill.getContext("2d"), rg = rim.getContext("2d");
@@ -436,6 +477,9 @@ function lobeVeil(g, glyphs, at) {
   for (const [mask, a] of [[fill, VEIL[0]], [rim, VEIL[1]]]) {
     const c = mk(), cg = c.getContext("2d");
     for (const i of VEIL_LOBES) { const [col, pts, fl] = ORN[i]; ornPath(cg, pts, fl === 1); cg.fillStyle = shapeFill(cg, col); cg.fill(); }
+    // the restored pink | purple keyline runs on up to the letters' edges (it passes behind them): over the rim's lobe
+    // colour, softened as lobeSoft softens it outside the veil
+    if (mask === rim) lobeKeyline(cg, LOBE_SOFT);
     cg.globalCompositeOperation = "destination-in"; cg.drawImage(mask, 0, 0);
     g.save(); g.globalAlpha = a; g.drawImage(c, 0, 0); g.restore();
   }
@@ -446,8 +490,9 @@ function lobeVeil(g, glyphs, at) {
 const DATE1 = { k: 1.0218, dy: 0.45, v: 1.06, col: "rgb(212,215,207)" }, DATE2 = { k: 1.0525, dy: 2.0, v: 1.03, col: "rgb(210,212,205)" };
 // Fix pass 1, measured as render - source glyph edge offsets (half level, frames 764-771, F0): line 1's left edges sat
 // +1.0 px right and its right edges +0.15 (thinner by ~0.8 px across, ~0.4 up and down, and 0.57 px right); its
-// vertical centre ran +0.86 ("rch") to -0.35 ("2023"). "Linden Hollow" sat 0.37 left and 0.48 high, "GA" 0.4 left, 0.87 high.
-// [dx, dy, a, b, x0]: shift (dx, dy) plus a + b (x - x0) down, F0 px; bold: extra emboldening, page units.
+// vertical centre ran +0.86 at its left end to -0.35 at its right end. Line 2 sat ~0.4 left, 0.48 high at its left
+// part and 0.87 high at its right end. [dx, dy, a, b, x0]: shift (dx, dy) plus a + b (x - x0) down, F0 px (a straight
+// levelling along each line, kept); bold, bold2: extra emboldening of lines 1 and 2, page units.
 const DATE_FIX = { l1: [-0.57, 0, -1.05, 0.00225, 70], l2: [0.38, 0, 0.62, 0.003, 265], bold: 0.3, bold2: 0.3 };
 const DATE_RIM = 2.6, DATE_RIM_COL = "rgba(6,5,4,0.95)", DATE_W = 600, DATE_ERODE = [0.5, 0];
 // Repaint a zone of the static frame from traced shapes: page ground, keylines (every stroked shape first), fills,
@@ -511,7 +556,8 @@ function overpaintLowerLeft(dst) {
   overpaint(dst, RIB_ZONE, [], ribbon, false, 10, SOFT.rib);
   overpaint(dst, LOGO_ZONE, [], logoMark, false, 10, MARK_SOFT);
 }
-// The lobe artwork at the top left (the big purple lobe and the pink one behind "rch", the small ones behind "Colu")
+// The lobe artwork at the top left (the big purple lobe and the pink one behind line 1's left end, the small ones
+// behind line 2's)
 // is soft in the source while the date text over it is crisp: the purple lobe's edge on the ground measures sigma
 // ~4 px (render 1.0-1.4) at x 20-50, ~2.5 at x 80, ~3 on the small lobe's top at x 230, and ~1.3-1.7 on the pink
 // lobe lower down (frame 764, erf fits). Blurred by LOBE_SOFT px before the text is drawn, weighted by a field that is
@@ -545,7 +591,22 @@ const ORN_KEY = "#170a05", ORN_KEY_LIFT = "#141a13", FAN_KEY = "#161310";
 // wedge at the bottom of the u (half-level edges: tip (227.5, 910), right edge ~x 227, left edge to (193, 946)).
 const SALMON = [581, 735, 584, 740, 584.6, 750, 583.2, 762, 582, 775, 581.6, 788, 582.6, 798, 585.5, 806, 579.5, 807, 577.4, 796, 576.1, 786, 576.2, 772, 577.1, 760, 578.9, 748, 579.8, 739];
 const WEDGE = [227.6, 909.2, 224.2, 914.6, 220.3, 920.6, 212.3, 929.6, 202.3, 938.6, 193, 945.6, 189, 950, 228.6, 950, 228, 930, 228.3, 915];
+// The keyline between the pink and purple lobes (ORN[8] | ORN[3]) where it runs behind line 1's left end. The lobes
+// were traced on a frame where the source's letters covered that stretch of the boundary, so the trace has no gap
+// there, and letters that leave it open showed pink running straight into purple. Read on the source's frame 764 (F0
+// px): the line comes down to (73, 352) and (77, 358), passes behind the letters, and is out again at (93, 384),
+// running down at x 93-95 to meet the traced gap (y ~406 on). Drawn here before the date text, and again over the
+// lobe colour in the veil round the letters (lobeVeil), which would otherwise wash it out next to them.
+const LOBE_KEY = [71, 353, 76, 360, 84, 374, 93.5, 392, 94, 404, 94.5, 414], LOBE_KEY_LW = 5;
+function lobeKeyline(g, blur = 0) {
+  g.save();
+  g.beginPath(); for (let i = 0; i < LOBE_KEY.length; i += 2) (i ? g.lineTo : g.moveTo).call(g, LOBE_KEY[i], LOBE_KEY[i + 1]);
+  if (blur) g.filter = `blur(${blur}px)`;
+  g.lineWidth = LOBE_KEY_LW; g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = KEYLINE; g.stroke();
+  g.restore();
+}
 function ornExtra(g) {
+  lobeKeyline(g);
   g.save();
   g.fillStyle = "#906f5e"; ornPath(g, SALMON, false); g.fill();
   g.fillStyle = "#0c0d0a"; ornPath(g, WEDGE, true); g.fill();

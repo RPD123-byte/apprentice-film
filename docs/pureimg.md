@@ -11,9 +11,9 @@ links, two pill buttons, a marquee strip and a "Get your tickets" button. The so
 brand mark) is replaced by an original two-line mark, "Wonder / Camp" in Shrikhand. The date/location line is plain
 text set in the source's layout: the same font, weight, size, colour and position. The source's line gave a real
 event's dates and city. On 2026-09-28 it was replaced with invented text, "April 24 - April 26, 2025" and "Linden
-Hollow" (`PURE_DATE`, below). The render no longer uses the real text anywhere. Archived build copies under `tracing/`
-(17 files: old copies of `s05/pure.js`, `s07/page.js` and `s08.js`, and some of s08's measuring scripts and font test
-pages) and one review input in `process/` are kept as they ran, and still contain it. So does the git history.
+Hollow" (`PURE_DATE`, below). The render no longer uses the real text anywhere. The same day it was also
+replaced in the archived build copies under `tracing/`, in one review input in `process/`, and throughout the git
+history, so the repository no longer contains it. That text swap is the only edit made to the archived copies.
 
 ## Page units
 

@@ -40,9 +40,10 @@ These scripts are kept **as they ran**, not as a polished toolkit:
   folders back in to use them.
 - **Old page text.** The Pure Imagination page's date and city line was a real event's until 2026-09-28. The film now
   draws invented text (`PURE_DATE` in `src/lib/pureimg.js`, see [`../docs/pureimg.md`](../docs/pureimg.md)). The
-  archived copies here kept the old strings as they ran, and nothing in them is rendered. That is 17 files: older copies of
-  `s05/pure.js`, `s07/page.js` and `s08.js` under `s05/`, `s07/`, `s08/` and `render/scratch-build-*/`, s08's
-  `glyphedges.py` and `boxes.py`, and `s08/trace-scripts-s08-dev/fonts*.html`.
+  old strings were also replaced with the invented ones in the 17 archived copies here that contained them (older
+  copies of `s05/pure.js`, `s07/page.js` and `s08.js`, s08's `glyphedges.py` and `boxes.py`, and
+  `s08/trace-scripts-s08-dev/fonts*.html`) and in the git history. That text swap is the only edit made to archived
+  copies; nothing in them is rendered.
 
 ## How the pipeline works
 

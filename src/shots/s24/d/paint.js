@@ -12,6 +12,7 @@ import { curve, polyPath, smoothFn, inkLine, inkOutline, softFill, shade, hatch,
 import { drawScissors, glint } from "./scissors.js";
 import { drawBandage, setPPU, gv } from "../../../lib/owlInk.js";
 import { cup3, yoke, brow, eye2, hookBeak, tuft, coverts, quill, foot, fineHatch, stroke, lobe, ringArc } from "./art2.js";
+import { tufts, ruff, barbs, arches, bandX, contourLines, blobTone, flowDir, clipOf } from "./engr.js";
 
 const LIGHT = [-0.6, -0.8];
 
@@ -73,6 +74,8 @@ export function paintSpec(g, spec) {
   setPPU(1);
   g.lineJoin = "round"; g.lineCap = "round";
   for (const L of spec.layers) {
+    // ending fix: any layer may be confined to a rectangle (clipRect: [x0, y0, x1, y1]) or polygon (clipTo)
+    if (L.clipRect || L.clipTo) { g.save(); g.beginPath(); if (L.clipRect) { const [a, b, c, d] = L.clipRect; g.rect(a, b, c - a, d - b); } else polyPath(L.clipTo)(g); g.clip(); paintSpec(g, { layers: [{ ...L, clipRect: null, clipTo: null }] }); g.restore(); continue; }
     switch (L.type) {
       case "feathers": {
         const list = L.order === "rev" ? [...L.list].reverse() : L.list;
@@ -222,6 +225,13 @@ export function paintSpec(g, spec) {
       case "stroke": stroke(g, L.pts, L.ws, { color: L.color ? gv(L.color[0], L.color[1] ?? 1) : undefined }); break;
       case "lobe": lobe(g, L.pts, L); break;
       case "ringArc": ringArc(g, L); break;
+      // ending fix: the engraving pass (engr.js) — fur tufts on a tone field of ellipses along a flow field, ruffs, barbs
+      case "tufts": tufts(g, clipOf(L), L.box, { ...L, tone: blobTone(L.blobs || [], L.base ?? 0), dir: flowDir(L.flow || [1, 0], L.centres || []) }); break;
+      case "ruff": ruff(g, L.pts, L); break;
+      case "bandX": bandX(g, L); break;
+      case "contour": contourLines(g, L.poly, L); break;
+      case "arches": { const c = clipOf(L); if (c) { g.save(); g.beginPath(); c(g); g.clip(); } arches(g, L.tips, L); if (c) g.restore(); break; }
+      case "barbs": { const c = clipOf(L); if (c) { g.save(); g.beginPath(); c(g); g.clip(); } for (const [i, f] of L.list.entries()) barbs(g, f.r, f.t, { ...L, ...f, seed: (L.seed || 1) * 53 + i }); if (c) g.restore(); break; }
     }
   }
 }

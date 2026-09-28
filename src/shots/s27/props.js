@@ -2,27 +2,39 @@
 // (top face mapped by its measured corners, page block extruded below).
 import { canvas, spath, path, shape, ellipse, lin, rad, rgba, INKC } from "./paint.js";
 
-const MUG = "#e8e0d2", MUG_SH = "#cfc3b3", MUG_D = "#b9ab99", MUG_IN = "#d8cdbd";
+const MUG = "#e8e0d2", MUG_SH = "#cfc3b3", MUG_D = "#b9ab99", MUG_IN = "#d8cdbd", MUG_INK = "#5b4336";
 // mug sprite: body 100 wide x 115 tall (rim ellipse ry 7.5 at top, base arc at bottom); handle to the right (flip for left).
 // Texture px = 2 x units; the body's left edge is at x = 40 units, top rim centre y = 12 units.
 export const MUG_TEX = { ox: 40, oy: 12, W: 180, H: 142, S: 2 };
 export function paintMug(flip = false) {
   const T = MUG_TEX, c = canvas(T.W * T.S, T.H * T.S), g = c.getContext("2d");
   g.scale(T.S, T.S); g.translate(T.ox, T.oy);
-  const ry = 7.5, lw = 2.2;
+  const ry = 6, lw = 1.8;   // (end-s27-tfix) outline 2.2 -> 1.8 units (source ~2.5 px)
   // handle
-  g.beginPath(); g.ellipse(100, 52, 24, 30, 0, -Math.PI / 2 - 0.1, Math.PI / 2 + 0.1); g.lineWidth = 11; g.strokeStyle = INKC; g.stroke();
-  g.beginPath(); g.ellipse(100, 52, 24, 30, 0, -Math.PI / 2 - 0.1, Math.PI / 2 + 0.1); g.lineWidth = 7; g.strokeStyle = flip ? "#c6b19d" : "#e0d4c2"; g.stroke();
+  // (end-s27-tfix) thinner, browner outlines (source: a mid-brown line ~2 px, graded ~160,135,115) and a light rim opening
+  g.beginPath(); g.ellipse(100, 52, 24, 30, 0, -Math.PI / 2 - 0.1, Math.PI / 2 + 0.1); g.lineWidth = 10; g.strokeStyle = MUG_INK; g.stroke();
+  g.beginPath(); g.ellipse(100, 52, 24, 30, 0, -Math.PI / 2 - 0.1, Math.PI / 2 + 0.1); g.lineWidth = 7.4; g.strokeStyle = flip ? "#cdb9a5" : "#e6dccb"; g.stroke();
   // body
   g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 115 - 6); g.ellipse(50, 115 - 6, 50, ry, 0, Math.PI, 0, true); g.lineTo(100, 0); g.ellipse(50, 0, 50, ry, 0, 0, Math.PI, false); g.closePath();
   // the window light comes from the right in both views: shaded left, lit right (measured #c4b09c / #d7c4af / #e8dfca);
   // the texture is mirrored when the handle is on the left, so the gradient is mirrored with it
-  const st = [[0, "#bfa996"], [0.22, "#cdb9a5"], [0.5, "#d9c8b4"], [0.8, "#e6dccb"], [0.93, "#ebe3d4"], [1, "#d6c8b6"]];
+  // (end-s27-fix1) behind the laptop (handle left, 123.5–129.1) the source's mug is a warmer cream than in the hold, with a
+  // darker right edge (graded 127.04: 210,181,144 left, 242,225,197 highlight, 214,189,171 right edge; the render was 15–25
+  // levels too light and too cool there)
+  const st = flip ? [[0, "#b69a81"], [0.22, "#c4a88e"], [0.5, "#cfb69b"], [0.8, "#dcc8af"], [0.9, "#e0cfb6"], [1, "#c5af98"]]
+    : [[0, "#c9b2a3"], [0.04, "#d6c1b8"], [0.1, "#c2a899"], [0.3, "#c6ae9f"], [0.37, "#cbb4a7"], [0.42, "#d3bcaf"], [0.6, "#d6c6b8"], [0.8, "#dad3c8"], [0.93, "#ddd6cc"], [1, "#d6c8b6"]];
+  // (end-s27-tfix) front view re-measured at 119.0 (graded): a lit sliver at the left edge (221,201,189), a pinkish shaded
+  // band (201–205,176–182,158–165) over the left third, then cream (218–230,196–224,180–213) to the right
   g.fillStyle = lin(g, flip ? 100 : 0, 0, flip ? 0 : 100, 0, st); g.fill();
-  g.lineWidth = lw; g.strokeStyle = INKC; g.stroke();
-  // rim: opening
-  ellipse(g, 50, 0, 50, ry, "#cfbfab", lw);
-  ellipse(g, 50, 1.2, 46, ry - 2, "#b9a591", 0);
+  // (end-s27-fix1) the glaze's fine speckle (deterministic)
+  g.save(); g.clip();
+  for (let i = 0; i < 260; i++) { const x = (i * 37.17) % 100, y = (i * 61.31) % 112; g.fillStyle = i % 3 ? "rgba(120,95,70,0.16)" : "rgba(255,250,240,0.22)"; g.fillRect(x, y, 0.55, 0.55); }
+  g.restore();
+  g.lineWidth = lw; g.strokeStyle = MUG_INK; g.stroke();
+  // rim: opening (source at 119.0: a thin top line, a light inside, a thin inner line ~12 px below; the render drew a dark
+  // brown inner band there)
+  g.beginPath(); g.ellipse(50, 0, 50, ry, 0, 0, Math.PI * 2); g.fillStyle = flip ? "#d9c7b2" : "#e9dfd0"; g.fill(); g.lineWidth = lw * 0.8; g.strokeStyle = MUG_INK; g.stroke();
+  g.beginPath(); g.ellipse(50, 1.4, 46.5, ry - 2.2, 0, 0, Math.PI); g.lineWidth = lw * 0.55; g.strokeStyle = "rgba(110,85,65,0.75)"; g.stroke();
   // soft shade near the bottom
   g.save(); g.beginPath(); g.rect(0, 60, 100, 60); g.clip();
   g.fillStyle = lin(g, 0, 70, 0, 118, [[0, "rgba(160,140,120,0)"], [1, "rgba(150,128,108,0.25)"]]); g.fillRect(0, 60, 100, 70); g.restore();
@@ -41,14 +53,12 @@ export const NB_TEX = { W: 100, D: 60, S: 6 };
 export function paintNotebookTop(withPencil = true) {
   const T = NB_TEX, c = canvas(T.W * T.S, T.D * T.S), g = c.getContext("2d");
   g.scale(T.S, T.S);
-  g.fillStyle = "#a9765a"; g.beginPath(); g.roundRect(0.3, 0.3, T.W - 0.6, T.D - 0.6, 1.2); g.fill();
+  g.fillStyle = "#ae7c62"; g.beginPath(); g.roundRect(0.3, 0.3, T.W - 0.6, T.D - 0.6, 1.2); g.fill();   // (end-s27-tfix) a touch lighter (119.0: 12-17 levels dark)
   g.fillStyle = lin(g, 0, 0, T.W, T.D, [[0, "rgba(255,230,200,0.10)"], [1, "rgba(80,40,20,0.10)"]]); g.fillRect(0, 0, T.W, T.D);
-  // spine band on the left
-  g.fillStyle = "#8f5d45"; g.fillRect(0.3, 0.3, 9, T.D - 0.6);
-  g.strokeStyle = "rgba(70,40,30,0.5)"; g.lineWidth = 0.35; g.beginPath(); g.moveTo(9.3, 1); g.lineTo(9.3, T.D - 1); g.stroke();
+  // (end-s27-fix1) no spine band on the top face (the source's cover is one colour; the rounded spine is drawn at the end)
   // speckle
   for (let i = 0; i < 120; i++) { const x = (i * 37.3) % T.W, y = (i * 23.9) % T.D; g.fillStyle = "rgba(255,240,220,0.12)"; g.fillRect(x, y, 0.4, 0.4); }
-  g.lineWidth = 0.55; g.strokeStyle = INKC; g.beginPath(); g.roundRect(0.3, 0.3, T.W - 0.6, T.D - 0.6, 1.2); g.stroke();
+  g.lineWidth = 0.95; g.strokeStyle = "#3b2622"; g.beginPath(); g.roundRect(0.45, 0.45, T.W - 0.9, T.D - 0.9, 1.2); g.stroke();   // (end-s27-fix1) the source's dark keyline
   if (withPencil) paintPencil(g, [30, 6], [84, 44], 2.2);
   return c;
 }
@@ -70,9 +80,23 @@ export function paintPencil(g, a, b, w) {
   g.beginPath(); g.moveTo(...P(0, 0.9)); g.lineTo(...q0); g.lineTo(...q3); g.lineTo(...P(0, -0.9)); g.closePath(); g.fillStyle = "#dc8a86"; g.fill(); g.stroke();
 }
 // page block side strip (u along the edge, v top->bottom)
+// (end-s27-fix1) darker ink edges and the page lines of the source's page block (cream-grey pages between the brown
+// boards, a few fine darker lines)
+// (end-s27-tfix) re-measured on the front edge at 119.0 (graded, x 1900): top board ~6 px (edge ink 793–799), page block
+// 801–823 (pinkish grey 164–181,141–154,129–143 with fine lines), bottom board and its ink 825–829; the strip is now 30–36 px
+// deep (drawNotebook) with the page block ~60 % of it (it was 20 px with pages ~45 %: a thin pad)
 export function paintPageStrip() {
-  const c = canvas(8, 48), g = c.getContext("2d");
-  g.fillStyle = lin(g, 0, 0, 0, 48, [[0, INKC], [0.06, INKC], [0.08, "#9a6a50"], [0.22, "#9a6a50"], [0.26, "#cdb9a3"], [0.7, "#bba48e"], [0.76, "#9a6a50"], [0.92, "#8d5e47"], [0.95, INKC], [1, INKC]]);
-  g.fillRect(0, 0, 8, 48);
+  const c = canvas(8, 64), g = c.getContext("2d");
+  g.fillStyle = lin(g, 0, 0, 0, 64, [[0, "#3b2622"], [0.05, "#3b2622"], [0.07, "#9c6a52"], [0.14, "#8a5a44"], [0.16, "#3b2622"], [0.19, "#c9aea3"], [0.5, "#c0a79b"], [0.76, "#b09688"], [0.79, "#3b2622"], [0.82, "#7d503d"], [0.92, "#6d4434"], [0.95, "#3b2622"], [1, "#3b2622"]]);
+  g.fillRect(0, 0, 8, 64);
+  g.fillStyle = "rgba(90,66,58,0.4)"; for (const y of [18.5, 23.5, 29, 35.5, 41, 45.5]) g.fillRect(0, y, 8, 0.8);
+  return c;
+}
+// (end-s27-tfix) the spine face along the c3-c0 edge, seen from the front-left at 119–121: flat maroon-brown (graded ~140,83,68,
+// slightly darker toward the desk) between the top board's edge ink and the bottom ink line
+export function paintSpineFace() {
+  const c = canvas(8, 64), g = c.getContext("2d");
+  g.fillStyle = lin(g, 0, 0, 0, 64, [[0, "#3b2622"], [0.06, "#3b2622"], [0.1, "#8e574c"], [0.45, "#7c4a42"], [0.84, "#6f413a"], [0.9, "#3b2622"], [1, "#3b2622"]]);
+  g.fillRect(0, 0, 8, 64);
   return c;
 }

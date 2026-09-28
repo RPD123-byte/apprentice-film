@@ -14,8 +14,10 @@
 //                to it (93.84–94.84), a flare (94.88–95.12), a pair in each wing
 //   95.60–95.92  the aura blows off; it hovers with the two pairs in a thin speed ring
 //   95.96–97.04  it zips round the page, leaving shard cut lines
-// Everything is drawn: the page is F1's (sites.js), the banner F2's (hippie.js), the owl the F4 kit (owlInk.js) posed in
-// s23/bird.js; effects in s23/fx.js. No source pixel is used.
+// Everything is drawn: the page is F1's (sites.js), the banner F2's (hippie.js). The owl (targeted fix, 2026-09-27) is
+// an engraved drawing per beat in s23/owlE.js (hand-read landmarks, drawn with the s24 kit copied to s23/eng/); only
+// the 84.04 hug still uses the F4 kit (owlInk.js via s23/bird.js). The aura and flare are s23/fire.js; the rings,
+// scraps, shards and confetti s23/fx23.js. No source pixel is used.
 import { drawFramedPage, addScreenGlow, sokoPageCanvas, sokoHeaderCanvas, HEADER, HEADER_FRAMED, FRAMED, releaseSoko, PAGE_W, PAGE_H } from "../lib/sites.js";
 import { hippieBannerCanvas, releaseHippie } from "../lib/hippie.js";
 import { STRIP_TRK, STRIP_DISS, BAN_TRK, SHAKE } from "./s23/tracks.js";
@@ -23,7 +25,9 @@ import { STRIP_WALK, BAN_WALK, WALK_Y, STRIP_EXIT, BAN_ENTRY, HOP, at, lerpTab }
 import { POSES23 as P, birdLayer, drawLayer, releaseBirds, HUG_WING } from "./s23/bird.js";
 import { paintWing23 } from "./s23/wings.js";
 import { gv } from "../lib/owlInk.js";
-import { drawAura3, drawFlare3, releaseFlames } from "./s23/flames.js";
+import { releaseFlames } from "./s23/flames.js";
+import { drawFire, drawFlareE, releaseFire } from "./s23/fire.js";
+import { owlPowerLayer, owlReachLayer, owlTwoLayer, owlCrouchLayer, owlWipeLayer, zipLayer, carryLayer, pressLayer, releaseOwlE } from "./s23/owlE.js";
 import { drawAura, drawFlare, drawRemnant, ring, bigRing, drawPapers, drawShards, drawConfetti, drawImpact, releaseFx } from "./s23/fx23.js";
 import { drawScissors, drawSprout } from "./s23/props.js";
 import { SHARDS } from "./s23/tracks.js";
@@ -114,48 +118,57 @@ function drawCard(g) {
 
 // ---------------------------------------------------------------- the owl per source frame
 // returns [{ L (layer), alpha, m? }] to paint, in frame px
-const WALK_PH = (k, k0) => ["carry0", "carry1", "carry2", "carry3"][Math.floor((k - k0) / 2) % 4];
 function owlAt(k) {
   const out = [];
   // each drawing is built once at the origin (cached per pose, size and flip) and moved to (x, y) when drawn
-  const lay = (name, x, y, s, o = {}) => out.push({ L: birdLayer(P[name], { x: 0, y: 0, s, flip: !!o.flip, rot: o.rot || 0 }, { key: `${name}:${s}:${!!o.flip}:${o.rot || 0}` }), alpha: o.alpha ?? 1, dx: x, dy: y });
   if (k <= 2102) return out;
-  if (k <= 2139) { const [, a, b] = at(STRIP_WALK, k); lay(k <= 2104 ? "carryOpen" : WALK_PH(k, 2103), (a + b) / 2 - 5, WALK_Y, 0.42); return out; }
+  // (targeted fix: the carries are the engraved carry drawing of s23/owlE.js, read on 2112; four foot drawings on twos,
+  // mirrored while it looks right, the facing-us heads at the squeeze and the end of the walk; the lift-off and the
+  // drop-in use the same drawing, feet together)
+  const car = (x, y, o = {}) => out.push({ L: carryLayer(o.fi ?? 0, o.head || "side", !!o.flip), alpha: o.alpha ?? 1, dx: x, dy: y });
+  const FI = (k, k0) => Math.floor((k - k0) / 2) % 4;
+  if (k <= 2139) { const [, a, b] = at(STRIP_WALK, k); car((a + b) / 2 - 5, WALK_Y, { fi: k <= 2104 ? 0 : FI(k, 2103) }); return out; }
   if (k <= 2144) {
     // 85.60–85.76: two copies dissolve (the held one at the 85.56 pose, the new one moving on)
     const w = STRIP_DISS[k] ? STRIP_DISS[k][1][1] : 1, [, a, b] = at(STRIP_WALK, 2139);
-    lay("carry1", (a + b) / 2 - 5, WALK_Y, 0.42, { alpha: 1 - w });
+    car((a + b) / 2 - 5, WALK_Y, { fi: 1, alpha: 1 - w });
     const x2 = (a + b) / 2 - 5 + (STRIP_DISS[k] ? STRIP_DISS[k][1][0][2] - 1142.6 : 0), y2 = WALK_Y + (STRIP_DISS[k] ? (STRIP_DISS[k][1][0][3] + 234.4) * 0.3 : 0);
-    lay("lift", x2, y2, 0.42, { alpha: w });
+    car(x2, y2, { fi: 2, alpha: w });
     return out;
   }
-  if (k <= 2150) { const [x, y] = lerpTab(STRIP_EXIT, k); lay("lift", x, y, 0.42); return out; }
+  if (k <= 2150) { const [x, y] = lerpTab(STRIP_EXIT, k); car(x, y, { fi: 2 }); return out; }
   if (k <= 2162) return out;
-  if (k <= 2167) { const [x, y] = lerpTab(BAN_ENTRY, k); lay(k >= 2166 ? "carry1" : "lift", x, y, 0.42); return out; }
+  if (k <= 2167) { const [x, y] = lerpTab(BAN_ENTRY, k); car(x, y, { fi: 2 }); return out; }
   if (k <= 2203) {
     const [, a, b] = at(BAN_WALK, k), x = (a + b) / 2 - 5;
-    if (k <= 2191) lay(WALK_PH(k, 2168), x, WALK_Y, 0.42);
-    else if (k <= 2193) lay("carrySq", x, WALK_Y, 0.42);
-    else if (k <= 2201) lay(WALK_PH(k, 2194), x, WALK_Y, 0.42, { flip: true });
-    else lay("carryF", x, WALK_Y, 0.42);
+    if (k <= 2191) car(x, WALK_Y, { fi: FI(k, 2168) });
+    else if (k <= 2193) car(x, WALK_Y, { fi: 2, head: "sq" });
+    else if (k <= 2201) car(x, WALK_Y, { fi: FI(k, 2194), flip: true });
+    else car(x, WALK_Y, { fi: 2, head: "front" });
     return out;
   }
   // held at the end of the walk, facing us (re-measured at 88.24: head centre (727, 250), feet on the lip at ≈ 355)
-  if (k <= 2208) { lay("carryF", 727, WALK_Y + 2, 0.42); return out; }
-  if (k <= 2239) { lay("press", 721, 320, 0.425); return out; }
-  if (k <= 2253) { const [, x, y] = at(HOP, k); lay(k <= 2242 ? "press" : k <= 2249 ? "hopUp" : "land", x, y, 0.41); return out; }
-  if (k <= 2257) { lay("spread", 692, 522, 0.42); return out; }
-  if (k <= 2261) { lay("wipeUp", 692, 520, 0.41); return out; }
-  // the wing stays on the brow, eyes shut, through 2295 (2290–2295 is a redraw, not a lowering); crouch from 2296
-  if (k <= 2295) { lay("wipe", 693, 520 + (Math.floor(k / 2) % 2), 0.41); return out; }
-  if (k <= 2314) { lay("crouch", 692, 530, 0.43); return out; }
-  if (k === 2315) { lay("antic", 695, 520, 0.47); return out; }
-  if (k <= 2345) { lay("power", 690, 528, 0.475); return out; }
-  if (k <= 2371) { lay("reach", 688, 528, 0.475); return out; }
-  if (k <= 2398) { lay("two", 693, 528, 0.475); return out; }
+  if (k <= 2208) { car(727, WALK_Y + 2, { fi: 2, head: "front" }); return out; }
+  // (targeted fix: the press, the hop and the landing use the engraved press / carry drawings of s23/owlE.js)
+  const prs = (x, y) => out.push({ L: pressLayer(), alpha: 1, dx: x, dy: y });
+  if (k <= 2239) { prs(721, 320); return out; }
+  if (k <= 2253) { const [, x, y] = at(HOP, k); if (k <= 2242) prs(x, y); else car(x, y, { fi: 2, head: "front" }); return out; }
+  if (k <= 2257) { prs(692, 522); return out; }
+  const eng0 = (E, dy = 0) => out.push({ L: { canvas: E.c, x: E.x, y: E.y, w: E.c.width, h: E.c.height }, alpha: 1, dx: 0, dy });
+  // (targeted fix: the wipe and the crouch are the engraved drawings of s23/owlE.js, read on 2280 / 2305)
+  if (k <= 2295) { eng0(owlWipeLayer(), Math.floor(k / 2) % 2); return out; }
+  if (k <= 2314) { eng0(owlCrouchLayer()); return out; }
+  // 2315: the one anticipation frame (a soft, rising redraw of the crouch in the source)
+  if (k === 2315) { eng0(owlCrouchLayer(), -6); return out; }
+  // targeted fix: the powered-up owl is the engraved drawing of s23/owlE.js (frame px, read on 2327)
+  const eng = (E) => out.push({ L: { canvas: E.c, x: E.x, y: E.y, w: E.c.width, h: E.c.height }, alpha: 1, dx: 0, dy: 0 });
+  if (k <= 2345) { eng(owlPowerLayer()); return out; }
+  if (k <= 2371) { eng(owlReachLayer()); return out; }
+  if (k <= 2398) { eng(owlTwoLayer()); return out; }
   // zipping round the page: held drawings between one-frame streaks (drawn by fxZip)
+  // (targeted fix: the zip drawings are the engraved A / B of s23/owlE.js, placed by their root = body centre)
   const Z = ZIP[k];
-  if (Z) lay(Z[0], Z[1], Z[2], 0.475, { flip: !!Z[3] });
+  if (Z) out.push({ L: zipLayer(Z[0], !!Z[3]), alpha: 1, dx: Z[1], dy: Z[2] });
   return out;
 }
 
@@ -214,8 +227,8 @@ function fxLayer(k, t) {
   const L = [];
   if (k >= 2391) L.push((g) => drawSprout(g));
   // the aura: one drawing that boils every frame (6 variants); the flare replaces it for 2372–2378
-  if (k >= 2316 && k <= 2389 && !(k >= 2372 && k <= 2378)) L.push((g) => drawAura3(g, k % 6));
-  if (k >= 2372 && k <= 2378) L.push((g) => drawFlare3(g, k <= 2373 ? "a" : k <= 2376 ? "b" : k === 2377 ? "c" : "d"));
+  if (k >= 2316 && k <= 2389 && !(k >= 2372 && k <= 2378)) L.push((g) => drawFire(g, k % 6));
+  if (k >= 2372 && k <= 2378) L.push((g) => drawFlareE(g, k <= 2373 ? "a" : k <= 2376 ? "b" : k === 2377 ? "c" : "d"));
   if (k === 2390) L.push((g) => drawRemnant(g, 2390));
   return L;
 }
@@ -228,6 +241,10 @@ function fxFront(k, t) {
   if (PAPER_Q[k]) L.push((g) => drawPaperQuads(g, k));
   if (k >= 2346 && k <= 2371) L.push((g) => drawFlyingScissors(g, k));
   if (k >= 2211 && k <= 2233) L.push((g) => drawImpact(g, k));
+  // (targeted fix) the scissors it grabbed on landing: hanging from its right wing (89.96–90.12), then planted by its
+  // right foot with the wing on the rings (90.16–90.28; from 90.32 the wipe drawing carries them)
+  if (k >= 2250 && k <= 2253) { const [, x, y] = at(HOP, k); L.push((g) => drawScissors(g, { x: x + 55, y: y + 10, ang: Math.PI / 2 + 0.12, L: 60, open: 0.08, lw: 1.6 })); }
+  if (k >= 2254 && k <= 2257) L.push((g) => drawScissors(g, { x: 760, y: 530, ang: Math.PI / 2 + 0.05, L: 48, open: 0.08, lw: 1.6 }));
   if (k >= 2402) L.push((g) => drawShards(g, k / 25, SHARDS));
   if (k >= 2425) L.push((g) => drawConf(g));
   for (const S of STREAK.filter((q) => q[0] === k)) L.push((g) => drawSmear2(g, k, S));
@@ -290,15 +307,16 @@ function drawSmear2(g, k, [ , a, b, w, a0, pose, root, flip, rot, headA]) {
   }
   // 3) + 4) the owl
   if (pose) {
-    const L = birdLayer(P[pose], { x: 0, y: 0, s: 0.475, flip, rot }, { key: `${pose}:0.475:${flip}:${rot}` });
+    const L = zipLayer(pose, !!flip);
     const hx = root[0], hy = root[1];
+    const put = (x, y) => { g.save(); g.translate(x, y); if (rot) g.rotate(rot); g.drawImage(L.canvas, L.x, L.y, L.w, L.h); g.restore(); };
     for (let i = 40; i >= 1; i--) {
       const u = i / 40 * 0.4;
       g.globalAlpha = 0.045 * headA;
-      g.drawImage(L.canvas, hx - dx * u + L.x, hy - dy * u + L.y, L.w, L.h);
+      put(hx - dx * u, hy - dy * u);
     }
     // the owl at the head is itself motion-soft in the source
-    g.globalAlpha = headA; g.filter = "blur(1.6px)"; g.drawImage(L.canvas, hx + L.x, hy + L.y, L.w, L.h); g.filter = "none";
+    g.globalAlpha = headA; g.filter = "blur(1.6px)"; put(hx, hy); g.filter = "none";
   }
   g.restore();
 }
@@ -452,5 +470,5 @@ export const shot = {
     ctx.drawImage(buf, dx, dy);
     ctx.restore();
   },
-  release() { sideGrads.clear(); stripC = null; bannerPage = null; buf = null; releaseBirds(); releaseFx(); releaseFlames(); releaseSoko(); releaseHippie(); },
+  release() { sideGrads.clear(); stripC = null; bannerPage = null; buf = null; releaseBirds(); releaseFx(); releaseFlames(); releaseFire(); releaseOwlE(); releaseSoko(); releaseHippie(); },
 };

@@ -25,7 +25,7 @@ import { rng } from "../../lib/rng.js";
 const TAU = Math.PI * 2;
 // one tongue from base B to tip T: base width w, S-sway amplitude (px), tip hook (px, + = to the tongue's left),
 // phase ph. Returns the outline (closed polygon).
-function tongue(B, T, w, sway, hook, ph, N = 30, prof = 0.65) {
+export function tongue(B, T, w, sway, hook, ph, N = 30, prof = 0.65) {
   const dx = T[0] - B[0], dy = T[1] - B[1], L = Math.hypot(dx, dy) || 1, d = [dx / L, dy / L], n = [-d[1], d[0]];
   const C = (u) => {
     const s = sway * Math.sin(Math.PI * u * 1.55 + ph) * Math.sin(Math.PI * Math.min(1, u * 1.1)) + hook * u * u * u;
@@ -45,7 +45,7 @@ function tongue(B, T, w, sway, hook, ph, N = 30, prof = 0.65) {
   return { pts: [...Lp, ...Rp.reverse()], C };
 }
 // a smooth blob (core masses): centre, radii, wobble
-function blob(cx, cy, rx, ry, wob, ph, N = 48) {
+export function blob(cx, cy, rx, ry, wob, ph, N = 48) {
   const pts = [];
   for (let i = 0; i < N; i++) {
     const a = (i / N) * TAU, k = 1 + wob * Math.sin(a * 5 + ph) + wob * 0.6 * Math.sin(a * 9 + ph * 2);
@@ -112,7 +112,7 @@ function renderMass(box, shapes, o = {}) {
 
 // ---------------------------------------------------------------- the aura
 // top-row tongue tips (measured, see above); the base sits 110–170 px below, leaning in toward the owl (x 695)
-const AURA_TIPS = [[486, 452], [512, 440], [532, 384], [553, 398], [572, 390], [592, 352], [613, 362], [633, 355], [652, 338], [672, 352],
+export const AURA_TIPS = [[486, 452], [512, 440], [532, 384], [553, 398], [572, 390], [592, 352], [613, 362], [633, 355], [652, 338], [672, 352],
   [692, 302], [712, 314], [731, 302], [752, 334], [771, 358], [791, 328], [811, 394], [832, 408], [853, 393], [874, 400], [898, 434], [916, 462]];
 function auraShapes(variant) {
   const R = rng(5200), rv = rng(5200 + variant * 131), j = (a) => (rv() - 0.5) * 2 * a, S = [];
@@ -176,7 +176,7 @@ function auraShapes(variant) {
 //    upper-left / upper-right bands, fuller behind the head;
 //  - the flanks bulge and their tongues curl outward (hooked tips) to x ≈ 470 / 930;
 //  - grey smoke (graded ≈ 90–130) drifts over the boxes at the left, x 330–520, y 380–600.
-function coreTop(x) {
+export function coreTop(x) {
   // the top edge of the core masses (below it everything is flame body)
   let y = 1e9;
   const e = (cx, cy, rx, ry) => { const u = (x - cx) / rx; if (Math.abs(u) < 1) y = Math.min(y, cy - ry * Math.sqrt(1 - u * u)); };
@@ -353,7 +353,7 @@ const FLARE3 = {
   d: { tips: [[456, 475], [505, 436], [536, 388], [566, 362], [596, 340], [640, 312], [656, 288], [700, 249], [746, 234], [762, 300], [790, 320], [822, 295], [840, 353], [870, 350], [894, 392], [912, 436]],
     body: [475, 925, 420, 600], wide: { 746: 56, 700: 56 }, rays: [] },
 };
-function flareShapes(stage) {
+export function flareShapes(stage) {
   const F = FLARE3[stage], R = rng(7700 + stage.charCodeAt(0)), S = [];
   const [xl, xr, yt, yb] = F.body, cx = (xl + xr) / 2;
   // tongues from the body up to the measured tips; they fan out from the owl (axes back toward ≈ (cx, 480)), fuller

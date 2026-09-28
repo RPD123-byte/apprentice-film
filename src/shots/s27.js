@@ -1,701 +1,682 @@
-// s27 (117.52–129.30): out of the screen into the sunny morning room — DRAWN rebuild.
-// Everything on screen is drawn by code (src/shots/s27/drawn/*). The source film was used only to MEASURE: positions,
-// outlines, timing, camera/plane motion and colours (tools: snapshots/s27d-tools, measurements: snapshots/s27d-meas).
-//   117.52–117.92  pull-back out of the laptop screen: the held view drawn zoomed 2.5 -> 1 about the screen, under a
-//                  radial zoom blur and a white wash (zoom measured from the page's size on the screen)
-//   117.92–119.72  hold on the laptop on the desk (colour site on the screen, speakers, mug, notebook, shelves, window)
-//   119.72–124.8   the camera swings round the laptop (~83° of lid yaw) and finds the designer asleep on his arms
-//   125.44–127.1   the owl climbs out of the page, flies out and lands on the keyboard (^^ blink, wink)
-//   127.6–129.30   the camera starts round behind the laptop; the lid goes edge-on (~128.64) and shows its back
-// The source camera move is not rigid (the room is redrawn as it turns), so each element is its own plane or sprite,
-// moved by its own measurement: the back wall by one masked-KLT homography, the screen by a SIFT page homography, the
-// laptop base by hinge + hand-keyed corners (+ an ECC deck track in the end orbit), the designer by a KLT mesh warp,
-// props and the owl by hand-read keyframes (keys.js).
+// s27 (117.52–129.30): out of the screen into the sunny morning room.
+//   117.52–117.92  the camera pulls back out of the laptop screen (measured zoom 2.50 -> 1.0) under a radial blur,
+//                  through a white wash that peaks at 117.64
+//   117.92–119.8   hold on the laptop on the light wood desk: the colour site on the screen (with its owl on the
+//                  yellow box), speakers on a low cabinet, mug, notebook and pencil, shelves with plants, the window
+//   119.8–124.6    the camera swings round to the left (the laptop turns ~83 degrees like a turntable) and reveals the
+//                  designer asleep on his folded arms, beanie, headphones round his neck; he enters at 120.9
+//   125.4–127.1    the owl climbs out of the page on the screen, flies out (wings up, feet down), lands on the keyboard
+//                  at 126.9, a happy ^^ blink and a wink, then sits looking at us
+//   127.6–129.30   the camera starts round behind the laptop (the lid swings edge-on at ~128.6 and shows its back)
+//
+// The source is an AI-style camera move that does not keep the room rigid, so every element is its own layer driven by
+// its own measured track (s27/data.js, data2.js, data3.js; scripts in snapshots/s27-meas and snapshots/s27-k-tools):
+//   lid        page->frame homography of the screen content, SIFT, every frame 118.0–128.44 (then lid-outline fits)
+//   base       top-face corners chamfer-fitted to the edges, hinge tied to the lid (keyframes after 127.64); the owl's
+//              measured shadow rides it
+//   room       vector traces of the source's room (flat colour regions + ink, objects cut out) at 119.6, 125.0, 129.28
+//              and 14 key times along the move (s27/room*.js, s27/keys), each placed by the wall homography relative to
+//              its own frame and cross-faded to the next; the hand-painted views only fill the edges
+//   designer   traced at 125.0 s (a registered median, grain-free) and at 7 key times of the end orbit (s27/dkeys);
+//              moved by a 12x9 mesh tracked on the source by template alignment (121.6–129.28), by a similarity
+//              fitted on his outline while he enters (120.7–121.6)
+//   owl        traced from the source on every frame 125.40–129.00 (s27/owlTrace.js), clipped to the display while it
+//              is inside the page; then the 129.00 trace moved by the face's measured drift
+//   mug, notebook, pencil   chamfer outline fits / keyframes read off gridded crops
+// All traces are vector data (polygons + measured colours) redrawn with canvas paths; layers are composited through
+// perspective-correct quads and meshes in WebGL (s27/gl.js).
+//
+// (s27t pass, 2026-09-27: the traced build restored as the active s27 per the user's decision in STYLE.md, then fixed; the
+// hand-drawn rebuild is kept unused in s27/drawn/ and archive/prev-builds/s27-drawn-prev/. Scripts:
+// tools/trace-scripts/s27t-tools, see fidelity/s27.md.)
+//   whip        blur/wash re-fitted per frame to the source (symmetric radial blur about his face, WHIP_FX)
+//   lid         rim and bezel re-measured (lit in the hold, darker once the camera has swung: LIDTURN); bilinear mesh while
+//               edge-on (no stray texture); the sunlit back as it swings past (end-s27-fix1: s27/lidback.js)
+//   base        keyboard/trackpad re-measured, contact shadow, finger notch, per-0.2 s colour gain of the deck (deckgain.js)
+//   designer    end-orbit keys completed with the near sleeve they had cut off (traced from the source), a background
+//               spur and two background chunks moved out; per-view mesh corrections from chained source flow (desfix.js)
+//   room keys   the designer's traced remnants removed from 121.2/121.6/122.0 and the sleeve copies from 128.2–128.68
+// (end-s27-fix1, 2026-09-27; scripts and data edits in snapshots/end-s27-fix1-tools/README.txt, see fidelity/s27.md)
+//   mug keys through the end orbit (MUG_D); lid back fitted per frame (s27/lidback.js) and the edge-on pass re-timed
+//   (LID_TWARP) with the lid's thickness; notebook corner order fixed; side-view keyboard dark; the "tag" cut from the
+//   designer; traced page owl (s27/pageOwl.js); softer designer fill / thinner ink / one keyline between key views; traced
+//   chair at the left edge (s27/chairTrace.js); speaker out of the 129.28 key (s27/speaker.js); whip 117.76/117.80
+// (end-s27-tfix, 2026-09-27; snapshots/end-s27-tfix-tools/README.txt) end-orbit room = 13 traced keys, one every 3 frames
+//   (s27/okeys), carried onto the frames between them by per-frame room meshes measured on the source (s27/orbitMesh.js,
+//   drawOrbit) instead of cross-fading keys 6-8 frames apart; the lid's near edge seen from behind; lid-back speckle; base
+//   underside line and contact shadow; hardcover notebook; mug re-toned; grain x1.35 through grade()
 import { W, H } from "../config.js";
-import { getGL, hmul, hinv, happly, hquad } from "./s27/drawn/gl.js";
-import { SCREEN, WALL, BASE_END, SHELF_B } from "./s27/drawn/tracks.js";
-import { hippiePageCanvas } from "../lib/hippie.js";
-import { paintWall, paintWallLow, paintWallCab, WALL_BOX, paintDesk, DESK_BOX, paintShelfA, SHELF_A_BOX, paintShelfB, SHELF_B_BOX, paintLateSill, LATE_SILL_BOX } from "./s27/drawn/room.js";
-import * as LT from "./s27/drawn/laptop.js";
-import { BASE_FL, BASE_FR, BASE_BACK_PAGE, NB_K, PENCIL_K, MUG_K, LID_END, NB_END, PENCIL_END, JAKCONT, CHAIR_K } from "./s27/drawn/keys.js";
-import { paintDesigner, DES_BOX, paintDesigner2, DES2_BOX } from "./s27/drawn/designer.js";
-import { DES2_GRID, DES2_MESH } from "./s27/drawn/des2mesh.js";
-import { DES_GRID, DES_MESH } from "./s27/drawn/desmesh.js";
-import { drawColorOwl } from "./s27/drawn/owl.js";
-import { drawMug, drawMugSheet, drawNotebook, drawPencil } from "./s27/drawn/props.js";
+import { getGL, hquad, hmul, happly, hinv } from "./s27/gl.js";
+import { SCREEN, BG, BG_END, DES_GRID } from "./s27/data.js";
+import { DES_ENTRY, MUG_A, MUG_B, MUG_C, LID_END, NOTEBOOK_K, PENCIL_K, BASE_ALL, OWL_END } from "./s27/data2.js";
+import { DES_MESH, OWL_SHADOW } from "./s27/data3.js";
+import { KEYS } from "./s27/keys/index.js";
+import { hippiePageCanvas, releaseHippie } from "../lib/hippie.js";
+import { paintWallA, paintDeskA, A_BOX, paintRoomB, B_BOX, paintRoomC, C_BOX, paintTraceA, paintTraceB, paintTraceC, paintTrace, KEY_BOX } from "./s27/room.js";
+import * as LT from "./s27/laptop.js";
+import { paintDesigner, DES_BOX, DES_SC, paintDesignerKey, DKEY_BOX } from "./s27/designer.js";
+import { DKEYS } from "./s27/dkeys/index.js";
+import { drawOwl, owlTraceAt, paintOwlTrace } from "./s27/owl.js";
+import { paintMug, mugH, paintNotebookTop, paintPageStrip, paintSpineFace, paintPencil, NB_TEX } from "./s27/props.js";
+import { canvas } from "./s27/paint.js";
+import { DECK_GAIN } from "./s27/deckgain.js";
+import { PAGE_OWL_REGIONS, PAGE_OWL_INK } from "./s27/pageOwl.js";
+import { CHAIR } from "./s27/chairTrace.js";
+import { SPEAKER_REGIONS, SPEAKER_INK } from "./s27/speaker.js";
+import { poly as dec } from "./s27/codec.js";
+import { DES_FIX, DES_FIX_NODES } from "./s27/desfix.js";
+import { OKEYS } from "./s27/okeys/index.js";
+import { OM, OM_GRID } from "./s27/orbitMesh.js";
 
-const clamp01 = (v) => Math.max(0, Math.min(1, v));
-const I3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-const HOLD_END = 119.72;
-const SHELF_SWAP = 122.52;
-
-// ---------------------------------------------------------------- sampling helpers
-function rowH(r) { return [r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], 1]; }
-// per-frame homography rows (0.04 s apart), linear between rows
-function trackAt(T, t, before = null) {
-  const n = T.length;
-  if (t <= T[0][0]) return before || rowH(T[0]);
-  if (t >= T[n - 1][0]) return rowH(T[n - 1]);
-  let i = Math.min(n - 2, Math.max(0, Math.floor((t - T[0][0]) / 0.04)));
-  while (i > 0 && T[i][0] > t) i--;
-  while (i < n - 2 && T[i + 1][0] < t) i++;
-  const a = T[i], b = T[i + 1], u = clamp01((t - a[0]) / (b[0] - a[0]));
-  const out = new Array(9); for (let k = 0; k < 8; k++) out[k] = a[k + 1] + (b[k + 1] - a[k + 1]) * u; out[8] = 1;
-  return out;
-}
-// keyframe rows [t, v1, v2, ...]: cubic Hermite with Catmull-Rom tangents scaled for uneven key spacing
-function keyAt(K, t) {
-  const n = K.length;
-  if (t <= K[0][0]) return K[0].slice(1);
-  if (t >= K[n - 1][0]) return K[n - 1].slice(1);
-  let i = 1; while (i < n - 1 && K[i][0] < t) i++;
-  const p1 = K[i - 1], p2 = K[i], p0 = K[Math.max(0, i - 2)], p3 = K[Math.min(n - 1, i + 1)];
-  const d1 = p2[0] - p1[0], d0 = (p1[0] - p0[0]) || d1, d2 = (p3[0] - p2[0]) || d1, u = (t - p1[0]) / d1;
-  const h00 = 2 * u * u * u - 3 * u * u + 1, h10 = u * u * u - 2 * u * u + u, h01 = -2 * u * u * u + 3 * u * u, h11 = u * u * u - u * u;
-  return p1.slice(1).map((v, k0) => {
-    const k = k0 + 1;
-    const m1 = (p0 === p1 ? (p2[k] - p1[k]) / d1 : ((p2[k] - p1[k]) / d1 + (p1[k] - p0[k]) / d0) * 0.5) * d1;
-    const m2 = (p3 === p2 ? (p2[k] - p1[k]) / d1 : ((p3[k] - p2[k]) / d2 + (p2[k] - p1[k]) / d1) * 0.5) * d1;
-    return h00 * v + h10 * m1 + h01 * p2[k] + h11 * m2;
-  });
-}
-// linear keys (for keys that must not overshoot)
-function linAt(K, t) {
-  const n = K.length;
-  if (t <= K[0][0]) return K[0].slice(1);
-  if (t >= K[n - 1][0]) return K[n - 1].slice(1);
-  let i = 1; while (i < n - 1 && K[i][0] < t) i++;
-  const a = K[i - 1], b = K[i], u = (t - a[0]) / (b[0] - a[0]);
+// ---------- table helpers ----------
+function seg(T, t) { let i = 1; while (i < T.length - 1 && T[i][0] < t) i++; return i; }
+function lerpRows(T, t) {
+  if (t <= T[0][0]) return T[0].slice(1);
+  if (t >= T[T.length - 1][0]) return T[T.length - 1].slice(1);
+  const i = seg(T, t), a = T[i - 1], b = T[i], u = (t - a[0]) / (b[0] - a[0]);
   return a.slice(1).map((v, k) => v + (b[k + 1] - v) * u);
 }
-
-// ---------------------------------------------------------------- measured planes
-let SCREEN_HOLD = null;
-function screenHold() {   // median of the page homography over the static hold 117.96–119.64
-  if (!SCREEN_HOLD) {
-    const rows = SCREEN.filter((r) => r[0] >= 117.96 && r[0] <= 119.64);
-    SCREEN_HOLD = [1, 2, 3, 4, 5, 6, 7, 8].map((k) => { const v = rows.map((r) => r[k]).sort((a, b) => a - b); return v[v.length >> 1]; });
-    SCREEN_HOLD.push(1);
-  }
-  return SCREEN_HOLD;
+function crRows(T, t) {
+  const n = T.length;
+  if (t <= T[0][0]) return T[0].slice(1);
+  if (t >= T[n - 1][0]) return T[n - 1].slice(1);
+  const i = seg(T, t), p0 = T[Math.max(0, i - 2)], p1 = T[i - 1], p2 = T[i], p3 = T[Math.min(n - 1, i + 1)];
+  const u = (t - p1[0]) / (p2[0] - p1[0]), u2 = u * u, u3 = u2 * u;
+  return p1.slice(1).map((_, k0) => { const k = k0 + 1; return 0.5 * (2 * p1[k] + (-p0[k] + p2[k]) * u + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * u2 + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * u3); });
 }
-function screenH(t) { return t < HOLD_END ? screenHold() : trackAt(SCREEN, t); }
-function wallH(t) { return t < HOLD_END ? I3 : trackAt(WALL, t, I3); }
-
-// lid corners (frame px) for its page-space corners TL TR BR BL; after 128.36 from the hand-read end keys
-const LIDC = [[LT.LID.x0, LT.LID.y0], [LT.LID.x1, LT.LID.y0], [LT.LID.x1, LT.LID.y1], [LT.LID.x0, LT.LID.y1]];
-let LID_TAB = null;
-function lidCorners(t) {
-  if (!LID_TAB) {
-    const S = trackAt(SCREEN, 128.36);
-    LID_TAB = [[128.36].concat(...LIDC.map(([x, y]) => happly(S, x, y)))].concat(LID_END);
-  }
-  const v = linAt(LID_TAB, t);
-  return [[v[0], v[1]], [v[2], v[3]], [v[4], v[5]], [v[6], v[7]]];
-}
-const areaOf = (q) => { let a = 0; for (let i = 0; i < q.length; i++) { const p = q[i], r = q[(i + 1) % q.length]; a += p[0] * r[1] - r[0] * p[1]; } return a / 2; };
-
-// base top face: texture corners -> frame corners
-const BTEX = [[0, 0], [LT.BASE_TW, 0], [LT.BASE_TW, LT.BASE_TD], [0, LT.BASE_TD]];
-function baseCornersMid(t) {
-  const S = screenH(t);
-  return [happly(S, BASE_BACK_PAGE[0][0], BASE_BACK_PAGE[0][1]), happly(S, BASE_BACK_PAGE[1][0], BASE_BACK_PAGE[1][1]), keyAt(BASE_FR, t), keyAt(BASE_FL, t)];
-}
-let BASE_127 = null;
-function baseCorners(t) {
-  if (t < HOLD_END) return LT.BASE_CORNERS_REF;
-  if (t <= 127.6) return baseCornersMid(t);
-  if (!BASE_127) BASE_127 = baseCornersMid(127.6);
-  const D = trackAt(BASE_END, t);
-  return BASE_127.map(([x, y]) => happly(D, x, y));
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+const smooth = (v) => { v = clamp01(v); return v * v * (3 - 2 * v); };
+function keys(K, t) {   // keyframe rows [t, ...values] with smooth (Catmull) interpolation
+  return crRows(K, t);
 }
 
-// the desk plane (held-view ref px -> frame). The source camera is not rigid: while the laptop turns, the desk's front
-// edge stays put at the bottom of the frame (y ≈ 862, measured on strips 119.8–121.6) and only then slides out of
-// frame (121.6–122.4). So the desk is pinned to the base's two front corners (base track) and to its own front edge
-// line (y = DESK_FRONT(t), x from the base-riding extrapolation).
-// (fix pass 1) re-measured on luma profiles at x 300/800/1200: y 870 in the hold, then 872 (120.0), 875 (120.25), 877 (120.5),
-// 879 (120.75), 881 (121.0), 893 (121.5), 900 (121.75), 904 (122.0), 907 (122.25), 909 (122.5), 912 (123.0)
-const DESK_FRONT = [[119.72, 871], [120.0, 872], [120.25, 874], [120.5, 876], [120.75, 878], [121.0, 881], [121.5, 893], [121.75, 900], [122.0, 904], [122.25, 907], [122.5, 909], [123.0, 912], [123.6, 1010], [129.4, 1010]];
-function deskH(t, Q) {
-  if (t < HOLD_END) return I3;
-  const Hb = hmul(hquad(BTEX, Q), C.baseRefInv);
-  const yF = linAt(DESK_FRONT, t)[0], R = LT.BASE_CORNERS_REF;
-  // x of the front edge's ends from the base-riding plane when it is well-behaved, clamped so the quad cannot twist
-  const wAt = (x, y) => Hb[6] * x + Hb[7] * y + Hb[8];
-  const L = happly(Hb, 0, 872), Rr = happly(Hb, 2206, 872);
-  const xr = wAt(2206, 872) > 0.05 ? Math.min(Math.max(Rr[0], Q[2][0] + 400), Q[2][0] + 2400) : Q[2][0] + 1200;
-  const xl = wAt(0, 872) > 0.05 ? Math.max(Math.min(L[0], Q[3][0] - 400), Q[3][0] - 2400) : Q[3][0] - 1200;
-  const src = [R[3], R[2], [2206, 872], [0, 872]];
-  const dst = [Q[3], Q[2], [xr, yF], [xl, yF]];
-  const Hp = hquad(src, dst);
-  // once the front edge has left the frame (122.4) the desk simply rides the base (the base swings ~90° in the end
-  // orbit, which the pinned front edge cannot follow); blended over 122.4–123.0 through four anchor points
-  const u = clamp01((t - 123.0) / 0.6);
-  if (u <= 0) return Hp;
-  if (u >= 1) return Hb;
-  const A = [[700, 700], [1500, 700], [1500, 850], [700, 850]];
-  return hquad(A, A.map(([x, y]) => { const a = happly(Hp, x, y), b = happly(Hb, x, y); return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u]; }));
-}
-
-// ---------------------------------------------------------------- the pull-back (117.52–117.92)
-// zoom of the whole held view about WHIP_C (frame px): measured from the page's width on the screen relative to the
-// hold (117.68 1.39, 117.72 1.215, 117.76 1.128, 117.80 1.063, 117.84 1.028, 117.88 1.009, 117.92 1.0) and, for the
-// first frames, from the page's size (0.845 of the frame = 2.50 x the held 0.3385)
-const WHIP_C = [1086, 447];
-const WHIP_Z = [[117.52, 2.497], [117.56, 2.497], [117.6, 1.94], [117.64, 1.62], [117.68, 1.39], [117.72, 1.215], [117.76, 1.128], [117.8, 1.063], [117.84, 1.028], [117.88, 1.009], [117.92, 1.0]];
-// radial blur amount, floor (blur at the centre), white wash (source mean luma 79, 79, 175, 210, 175, 160 ...)
-const WHIP_FX = [[117.52, 0.32, 0.6, 0], [117.56, 0.32, 0.6, 0], [117.6, 0.24, 0.2, 0.56], [117.64, 0.3, 0.2, 0.86], [117.68, 0.27, 0.3, 0.42], [117.72, 0.17, 0.3, 0.08], [117.76, 0.09, 0.3, 0], [117.8, 0.05, 0.3, 0], [117.84, 0.027, 0.3, 0], [117.88, 0.006, 0, 0], [117.92, 0, 0, 0]];
-function whipZ(t) {
+// ---------- the whip (117.52–117.92) ----------
+// One pull-back of the camera from the laptop screen: the room is drawn zoomed by Z about WHIP_C. Z is measured from
+// the page's scale in the frame (camtrack on the page: s 0.845 at 117.52, 0.836 at 117.56, 0.656 at 117.60; then the
+// screen homography tracked back through the blur: 1.36, 1.222, 1.123, 1.062, 1.028, 1.010, 1.0 at 117.68–117.92),
+// divided by the page's settled scale on the screen (0.3383). The zoom's fixed point solves to (1078, 440).
+const WHIP_C = [1078, 440];
+const WHIP_S = [[117.52, 2.497], [117.56, 2.471], [117.6, 1.939], [117.64, 1.52], [117.68, 1.36], [117.72, 1.222], [117.76, 1.123], [117.8, 1.062], [117.84, 1.028], [117.88, 1.01], [117.92, 1.0]];
+// radial blur per frame: [t, amount, white wash, swirl, floor (blur at the centre), centre x, centre y]. The blur samples
+// symmetrically about each pixel (no net magnification). (s27t pass) Every value is fitted to the source frame by
+// simulating this blur on an unblurred render (tools/trace-scripts/s27t-tools/whipfit.py): the source's 117.52/117.56 frames are
+// blurred almost evenly (floor 0.85) round a centre just above his face; the wash frames settle from 0.21 to nothing.
+// (source mean luma 79, 79, 175, 210, 175, 160 ... at 117.52 ... 117.72)
+// (end-s27-fix1) 117.76 / 117.80 re-fitted on the frame's periphery (the source still streaks the lid edge and speakers
+// there): amount 0.035 -> 0.07 and 0.02 -> 0.046, floor 0.6 / 0.8
+const WHIP_FX = [
+  [117.52, 0.29, 0.0, 0, 0.85, 1087, 345], [117.56, 0.29, 0.0, 0, 0.85, 1087, 345], [117.6, 0.21, 0.63, 0, 0.85, 1092, 400],
+  [117.64, 0.16, 0.9, 0, 1.0, 1095, 420], [117.68, 0.13, 0.45, 0, 0.96, 1097, 445], [117.72, 0.08, 0.17, 0, 1.0, 1110, 435],
+  [117.76, 0.07, 0.05, 0, 0.6, 1100, 420], [117.8, 0.046, 0, 0, 0.8, 1100, 420], [117.84, 0.02, 0, 0, 0.6, 1100, 420],
+  [117.88, 0.01, 0, 0, 0.6, 1100, 420], [117.92, 0, 0, 0, 0, 1100, 420]];
+function whipZoom(t) {
   if (t >= 117.92) return null;
-  const s = linAt(WHIP_Z, t)[0];
+  const s = lerpRows(WHIP_S, t)[0] * (DBG() && DBG().wz ? DBG().wz : 1);   // wz: measuring hook (zoom multiplier)
   return [s, 0, WHIP_C[0] * (1 - s), 0, s, WHIP_C[1] * (1 - s), 0, 0, 1];
 }
 
-// ---------------------------------------------------------------- cached textures and sprites
-let C = null;
-function solid(col) { const c = document.createElement("canvas"); c.width = c.height = 4; const g = c.getContext("2d"); g.fillStyle = col; g.fillRect(0, 0, 4, 4); return c; }
-function sprite(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
-function build(G) {
-  if (C) return C;
-  C = {};
-  C.wall = G.tex("s27d:wall", paintWall);
-  C.wallLow = G.tex("s27d:wallLow", paintWallLow);
-  C.wallCab = G.tex("s27d:wallCab", paintWallCab);
-  C.spCab = sprite(560, 200);
-  C.shelfA = G.tex("s27d:shelfA", paintShelfA);
-  C.shelfB = G.tex("s27d:shelfB", paintShelfB);
-  C.lateSill = G.tex("s27d:lateSill", paintLateSill);
-  C.wall125inv = hinv(trackAt(WALL, 125.0));
-  const desk = paintDesk(0); C.deskS = desk.s; C.desk = G.tex("s27d:desk", () => desk.canvas);
-  C.deskSoft = G.tex("s27d:deskSoft", () => paintDesk(1).canvas);
-  C.deskFar = G.tex("s27d:deskFar", () => paintDesk(true).canvas);   // no front edge: used once the edge is off-frame
-  C.deskEnd = G.tex("s27d:deskEnd", () => paintDesk(3).canvas);      // the end orbit's far desk (fix pass 2)
-  C.spFarEdge = sprite(860, 330);
-  C.lid = G.tex("s27d:lid", () => LT.paintLid(hippiePageCanvas()));
-  C.lidBack = G.tex("s27d:lidBack", LT.paintLidBack);
-  C.nearShade = G.tex("s27d:nearShade", () => {
-    const c = document.createElement("canvas"); c.width = 4; c.height = 306; const g = c.getContext("2d");
-    const gr = g.createLinearGradient(0, 0, 0, 306); gr.addColorStop(0, "rgba(120,70,45,0)"); gr.addColorStop(0.55, "rgba(120,70,45,0.1)"); gr.addColorStop(1, "rgba(120,70,45,0.3)");
-    g.fillStyle = gr; g.fillRect(0, 0, 4, 306); return c;
-  }, { mip: false });
-  C.backstop = G.tex("s27d:backstop", () => solid("#dcc39f"), { mip: false });
-  C.baseShadow = G.tex("s27d:baseShadow", () => {
-    const c = document.createElement("canvas"); c.width = 4; c.height = 32; const g = c.getContext("2d");
-    const gr = g.createLinearGradient(0, 0, 0, 32); gr.addColorStop(0, "rgba(90,55,45,0.55)"); gr.addColorStop(1, "rgba(90,55,45,0)");
-    g.fillStyle = gr; g.fillRect(0, 0, 4, 32); return c;
-  }, { mip: false });
-  C.lidEdge = G.tex("s27d:lidEdge", () => solid("#cfc8bf"), { mip: false });
-  C.lidInk = G.tex("s27d:lidInk", () => solid("#4a403c"), { mip: false });
-  C.baseTop = G.tex("s27d:baseTop", LT.paintBaseTop);
-  C.baseFront = G.tex("s27d:baseFront", () => LT.paintBaseSide(false), { mip: false });
-  C.baseRight = G.tex("s27d:baseRight", () => LT.paintBaseSide(true), { mip: false });
-  C.des = G.tex("s27d:des", paintDesigner);
-  C.des2 = G.tex("s27d:des2", paintDesigner2);
-  C.pageOwl = G.tex("s27d:pageOwl", paintPageOwl);
-  C.owlShadow = G.tex("s27d:owlShadow", paintOwlShadow, { mip: false });
-  C.baseRefInv = hinv(hquad(BTEX, LT.BASE_CORNERS_REF));
-  C.spMug = sprite(460, 420); C.spProps = sprite(1500, 420); C.spOwl = sprite(900, 800);
-  C.spLine = sprite(720, 946); C.spChair = sprite(760, 386);
-  C.sunTL = G.tex("s27d:sunTL", paintSunTL, { mip: false });
-  C.spDeskLight = sprite(760, 290);
-  C.spDeskLeft = sprite(440, 200);
-  return C;
+// ---------- the page on the screen, with the page's own owl on its box ----------
+// (end-s27-fix1) the owl as it sits on the page is traced in page coordinates (s27/pageOwl.js, painted in pageTexCanvas)
+
+// ---------- owl flight: face centre (x, y), scale, wings, feet; read off gridded crops every 0.04–0.16 s ----------
+// 125.4–126.3 it is inside the screen (clipped to the display), from 126.32 it is out in the room.
+const OWL_K = [
+  [125.4, 1742, 354, 0.27, 0.62, 0], [125.72, 1714, 362, 0.37, 0.7, 0], [125.96, 1712, 386, 0.45, 0.8, 0],
+  [126.12, 1702, 388, 0.48, 0.9, 0], [126.2, 1683, 390, 0.55, 1.0, 0], [126.28, 1648, 390, 0.66, 1.05, 0],
+  [126.36, 1612, 380, 0.95, 1.15, 0], [126.44, 1538, 362, 1.05, 1.3, 0.3], [126.52, 1483, 378, 1.03, 1.45, 0.6],
+  [126.6, 1465, 381, 1.0, 1.35, 0.9], [126.68, 1423, 408, 1.0, 1.1, 1], [126.76, 1402, 475, 1.05, 1.5, 1],
+  [126.84, 1379, 496, 1.0, 1.6, 0.5], [126.92, 1383, 515, 1.0, 0.8, 0], [127.0, 1380, 522, 1.0, 0.35, 0],
+  [127.08, 1370, 514, 1.02, 0.08, 0], [127.16, 1370, 509, 1.01, 0, 0], [127.24, 1371, 506, 1.0, 0, 0], [127.4, 1372, 505, 1.0, 0, 0],
+];
+// (end-s27-fix1) the source's owl pops up out of the page one frame earlier than the trace starts: at 125.36 it is already
+// the big climbing owl (125.32 is still the page's owl), so the 125.40 trace is shown from 125.36
+const OWL_START = 125.36;
+function owlState(t) {
+  if (t < OWL_START) return null;
+  if (t > 127.4) { const [x, y, s, sx, rot] = crRows(OWL_END, t); return { x, y, s, sx, rot, sy: 1, wings: 0, feet: 0, eyes: "open", inScreen: false }; }
+  let [x, y, s, wings, feet] = keys(OWL_K, t);
+  let sy = 1;
+  if (t > 126.9 && t < 127.1) sy = 1 - 0.05 * Math.sin(Math.PI * (t - 126.9) / 0.2);     // squash on landing
+  const eyes = t >= 126.88 && t < 126.98 ? "happy" : t >= 126.98 && t < 127.04 ? "wink" : "open";
+  return { x, y, s, sy, wings, feet, eyes, inScreen: t < 126.32 };
 }
 
-// place a texture drawn in (box) coordinates at scale s through homography Hm (box coords -> frame)
-function boxH(Hm, box, s) { return hmul(Hm, [1 / s, 0, box.x, 0, 1 / s, box.y, 0, 0, 1]); }
-// draw a sprite canvas (drawn in frame px offset by ox, oy) through the global pre-transform Z
-function blitSprite(G, key, cv, ox, oy, Z) {
-  const tex = G.dyn(key, cv);
-  G.quadH(tex, Z ? hmul(Z, [1, 0, ox, 0, 1, oy, 0, 0, 1]) : [1, 0, ox, 0, 1, oy, 0, 0, 1]);
+// ---------- the designer: motion field (mesh warp of the 125.0 s painting) ----------
+const GX = 12, GY = 9;
+function desPositions(t) {
+  const G = DES_GRID;
+  const sim = (r) => { const [s, rot, tx, ty] = r; const c = Math.cos(rot) * s, sn = Math.sin(rot) * s; return G.map(([x, y]) => [c * x - sn * y + tx, sn * x + c * y + ty]); };
+  const mesh = (tt) => { const M = crRows(DES_MESH, tt), P = []; for (let i = 0; i < M.length; i += 2) P.push([M[i], M[i + 1]]); return P; };
+  if (t >= 121.6) return mesh(t);
+  // entering (before 121.6 too little of him is in frame to track the mesh): the similarity chamfer-fitted on his outline,
+  // blended into the tracked mesh over 121.4-121.6
+  const r = crRows(DES_ENTRY, t); if (t < 121.28) r[1] = 0.025;
+  const a = sim(r);
+  if (t < 121.4) return a;
+  const b = mesh(121.6), u = smooth((t - 121.4) / 0.2);
+  return a.map((p, i) => [p[0] + (b[i][0] - p[0]) * u, p[1] + (b[i][1] - p[1]) * u]);
 }
-
-// ---------------------------------------------------------------- laptop
-function drawBase(G, Q, pre, t0 = 0) {
-  const Ht = pre(hquad(BTEX, Q));
-  const P = (x, y) => happly(Ht, x, y);
-  const fl = P(0, LT.BASE_TD), fr = P(LT.BASE_TW, LT.BASE_TD), br = P(LT.BASE_TW, 0), bl = P(0, 0);
-  // side depth: 24 px at the held view's front edge, scaled with the local size
-  const dd = Math.max(10, 24 * Math.max(Math.hypot(fr[0] - fl[0], fr[1] - fl[1]) / 1074, Math.hypot(br[0] - fr[0], br[1] - fr[1]) / 1000, Math.hypot(fl[0] - bl[0], fl[1] - bl[1]) / 1000));
-  const strip = (tex, a, b, y0 = 0, y1 = dd) => G.quadH(tex, hquad([[0, 0], [tex.w, 0], [tex.w, tex.h], [0, tex.h]], [[a[0], a[1] + y0], [b[0], b[1] + y0], [b[0], b[1] + y1], [a[0], a[1] + y1]]));
-  // hang side faces under the edges that face down in the image
-  const cx = (fl[0] + fr[0] + br[0] + bl[0]) / 4, cy = (fl[1] + fr[1] + br[1] + bl[1]) / 4;
-  const edges = [[bl, fl, C.baseFront], [fl, fr, C.baseFront], [fr, br, C.baseRight]];
-  for (const [a, b, tex] of edges) {
-    let nx = b[1] - a[1], ny = -(b[0] - a[0]);
-    const mx = (a[0] + b[0]) / 2 - cx, my = (a[1] + b[1]) / 2 - cy;
-    if (mx * nx + my * ny < 0) { nx = -nx; ny = -ny; }
-    if (ny > 0.15 * Math.hypot(nx, ny)) {
-      // (fix pass 2) the base's contact shadow on the desk under its front (source: a -30..-45 luma band 8–12 px deep)
-      if (tex === C.baseFront && t0 < 128.3) strip(C.baseShadow, a[0] < b[0] ? a : b, a[0] < b[0] ? b : a, dd * 0.8, dd * 1.45);
-      strip(tex, a[0] < b[0] ? a : b, a[0] < b[0] ? b : a);
-    }
+// mesh with one extrapolated ring of points on every side (so the texture beyond the tracked grid is carried along)
+// (end-s27-fix1) plus a second ring (EX2 x EY2), added after the per-view corrections: in the end orbit the traced key views
+// reach past the one-ring mesh (his sleeve by the owl, 129.0–129.28, was cut off along the mesh's straight outer edge, 30–60 px
+// short of the source, with the wall showing between him and the owl)
+const EX = GX + 2, EY = GY + 2, EX2 = GX + 4, EY2 = GY + 4;
+function extend(P, nx = GX, ny = GY) {
+  const GX = nx, GY = ny;
+  const at = (i, j) => P[j * GX + i], out = [];
+  for (let j = -1; j <= GY; j++) for (let i = -1; i <= GX; i++) {
+    const ci = Math.max(0, Math.min(GX - 1, i)), cj = Math.max(0, Math.min(GY - 1, j));
+    const ni = ci + (i < 0 ? 1 : i >= GX ? -1 : 0), nj = cj + (j < 0 ? 1 : j >= GY ? -1 : 0);
+    const a = at(ci, cj), bi = at(ni, cj), bj = at(ci, nj), bij = at(ni, nj);
+    // p = a + (a - b) per extrapolated direction
+    let x = a[0], y = a[1];
+    if (i < 0 || i >= GX) { x += a[0] - bi[0]; y += a[1] - bi[1]; }
+    if (j < 0 || j >= GY) { x += a[0] - bj[0]; y += a[1] - bj[1]; }
+    if ((i < 0 || i >= GX) && (j < 0 || j >= GY)) { /* corner: sum of both offsets already applied */ }
+    out.push([x, y]);
   }
-  G.quadH(C.baseTop, Ht);
+  return out;
 }
-function drawLid(G, t, pre) {
-  if (t <= 128.36) { G.quadH(C.lid, pre(boxH(screenH(t), LT.LID_BOX, LT.LID_BOX.s))); return; }
-  const q = lidCorners(t), a = areaOf(q);
-  if (Math.abs(a) < 9000) {
-    // edge-on (128.5–128.72): the lid's aluminium edge, light silver (source ~#cfc8bf band, 20–30 px wide) with a thin
-    // dark ink outline — never a dark line
-    const top = [(q[0][0] + q[1][0]) / 2, (q[0][1] + q[1][1]) / 2], bot = [(q[2][0] + q[3][0]) / 2, (q[2][1] + q[3][1]) / 2];
-    const dx = bot[0] - top[0], dy = bot[1] - top[1], L = Math.hypot(dx, dy) || 1;
-    const band = (hw, tex) => {
-      const nx = -dy / L * hw, ny = dx / L * hw, nb = 1.9;   // a little wider at the bottom (nearer the camera)
-      const xy = [top[0] - nx, top[1] - ny, top[0] + nx, top[1] + ny, bot[0] + nx * nb, bot[1] + ny * nb, bot[0] - nx * nb, bot[1] - ny * nb];
-      G.mesh(tex, xy, [0, 0, 4, 0, 4, 4, 0, 4], [0, 1, 2, 0, 2, 3]);
-    };
-    band(10, C.lidInk); band(8, C.lidEdge);
-    // (fix pass 2) the dark hinge block at the lid's lower end (source 128.6: a dark strip ~18 x 40 px at the hinge)
-    { const ux = dx / L, uy = dy / L, nx = -uy * 9, ny = ux * 9, a0 = [bot[0] - ux * 40, bot[1] - uy * 40];
-      G.mesh(C.lidInk, [a0[0] - nx, a0[1] - ny, a0[0] + nx, a0[1] + ny, bot[0] + nx, bot[1] + ny, bot[0] - nx, bot[1] - ny], [0, 0, 4, 0, 4, 4, 0, 4], [0, 1, 2, 0, 2, 3]); }
+let DES_IDX = null;
+function meshIdx() {
+  if (!DES_IDX) { DES_IDX = []; for (let j = 0; j < EY2 - 1; j++) for (let i = 0; i < EX2 - 1; i++) { const k = j * EX2 + i; DES_IDX.push(k, k + 1, k + EX2, k + 1, k + EX2 + 1, k + EX2); } }
+  return DES_IDX;
+}
+function meshDraw(G, tex, Pdst, Psrc, box, sc, alpha, fix = null) {
+  const xy = [], uv = [];
+  const E = extend(Pdst);
+  // (s27t pass) per-view correction of the right-hand part of the extended mesh (s27/desfix.js)
+  if (fix) DES_FIX_NODES.forEach((n, i) => { E[n] = [E[n][0] + fix[2 * i], E[n][1] + fix[2 * i + 1]]; });
+  for (const p of extend(E, EX, EY)) xy.push(p[0], p[1]);
+  for (const p of extend(extend(Psrc), EX, EY)) uv.push((p[0] - box.x0) * sc, (p[1] - box.y0) * sc);
+  G.mesh(tex, xy, uv, meshIdx(), { alpha, tint: DBG() && DBG().des === "only" ? [1, 1, 1, 1] : null });
+}
+// (end-s27-fix1) where a key's outline runs over the desk below his hem (read on the key frames): not stroked
+const KEYLINE_SKIP = {
+  "128.92": [[[100, 842], [180, 826], [300, 806], [312, 840], [312, 980], [100, 980]], [[-30, 932], [2230, 932], [2230, 980], [-30, 980]]],
+  "129.12": [[[-30, 847], [70, 843], [70, 980], [-30, 980]], [[-30, 932], [2230, 932], [2230, 980], [-30, 980]]],
+  "129.28": [[[-30, 826], [105, 818], [135, 818], [135, 980], [-30, 980]], [[-30, 932], [2230, 932], [2230, 980], [-30, 980]],
+    [[1234, 566], [1286, 566], [1286, 636], [1234, 636]], [[1196, 480], [1256, 480], [1256, 548], [1196, 548]]],   // the cut-out beak and speaker
+};
+// designer views: the 125.0 painting (warped by the mesh from its own grid) until 127.6, then the traced key views of the
+// end of the move, each warped from its own frame's mesh P(tk) to P(t), cross-faded between neighbours
+const DVIEWS = [[125.0, null], [127.6, null]].concat(DKEYS.map((k) => [k[0], k]));
+function drawDesigner(G, t) {
+  if (t < 120.7) return;
+  const P = desPositions(t);
+  let i = 0; while (i < DVIEWS.length - 1 && DVIEWS[i + 1][0] <= t) i++;
+  const a = DVIEWS[i], b = DVIEWS[Math.min(i + 1, DVIEWS.length - 1)];
+  const view = (v, alpha, kl = true) => {
+    if (!v[1]) { meshDraw(G, G.tex("s27:designer", paintDesigner), P, DES_GRID, DES_BOX, DES_SC, alpha); return; }
+    const key = `s27:dkey:${v[0].toFixed(2)}${kl ? "" : ":nl"}`;
+    const F = DES_FIX[v[0].toFixed(2)], fi = F ? Math.round(t * 25) - F.k0 : -1;
+    const fix = F && fi >= 0 && fi < F.d.length && !(DBG() && DBG().nofix) ? F.d[fi] : null;
+    meshDraw(G, G.tex(key, () => paintDesignerKey(v[1][1], v[1][2], v[1][3], KEYLINE_SKIP[v[0].toFixed(2)], kl)), P, desPositions(v[0]), DKEY_BOX, 1, alpha, fix);
+  };
+  for (const v of DVIEWS) for (const suf of ["", ":nl"]) { const k = v[1] ? `s27:dkey:${v[0].toFixed(2)}${suf}` : null, r = k && G.texes.get(k); if (r && v !== a && v !== b) { G.gl.deleteTexture(r.tex); G.texes.delete(k); } }
+  const dv = DBG() && DBG().dview;   // measuring hook: "a" / "b" draws only one of the two views
+  // (end-s27-fix1) between two traced key views only the nearer one draws its outer keyline (both drew theirs, 6–12 px
+  // apart, a doubled outline on the beanie at 127.92–128.48)
+  const u = b !== a && t > a[0] ? clamp01((t - a[0]) / (b[0] - a[0])) : 0, both = !!(a[1] && b[1] && b !== a);
+  if (dv !== "b") view(a, 1, !both || u < 0.5 || dv === "a");
+  if (dv !== "a" && b !== a && t > a[0] && (a[1] || b[1])) view(b, dv === "b" ? 1 : u, !both || u >= 0.5 || dv === "b");
+}
+
+// ---------- wall / desk ----------
+function wallH(t) {
+  if (t <= 126.6) return lerpRows(BG, Math.max(119.6, t));
+  const H0 = lerpRows(BG, 126.6);
+  if (t <= 127.6) return H0;
+  const a = crRows(BG_END, t);
+  return hmul([a[0], a[1], a[2], a[3], a[4], a[5], 0, 0, 1], H0);
+}
+
+// ---------- laptop ----------
+function stripMesh(G, tex, top, bot) {
+  const n = top.length, xy = [], uv = [], idx = [];
+  for (let i = 0; i <= n; i++) { const a = top[i % n], b = bot[i % n]; xy.push(a[0], a[1], b[0], b[1]); uv.push(4, 1, 4, tex.h - 1); }
+  for (let i = 0; i < n; i++) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+  G.mesh(tex, xy, uv, idx);
+}
+function baseHcm(t) {
+  const c = crRows(BASE_ALL, Math.max(119.6, t));
+  return hquad([[-LT.BW / 2, LT.BD], [LT.BW / 2, LT.BD], [LT.BW / 2, 0], [-LT.BW / 2, 0]], [[c[0], c[1]], [c[2], c[3]], [c[4], c[5]], [c[6], c[7]]]);
+}
+function drawBase(G, t, Z, shadowOnly = false) {
+  const side = G.tex("s27:baseSide", LT.paintBaseSide, { mip: false });
+  const Hcm = hmul(Z, baseHcm(t));
+  const outline = LT.rrPoly(-LT.BW / 2, 0, LT.BW / 2, LT.BD, 1.3, 5);
+  // side height (s27t pass: the source's front face is 20 px at 118–119.6, not 17; 24 px on the right side at 125.0)
+  const k = 1.4 + (1.74 - 1.4) * clamp01((t - 119.8) / 3.6);
+  const scaleAt = (x, z) => { const p = happly(Hcm, x, z), q = happly(Hcm, x + 0.5, z), r = happly(Hcm, x, z + 0.5);
+    return Math.sqrt(Math.abs((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]))) / 0.5; };
+  const top = outline.map(([x, z]) => happly(Hcm, x, z));
+  // (end-s27-fix1) once the camera is behind the laptop (128.6 on) the base's rear face is hidden under the lid's hinge in
+  // the source; it drew a light strip below the lid's bottom edge. Its height fades out along the back edge.
+  const rear = smooth((t - 128.5) / 0.3);
+  const bot = outline.map(([x, z], i) => [top[i][0], top[i][1] + k * scaleAt(x, z) * (1 - rear * clamp01((1.6 - z) / 0.6))]);
+  if (shadowOnly) {   // (s27t pass) contact shadow on the desk under the lower edges (the traced room had the laptop cut
+    // out with it); drawn right after the room, under the props that lie in front of the base
+    stripMesh(G, G.tex("s27:baseShadow", LT.paintContactShadow, { mip: false }), bot, bot.map((p, i) => [p[0], p[1] + 0.5 * (p[1] - top[i][1]) + 2]));
     return;
   }
-  // the back, lit warm silver as it comes round (source 162,136,111 at 128.8) and darkening to 102,90,82 by 129.28
-  if (a < 0) { const k = clamp01((129.02 - t) / 0.3); G.quadH(C.lidBack, pre(boxH(hquad(LIDC, q), LT.LID_BOX, LT.LID_BOX.s)), k > 0 ? { tint: [0.66, 0.56, 0.46, 0.75 * k] } : {}); return; }
-  G.quadH(a > 0 ? C.lid : C.lidBack, pre(boxH(hquad(LIDC, q), LT.LID_BOX, LT.LID_BOX.s)));
-}
-
-// ---------------------------------------------------------------- the designer (mesh warp of the 125.0 s drawing)
-let DES_IDX = null, DES_UV = null;
-function desNodes(t) {
-  const M = DES_MESH, n = M.length;
-  if (t <= M[0][0]) {   // before the track starts he is entering from the left: extrapolate the first frames' velocity
-    const a = M[0], b = M[1], k = (t - a[0]) / (b[0] - a[0]);
-    return a.map((v, i) => (i === 0 ? t : v + (b[i] - v) * k));
+  if (!(DBG() && DBG().noside)) stripMesh(G, side, top, bot);
+  // (s27t pass) the finger notch in the middle of the front face
+  {
+    const nt = [-2.1, 2.2].map((x) => happly(Hcm, x, LT.BD - 0.05)), nb = [-2.1, 2.2].map((x, i) => [nt[i][0], nt[i][1] + 0.92 * k * scaleAt(x, LT.BD)]);
+    if (nt[1][0] - nt[0][0] > 20) { const tex = G.tex("s27:notch", LT.paintNotch, { mip: false }); G.quadH(tex, hquad([[0, 0], [tex.w, 0], [tex.w, tex.h], [0, tex.h]], [nt[0], nt[1], nb[1], nb[0]])); }
   }
-  if (t >= M[n - 1][0]) return M[n - 1];
-  let i = Math.min(n - 2, Math.max(0, Math.floor((t - M[0][0]) / 0.04)));
-  while (i > 0 && M[i][0] > t) i--;
-  while (i < n - 2 && M[i + 1][0] < t) i++;
-  const a = M[i], b = M[i + 1], u = clamp01((t - a[0]) / (b[0] - a[0]));
-  const out = new Array(a.length); out[0] = t; for (let k = 1; k < a.length; k++) out[k] = a[k] + (b[k] - a[k]) * u;
-  return out;
-}
-function drawDesigner(G, t) {
-  if (t < DES_MESH[0][0] - 0.3) return;
-  const { X0, Y0, X1, Y1, GX, GY } = DES_GRID, B = DES_BOX;
-  if (!DES_IDX) {
-    DES_IDX = []; DES_UV = [];
-    for (let j = 0; j < GY - 1; j++) for (let i = 0; i < GX - 1; i++) { const k = j * GX + i; DES_IDX.push(k, k + 1, k + GX, k + 1, k + GX + 1, k + GX); }
-    for (let j = 0; j < GY; j++) for (let i = 0; i < GX; i++) DES_UV.push((X0 + i * (X1 - X0) / (GX - 1) - B.x) * B.s, (Y0 + j * (Y1 - Y0) / (GY - 1) - B.y) * B.s);
+  // (s27t pass) the keyboard's look changes as the laptop turns: dark gaps seen from the front, light gaps from the side
+  const kv = smooth((t - 120.4) / 1.6);
+  if (kv < 1) G.quadH(G.tex("s27:baseTop", () => LT.paintBaseTop(false)), LT.baseTopH(Hcm));
+  if (kv > 0) G.quadH(G.tex("s27:baseTopSide", () => LT.paintBaseTop(true)), LT.baseTopH(Hcm), { alpha: kv });
+  drawOwlShadow(G, t, Hcm);
+  drawDeckGain(G, t, Hcm);
+  // the ports on the laptop's right side (measured at 125.0: SD slot z 9.7-7.5 cm, two ports 6.6-5.3 and 4.4-3.0 cm),
+  // shown once that side turns toward the camera
+  const sideAt = (z) => { const p = happly(Hcm, LT.BW / 2, z), q = happly(Hcm, LT.BW / 2 + 0.5, z), r = happly(Hcm, LT.BW / 2, z + 0.5);
+    const s = Math.sqrt(Math.abs((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]))) / 0.5; return [p, [p[0], p[1] + k * s]]; };
+  const [a0, a1] = sideAt(10.2), [b0, b1] = sideAt(2.5);
+  if (b0[0] - a0[0] > 40) {
+    const tex = G.tex("s27:ports", LT.paintPorts, { mip: false });
+    G.quadH(tex, hquad([[0, 0], [tex.w, 0], [tex.w, tex.h], [0, tex.h]], [a0, b0, b1, a1]), { alpha: clamp01((b0[0] - a0[0] - 40) / 60) });
   }
-  // end orbit: the source's figure is narrower on the left than the warped 125.0 s drawing, so clip the drawing to the
-  // right of the measured jacket contour (keys.js JAKCONT) and re-ink that contour
-  // (fix pass 2) the source redraws him between 128.0 and 128.3 (cup onto the ear, collar, forearm across the desk):
-  // drawing 2 (keyed on 129.0) fades up over the warped 125.0 drawing, which then fades out behind it
-  const a2 = clamp01((t - DES2_IN) / 0.2), a1 = 1 - clamp01((t - DES2_IN - 0.15) / 0.2);
-  const cont = t >= 127.9 ? jacketContour(t) : null;
-  const clipped = cont ? G.clip(clipPoly(cont)) : false;
-  // (fix pass 2) under-fill: jacket colour between the measured contour and the drawing, so the silhouette follows the
-  // source's contour even where the warped drawing falls short of it (it is clipped where the drawing overshoots)
-  if (cont) drawUnderFill(G, t, cont);
-  if (a1 > 0) G.mesh(C.des, desNodes(t).slice(1), DES_UV, DES_IDX, { alpha: a1 });
-  if (a2 > 0) {
-    if (!DES2_IDX) {
-      const { X0, Y0, X1, Y1, GX, GY } = DES2_GRID, B2 = DES2_BOX;
-      DES2_IDX = []; DES2_UV = [];
-      for (let j = 0; j < GY - 1; j++) for (let i = 0; i < GX - 1; i++) { const k = j * GX + i; DES2_IDX.push(k, k + 1, k + GX, k + 1, k + GX + 1, k + GX); }
-      for (let j = 0; j < GY; j++) for (let i = 0; i < GX; i++) DES2_UV.push((X0 + i * (X1 - X0) / (GX - 1) - B2.x) * B2.s, (Y0 + j * (Y1 - Y0) / (GY - 1) - B2.y) * B2.s);
+}
+// (s27t pass) the deck's light: a low-frequency colour gain (source / render, 4 x 3 cells over the top face, per 0.2 s,
+// s27/deckgain.js) multiplied over the top face, so the silver darkens as the laptop turns away from the window
+let dgC = null;
+function drawDeckGain(G, t, Hcm) {
+  const T = DECK_GAIN, tt = Math.max(T[0][0], Math.min(T[T.length - 1][0], t));
+  let i = 0; while (i < T.length - 2 && T[i + 1][0] <= tt) i++;
+  const a = T[i], b = T[i + 1], u = clamp01((tt - a[0]) / (b[0] - a[0]));
+  const NX = 4, NZ = 3, TW = 64, TH = 48;
+  const gain = (j, k, c) => a[1][j][k][c] + (b[1][j][k][c] - a[1][j][k][c]) * u;
+  if (!dgC) dgC = canvas(TW, TH);
+  const g = dgC.getContext("2d"), img = g.createImageData(TW, TH), D = img.data;
+  const BW = LT.BW, BD = LT.BD, R = 1.3;
+  for (let v = 0; v < TH; v++) for (let w = 0; w < TW; w++) {
+    const x = -BW / 2 + ((w + 0.5) / TW) * BW, z = ((v + 0.5) / TH) * BD, o = (v * TW + w) * 4;
+    // outside the rounded front corners: neutral
+    const cxr = Math.abs(x) - (BW / 2 - R), czr = z - (BD - R);
+    if (cxr > 0 && czr > 0 && cxr * cxr + czr * czr > R * R) { D[o] = D[o + 1] = D[o + 2] = 128; D[o + 3] = 255; continue; }
+    const fx = Math.max(0, Math.min(NX - 1, ((x + BW / 2) / BW) * NX - 0.5)), fz = Math.max(0, Math.min(NZ - 1, (z / BD) * NZ - 0.5));
+    const i0 = Math.floor(fx), j0 = Math.floor(fz), i1 = Math.min(NX - 1, i0 + 1), j1 = Math.min(NZ - 1, j0 + 1), ux = fx - i0, uz = fz - j0;
+    for (let c = 0; c < 3; c++) {
+      const val = (gain(j0, i0, c) * (1 - ux) + gain(j0, i1, c) * ux) * (1 - uz) + (gain(j1, i0, c) * (1 - ux) + gain(j1, i1, c) * ux) * uz;
+      D[o + c] = Math.max(0, Math.min(255, Math.round(val * 127.5)));
     }
-    G.mesh(C.des2, meshAt(DES2_MESH, t).slice(1), DES2_UV, DES2_IDX, { alpha: a2 });
+    D[o + 3] = 255;
   }
-  if (clipped) { G.noclip(); drawContourInk(G, t, cont); }
+  g.putImageData(img, 0, 0);
+  G.quadH(G.dyn("s27:deckGain", dgC), hmul(Hcm, [BW / TW, 0, -BW / 2, 0, BD / TH, 0, 0, 0, 1]), { mul: true });
 }
-const DES2_IN = 128.0;
-let DES2_IDX = null, DES2_UV = null;
-// per-frame node rows (0.04 s apart), linear between rows, held at the ends
-function meshAt(M, t) {
-  const n = M.length;
-  if (t <= M[0][0]) return M[0];
-  if (t >= M[n - 1][0]) return M[n - 1];
-  let i = Math.min(n - 2, Math.max(0, Math.floor((t - M[0][0]) / 0.04)));
-  while (i > 0 && M[i][0] > t) i--;
-  while (i < n - 2 && M[i + 1][0] < t) i++;
-  const a = M[i], b = M[i + 1], u = clamp01((t - a[0]) / (b[0] - a[0]));
-  const out = new Array(a.length); out[0] = t; for (let k = 1; k < a.length; k++) out[k] = a[k] + (b[k] - a[k]) * u;
-  return out;
+// the owl's shadow on the deck (measured outline in base cm, so it rides the base through the orbit): a purple-grey veil
+// that scales the silver by the measured ratio (~0.76, 0.68, 0.70 at its core), softened at quarter resolution
+let shC = null;
+function drawOwlShadow(G, t, Hcm) {
+  if (t < 126.44) return;
+  let i = 0; while (i < OWL_SHADOW.length - 1 && OWL_SHADOW[i + 1][0] <= t + 1e-6) i++;
+  const p = OWL_SHADOW[i][1];
+  if (!shC) shC = canvas(W / 4, H / 4);
+  const g = shC.getContext("2d");
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, shC.width, shC.height);
+  // (end-s27-fix1) clipped to the deck: in the end orbit the measured outline reaches past the hinge (z < 0) and showed as
+  // a dark pink strip under the lid's bottom edge at 128.96–129.12
+  g.save(); g.beginPath();
+  LT.rrPoly(-LT.BW / 2, 0.15, LT.BW / 2, LT.BD, 1.3, 5).forEach(([x, z], i) => { const q = happly(Hcm, x, z); i ? g.lineTo(q[0] / 4, q[1] / 4) : g.moveTo(q[0] / 4, q[1] / 4); });
+  g.closePath(); g.clip();
+  g.filter = "blur(0.7px)"; g.beginPath();
+  for (let k = 0; k < p.length; k += 2) { const q = happly(Hcm, p[k] / 20, p[k + 1] / 20); k ? g.lineTo(q[0] / 4, q[1] / 4) : g.moveTo(q[0] / 4, q[1] / 4); }
+  g.closePath(); g.fillStyle = "rgba(80,40,45,0.4)"; g.fill(); g.filter = "none"; g.restore();
+  G.quadH(G.dyn("s27:owlShadow", shC), [4, 0, 0, 0, 4, 0, 0, 0, 1]);
 }
-function jacketContour(t) {
-  const v = linAt(JAKCONT, Math.min(t, JAKCONT[JAKCONT.length - 1][0]));
-  const P = []; for (let k = 0; k < v.length; k += 2) P.push([v[k], v[k + 1]]);
-  return P;
+// the lid: page homography until 128.44 (front showing); lid-outline corners after 128.8 (back showing); in between the
+// corners are interpolated (the lid passes edge-on)
+const LID_TWARP = [[128.44, 128.44], [128.48, 128.465], [128.52, 128.51], [128.56, 128.51], [128.6, 128.556], [128.64, 128.597],
+  [128.68, 128.655], [128.72, 128.69], [128.76, 128.745], [128.8, 128.8]];
+// (s27t pass) weight of the "turned" lid front (dark rim) over the lit one: source rim colours at 120.4, 121.2, 122.0, 122.8, 123.6
+const LIDTURN = [[120.9, 0], [121.2, 0.35], [122.0, 0.8], [122.8, 0.9], [123.6, 1]];
+const LID_RECT = [[LT.LID.x0, LT.LID.y0], [LT.LID.x1, LT.LID.y0], [LT.LID.x1, LT.LID.y1], [LT.LID.x0, LT.LID.y1]];
+function lidCorners(t) {
+  if (t <= 128.44) { const Hs = crRows(SCREEN, Math.max(118, t)); return LID_RECT.map(([x, y]) => happly(Hs, x, y)); }
+  if (t >= 128.8) { const c = crRows(LID_END, t); return [[c[0], c[1]], [c[2], c[3]], [c[4], c[5]], [c[6], c[7]]]; }
+  // (end-s27-fix1) time remapped so the lid turns edge-on when the source's does: the source holds 128.52–128.56 and still
+  // shows an 18 px band of screen at 128.60 (the plain interpolation had 5 px), edge-on at ~128.64, the back 6–11 px wide
+  // at 128.68–128.72 (measured dark-band widths at y 350/450/550)
+  const te = lerpRows(LID_TWARP, t)[0];
+  const a = lidCorners(128.44), b = lidCorners(128.8), u = (te - 128.44) / 0.36;
+  return a.map((p, i) => [p[0] + (b[i][0] - p[0]) * u, p[1] + (b[i][1] - p[1]) * u]);
 }
-function clipPoly(P) {
-  const xy = [P[0][0], 1100];
-  for (const [x, y] of P) xy.push(x, y);
-  const e = P[P.length - 1];
-  xy.push(e[0] - 10, -120, 2500, -120, 2500, 1100);
-  return xy;
-}
-function drawContourInk(G, t, P) {
-  const a = clamp01((t - 128.2) / 0.3);
-  if (a <= 0) return;
-  const cv = C.spLine, g = cv.getContext("2d");
-  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
-  const Q = P.filter(([x]) => x > -20);
-  if (Q.length < 2) return;
-  g.beginPath(); g.moveTo(Q[0][0], Q[0][1]);
-  for (let i = 1; i < Q.length - 1; i++) { const m = [(Q[i][0] + Q[i + 1][0]) / 2, (Q[i][1] + Q[i + 1][1]) / 2]; g.quadraticCurveTo(Q[i][0], Q[i][1], m[0], m[1]); }
-  g.lineTo(Q[Q.length - 1][0], Q[Q.length - 1][1]);
-  g.lineWidth = 4; g.strokeStyle = `rgba(29,21,19,${0.9 * a})`; g.lineJoin = "round"; g.lineCap = "round"; g.stroke();
-  blitSprite(G, "s27d:spLine", cv, 0, 0, null);
-}
-function drawUnderFill(G, t, P) {
-  const a = clamp01((t - 128.0) / 0.3);
-  if (a <= 0) return;
-  const cv = C.spLine, g = cv.getContext("2d");
-  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
-  const e = P[P.length - 1];
-  g.beginPath(); g.moveTo(P[0][0], P[0][1]);
-  for (const [x, y] of P.slice(1)) g.lineTo(x, y);
-  g.lineTo(e[0] + 40, e[1] + 60); g.lineTo(e[0] + 40, 640); g.lineTo(300, 760); g.lineTo(P[0][0] + 60, P[0][1] - 40); g.closePath();
-  const gr = g.createLinearGradient(0, 250, 0, 760); gr.addColorStop(0, "#9d9c84"); gr.addColorStop(0.45, "#7a7f6c"); gr.addColorStop(1, "#56604e");
-  g.fillStyle = gr; g.globalAlpha = a; g.fill(); g.globalAlpha = 1;
-  blitSprite(G, "s27d:spLine", cv, 0, 0, null);
-}
-// the chair back at the far left (frame space, keys.js CHAIR_K), behind the designer
-function drawChair(G, t) {
-  if (t < CHAIR_K[0][0]) return;
-  const [x0, y0] = keyAt(CHAIR_K, t);
-  const cv = C.spChair, g = cv.getContext("2d");
-  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
-  g.translate(0, -560);
-  const yb = 832;
-  const P = [[x0, yb], [x0 - 4, y0 + 40], [x0 + 6, y0 + 10], [x0 + 40, y0], [x0 + 420, y0 + 6], [x0 + 420, yb - 10]];
-  g.beginPath(); g.moveTo(P[0][0], P[0][1]); for (const q of P.slice(1)) g.lineTo(q[0], q[1]); g.closePath();
-  const gr = g.createLinearGradient(0, y0, 0, yb); gr.addColorStop(0, "#7a5042"); gr.addColorStop(0.15, "#6c4639"); gr.addColorStop(1, "#5e3e34");   // (fix pass 2) less saturated (source 84,55,46)
-  g.fillStyle = gr; g.fill();
-  g.lineWidth = 3; g.strokeStyle = "#1d1513"; g.stroke();
-  g.beginPath(); g.moveTo(x0 + 10, y0 + 12); g.quadraticCurveTo(x0 + 40, y0 + 6, x0 + 200, y0 + 10); g.lineWidth = 3; g.strokeStyle = "rgba(170,110,90,0.5)"; g.stroke();
-  blitSprite(G, "s27d:spChair", cv, 0, 560, null);
-}
-// warm window light pouring in at the top left at the very end of the move (source 129.0–129.28: the top-left corner
-// warms to ~179,148,120 with diagonal bright bands)
-function drawSunShaft(G, t) {
-  const a = clamp01((t - 128.95) / 0.3);
-  if (a <= 0) return;
-  G.quadH(C.sunTL, [1, 0, 0, 0, 1, 0, 0, 0, 1], { alpha: a });
-}
-function paintSunTL() {
-  const c = document.createElement("canvas"); c.width = 700; c.height = 600; const g = c.getContext("2d");
-  const rg = g.createRadialGradient(0, 0, 40, 0, 0, 620); rg.addColorStop(0, "rgba(214,150,96,0.55)"); rg.addColorStop(0.6, "rgba(214,160,110,0.25)"); rg.addColorStop(1, "rgba(214,160,110,0)");
-  g.fillStyle = rg; g.fillRect(0, 0, 700, 600);
-  g.filter = "blur(18px)";
-  for (const [x, w] of [[-60, 70], [110, 50], [240, 36]]) {
-    g.beginPath(); g.moveTo(x, 0); g.lineTo(x + w, 0); g.lineTo(x + w - 260, 520); g.lineTo(x - 260, 520); g.closePath();
-    g.fillStyle = "rgba(255,238,205,0.32)"; g.fill();
+function drawLid(G, t, Z, withOwl) {
+  const side = G.tex("s27:side", LT.paintSideStrip, { mip: false });
+  const C = lidCorners(t).map(([x, y]) => happly(Z, x, y));
+  const Hl = hquad(LID_RECT, C);                       // lid (page px) -> frame
+  const area = (C[1][0] - C[0][0]) * (C[3][1] - C[0][1]) - (C[1][1] - C[0][1]) * (C[3][0] - C[0][0]);
+  // (s27t pass) while the lid passes edge-on (128.44–128.8) its corner quad is thin and flips over, and a homography
+  // of such a quad throws the texture far off the lid (it drew a long line up out of the frame). There the lid is
+  // mapped bilinearly between its measured corners instead (a mesh), which stays on the quad.
+  const edge = t > 128.44 && t < 128.8;
+  const L = LT.LID, bil = (x, y) => { const u = (x - L.x0) / (L.x1 - L.x0), v = (y - L.y0) / (L.y1 - L.y0);
+    return [0, 1].map((k) => (1 - u) * (1 - v) * C[0][k] + u * (1 - v) * C[1][k] + u * v * C[2][k] + (1 - u) * v * C[3][k]); };
+  const map = edge ? bil : (x, y) => happly(Hl, x, y);
+  const lo = LT.rrPoly(L.x0, L.y0, L.x1, L.y1, 60, 5);
+  // rim thickness: a fixed ~9 px band pushed away from the viewer side (image-space normal offset of the outline)
+  const top = lo.map(([x, y]) => map(x, y));
+  const cx = top.reduce((s, p) => s + p[0], 0) / top.length;
+  const th = t < 119.8 ? 0 : 9;
+  // (end-s27-fix1) seen from behind (128.6 on) the rim does not show along the hinge edge: it drew a light strip under the
+  // lid's bottom edge where the source has only the edge's ink and the desk
+  const hb = smooth((t - 128.55) / 0.15);
+  const bot = top.map(([x, y], i) => { const k = th * (1 - hb * clamp01((lo[i][1] - (L.y1 - 80)) / 60)); return [x + (x < cx ? -1 : 1) * k * 0.6, y + k * 0.2]; });
+  if (th) stripMesh(G, side, top, bot);
+  // (end-s27-tfix) seen from behind (128.72 on) the lid's near (image-left) edge shows its thickness as a band ~14 px wide
+  // outside the face: ink ~4 px, a light rim ~6-8 px (graded ~200), ink ~4 px (source rows y 420 / 560 at 128.72-128.96);
+  // the 5 px rim above read as a dark line only, and the owl trace's copy of the source's rim stuck out beside it
+  if (t >= 128.71 && th) {
+    // the lid's two side edges (page x0 and x1) in the frame; the one further left is the near edge
+    const ed = (xe) => { const P = []; for (let k = 0; k <= 12; k++) P.push(map(xe, L.y0 + 40 + (L.y1 - L.y0 - 120) * k / 12)); return P; };
+    const e0 = ed(L.x0), e1 = ed(L.x1), mx = (P) => P.reduce((a, p) => a + p[0], 0) / P.length, E = mx(e0) < mx(e1) ? e0 : e1;
+    const w = 14 * smooth((t - 128.7) / 0.04), tex = G.tex("s27:lidRimBack", LT.paintRimBack, { mip: false }), xy = [], uv = [], idx = [];
+    for (const [x, y] of E) { xy.push(x, y, x - w, y + w * 0.12); uv.push(4, 1, 4, tex.h - 1); }
+    for (let k = 0; k < E.length - 1; k++) { const q = k * 2; idx.push(q, q + 1, q + 2, q + 1, q + 3, q + 2); }
+    G.mesh(tex, xy, uv, idx);
   }
-  return c;
-}
-
-// ---------------------------------------------------------------- window light on the desk (fix pass 2)
-// The source's crisp diagonal wedge of sunlight on the desk left of the laptop does not stay fixed to the desk plane
-// as the camera turns, so it is a frame-space layer keyed on luma profiles of the source (rows y 720–840):
-// hold (118.6): bright from x 100–250 at y 840 to x 330–470 at y 720 (source 186–194 against the desk's ~150);
-// 121.0: x 300–530 at y 840 to x 480–560 at y 720, with the far left in shade (source -15..-20 against the render).
-// Rows: [t, light quad x0,y0 .. x3,y3 (frame px), light alpha, shade alpha]
-const DESK_LIGHT = [
-  [117.92, 70, 872, 240, 872, 505, 690, 365, 690, 0.42, 0],
-  [119.72, 70, 872, 240, 872, 505, 690, 365, 690, 0.42, 0],
-  [121.0, 280, 872, 545, 872, 575, 700, 490, 700, 0.42, 1],
-  [121.5, 330, 890, 600, 890, 620, 710, 540, 710, 0.3, 0.6],
-  [121.9, 380, 900, 640, 900, 660, 720, 590, 720, 0, 0],
-];
-function drawDeskLight(G, t, Z) {
-  if (t < 117.92 || t > 121.9) return;
-  const v = linAt(DESK_LIGHT, t), [la, sa] = [v[8], v[9]];
-  if (la <= 0 && sa <= 0) return;
-  const cv = C.spDeskLight, g = cv.getContext("2d"), ox = 0, oy = 660;
-  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.translate(-ox, -oy);
-  const q = [[v[0], v[1]], [v[2], v[3]], [v[4], v[5]], [v[6], v[7]]];
-  const poly = (P) => { g.beginPath(); g.moveTo(P[0][0], P[0][1]); for (const p of P.slice(1)) g.lineTo(p[0], p[1]); g.closePath(); };
-  if (sa > 0) { g.filter = "blur(10px)"; poly([[-40, 700], [q[3][0], 700], [q[0][0], 900], [-40, 900]]); g.fillStyle = `rgba(110,62,40,${0.2 * sa})`; g.fill(); }
-  if (la > 0) { g.filter = "blur(4px)"; poly(q); g.fillStyle = `rgba(255,246,222,${la})`; g.fill(); }
-  g.filter = "none";
-  blitSprite(G, "s27d:spDeskLight", cv, ox, oy, Z);
-}
-
-// ---------------------------------------------------------------- the low cabinet behind the mug in the end orbit (fix pass 2)
-// In the source its top stays horizontal while the wall plane swings, so it is a frame-space layer keyed on the
-// source's cabinet edges (cab_seq.jpg). Rows: [t, x0, x1, top y, bottom y]
-const CAB_K = [[128.72, 1700, 1850, 546, 640], [128.8, 1700, 1850, 550, 640], [129.0, 1724, 1994, 570, 650], [129.16, 1740, 2230, 575, 680], [129.28, 1704, 2230, 580, 700], [129.32, 1695, 2230, 582, 705]];
-function drawCabinet(G, t) {
-  if (t < 128.72) return;
-  const a = clamp01((t - 128.72) / 0.15), [x0, x1, yt, yb] = linAt(CAB_K, t);
-  const cv = C.spCab, g = cv.getContext("2d"), ox = 1660, oy = 520;
-  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.translate(-ox, -oy); g.globalAlpha = a;
-  const gr = g.createLinearGradient(x0, 0, x1, 0); gr.addColorStop(0, "#d6b690"); gr.addColorStop(0.55, "#cfae88"); gr.addColorStop(1, "#b8977a");
-  g.fillStyle = gr; g.fillRect(x0, yt, x1 - x0, yb - yt);
-  g.fillStyle = "#e3c9a6"; g.fillRect(x0, yt, x1 - x0, 7);
-  g.lineWidth = 2; g.strokeStyle = "#5a4034"; g.beginPath(); g.moveTo(x0, yt); g.lineTo(x1, yt); g.moveTo(x0, yt + 7); g.lineTo(x1, yt + 7); g.moveTo(x0, yt); g.lineTo(x0, yb); g.stroke();
-  // drawers: two fronts with a seam and small pulls
-  g.lineWidth = 1.4; g.strokeStyle = "rgba(90,64,52,0.7)";
-  const xm = x0 + (x1 - x0) * 0.48;
-  g.beginPath(); g.moveTo(x0 + 8, yt + 16); g.lineTo(x1, yt + 16); g.moveTo(xm, yt + 16); g.lineTo(xm, yb); g.stroke();
-  g.fillStyle = "rgba(90,64,52,0.8)"; for (const px of [(x0 + xm) / 2, (xm + x1) / 2]) g.fillRect(px - 10, yt + 26, 20, 3);
-  g.globalAlpha = 1;
-  blitSprite(G, "s27d:spCab", cv, ox, oy, null);
-}
-
-// ---------------------------------------------------------------- the far desk's edge in the end orbit (fix pass 2)
-// The desk's right edge swings round as the camera orbits: first its side edge running down-right with the wall beyond
-// it, then (from ~129.0) its front edge running down-left from the corner, with the front face and the dark drawer
-// unit under it. Located on each frame from the thin ink line (black-hat peaks on rows y 660–940), frame px.
-// Rows: [t, top x, top y, bottom x (at y 946)]
-const FAR_EDGE = [
-  [128.45, 1790, 686, 2320], [128.52, 1800, 690, 2283], [128.6, 1812, 690, 2250], [128.72, 1805, 660, 2150], [128.8, 1846, 660, 2085],
-  [128.92, 1935, 700, 1998], [129.04, 2010, 680, 1922], [129.16, 2100, 690, 1866], [129.28, 2200, 705, 1835], [129.32, 2232, 710, 1815],
-];
-function drawFarEdge(G, t) {
-  if (t < 128.45) return;
-  const a = clamp01((t - 128.45) / 0.12);
-  const [xt, yt, xb] = linAt(FAR_EDGE, t), yb = 946;
-  const cv = C.spFarEdge, g = cv.getContext("2d"), ox = 1350, oy = 620;
-  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.translate(-ox, -oy); g.globalAlpha = a;
-  const front = t > 128.97;   // the front edge (desk below-left of it, face + drawer under it)
-  // the pale far desk top (source 211–215, 202–205, 171–173), fading in from the left under the laptop
-  const dg = g.createLinearGradient(1350, 0, 1560, 0); dg.addColorStop(0, "rgba(235,226,185,0)"); dg.addColorStop(1, "rgba(235,226,185,1)");
-  g.beginPath(); g.moveTo(1350, yt - 10); g.lineTo(xt, yt - 10); g.lineTo(xt, yt); g.lineTo(xb, yb); g.lineTo(1350, yb); g.closePath(); g.fillStyle = dg; g.fill();
-  if (!front) {
-    // beyond the side edge: the wall under the window (source 160,144,138 at (2050–2200, 700–850))
-    g.beginPath(); g.moveTo(xt, yt); g.lineTo(2220, yt - 10); g.lineTo(2220, yb); g.lineTo(xb, yb); g.closePath(); g.fillStyle = "#a8968f"; g.fill();
-  } else {
-    // under the front edge: the face (a band ~18 px) and the dark drawer unit; the wall right of the corner
-    // (the region under the corner turns from the grey wall at 129.0 (153,138,132) to the brown desk end at 129.28 (~137,99,79))
-    const k = clamp01((t - 129.04) / 0.22), mix = (p, q) => Math.round(p + (q - p) * k);
-    g.beginPath(); g.moveTo(xt, yt); g.lineTo(2220, yt - 4); g.lineTo(2220, yb); g.lineTo(xb, yb); g.closePath(); g.fillStyle = `rgb(${mix(168, 138)},${mix(150, 100)},${mix(143, 80)})`; g.fill();
-    g.beginPath(); g.moveTo(xt, yt); g.lineTo(xt + 22, yt + 12); g.lineTo(xb + 26, yb); g.lineTo(xb, yb); g.closePath(); g.fillStyle = "#b08a6e"; g.fill();
-    g.lineWidth = 2; g.strokeStyle = "rgba(58,37,32,0.8)"; g.beginPath(); g.moveTo(xt + 22, yt + 12); g.lineTo(xb + 26, yb); g.stroke();
+  const front = area > 0 || (t > 128.5 && t < 128.63);     // the source still shows the screen side at 128.60 (a sliver)
+  // (s27t pass) the rim and bezel darken as the camera swings off the window light (measured, see LIDTURN)
+  const tw = front ? lerpRows(LIDTURN, t)[0] : 0;
+  const tex = front ? G.tex(`s27:lidFront:${withOwl}:${tw >= 1}`, () => LT.paintLidFront(pageTexCanvas(withOwl), tw >= 1)) : G.tex("s27:lidBack", LT.paintLidBack);
+  const S = LT.LID_SC, o = 4 / S;
+  const drawTex = (tex, alpha) => {
+    if (edge) {
+      const N = 10, xy = [], uv = [], idx = [];
+      for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
+        const x = L.x0 + (L.x1 - L.x0) * i / N, y = L.y0 + (L.y1 - L.y0) * j / N, q = bil(x, y);
+        xy.push(q[0], q[1]); uv.push(((front ? x - L.x0 : L.x1 - x) + o) * S, (y - L.y0 + o) * S);
+      }
+      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const k = j * (N + 1) + i; idx.push(k, k + 1, k + N + 1, k + 1, k + N + 2, k + N + 1); }
+      G.mesh(tex, xy, uv, idx, { alpha });
+    } else if (front) G.quadH(tex, hmul(Hl, [1 / S, 0, L.x0 - o, 0, 1 / S, L.y0 - o, 0, 0, 1]), { alpha });
+    else G.quadH(tex, hmul(Hl, [-1 / S, 0, L.x1 + o, 0, 1 / S, L.y0 - o, 0, 0, 1]), { alpha });   // the back seen from behind: mirror x
+  };
+  drawTex(tex, 1);
+  if (front && tw > 0 && tw < 1) drawTex(G.tex(`s27:lidFront:${withOwl}:true`, () => LT.paintLidFront(pageTexCanvas(withOwl), true)), tw);
+  // (end-s27-fix1) the back's face as it swings past: the sunlit patch over the darker face, fitted per source frame
+  // (s27/lidback.js); it replaced a flat lit back cross-faded by weight (LIDBACK_LIT), which read too light and even
+  // (end-s27-fix1) edge-on (128.62–128.70) the source shows the lid's thickness: a ~12 px band, ink / light rim / ink, along
+  // the lid (128.64, y 450: ink 1661, light 1664–1670, ink 1673); the collapsed quad drew only a faint light line
+  if (t > 128.61 && t < 128.71) {
+    const n = 8, xy = [], uv = [], idx = [], tex = G.tex("s27:lidEdge", () => { const c = canvas(12, 4), g = c.getContext("2d");
+      g.fillStyle = "rgb(75,50,36)"; g.fillRect(0, 0, 12, 4); g.fillStyle = "rgb(214,192,170)"; g.fillRect(3, 0, 6, 4); return c; }, { mip: false });
+    const T = [(C[0][0] + C[1][0]) / 2, (C[0][1] + C[1][1]) / 2], Bt = [(C[3][0] + C[2][0]) / 2, (C[3][1] + C[2][1]) / 2];
+    for (let i = 0; i <= n; i++) { const x = T[0] + (Bt[0] - T[0]) * i / n, y = T[1] + (Bt[1] - T[1]) * i / n; xy.push(x - 6, y, x + 6, y); uv.push(0.5, 2, 11.5, 2); }
+    for (let i = 0; i < n; i++) { const k = 2 * i; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    G.mesh(tex, xy, uv, idx);
+    return Hl;
   }
-  g.lineWidth = 3; g.strokeStyle = "#3a2520"; g.lineCap = "round"; g.beginPath(); g.moveTo(xt, yt); g.lineTo(xb, yb); g.stroke();
-  g.globalAlpha = 1;
-  blitSprite(G, "s27d:spFarEdge", cv, ox, oy, null);
-}
-
-// the desk's back-left corner during the turn (fix pass 2): in the source it stays near (290–350, 634–654) with its left
-// edge dropping to the frame edge (wall showing above it), while the desk plane pinned to the base swings that corner
-// off to the upper left. Rows: [t, corner x, corner y, edge y at x = 0] (read on 0.7x crops, deskleft.jpg)
-const DESK_LEFT = [[119.72, 302, 654, 737], [120.4, 294, 648, 739], [121.0, 290, 637, 723], [121.4, 350, 634, 715], [121.9, 420, 630, 705]];
-function drawDeskLeft(G, t, Z) {
-  if (t < 119.9 || t > 121.9) return;
-  const a = clamp01((t - 119.9) / 0.2) * (1 - clamp01((t - 121.6) / 0.3));
-  const [cx, cy, y0] = linAt(DESK_LEFT, t);
-  const cv = C.spDeskLeft, g = cv.getContext("2d"), ox = -10, oy = 590;
-  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.translate(-ox, -oy); g.globalAlpha = a;
-  const top = Math.min(cy, 640) - 14;
-  g.beginPath(); g.moveTo(-10, top); g.lineTo(cx + 30, top); g.lineTo(cx + 30, cy); g.lineTo(cx, cy); g.lineTo(0, y0); g.lineTo(-10, y0 + 3); g.closePath();
-  g.fillStyle = "#e6e2d4"; g.fill();
-  g.lineWidth = 2.2; g.strokeStyle = "rgba(74,58,51,0.9)"; g.lineCap = "round";
-  g.beginPath(); g.moveTo(-10, y0 + 3); g.lineTo(cx, cy); g.lineTo(cx + 30, cy); g.stroke();
-  g.globalAlpha = 1;
-  blitSprite(G, "s27d:spDeskLeft", cv, ox, oy, Z);
-}
-
-// ---------------------------------------------------------------- props (per-frame sprites from keys)
-function drawMugSprite(G, t, Z) {
-  const [x, y, w, hd] = keyAt(MUG_K, Math.max(MUG_K[0][0], t));
-  const cv = C.spMug, g = cv.getContext("2d"), ox = Math.round(x - 210), oy = Math.round(y - 120);
-  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.translate(-ox, -oy);
-  if (t > 128.7) drawMugSheet(g, x, y, w, clamp01((t - 128.7) / 0.2));
-  drawMug(g, x, y, w, hd);
-  blitSprite(G, "s27d:spMug", cv, ox, oy, Z);
-}
-function nbAt(t) {
-  if (t <= 127.6) return keyAt(NB_K, Math.max(NB_K[0][0], t));
-  const v = NB_K[NB_K.length - 1].slice(1), [dx, dy] = keyAt(NB_END, t);
-  for (let k = 0; k < 8; k += 2) { v[k] += dx; v[k + 1] += dy; }
-  // (fix pass 2) the source's notebook foreshortens as the camera comes round: its right edge (B, C) ends ~90–110 px
-  // further left at 128.8–129.0 (right edge x 1711 vs 1790 at 128.8)
-  const r = linAt(NB_RIGHT, t)[0]; v[2] += r; v[4] += r;
-  return v;
-}
-const NB_RIGHT = [[127.6, 0], [128.4, -20], [128.8, -90], [129.0, -110], [129.4, -110]];
-function pencilAt(t) { return t <= 127.6 ? keyAt(PENCIL_K, Math.max(PENCIL_K[0][0], t)) : keyAt(PENCIL_END, t); }
-function drawPropsSprite(G, t, Z) {
-  const n = nbAt(t), p = pencilAt(t);
-  const xs = [n[0], n[2], n[4], n[6], p[0], p[2]], ys = [n[1], n[3], n[5], n[7], p[1], p[3]];
-  const ox = Math.round(Math.min(...xs) - 60), oy = Math.round(Math.min(...ys) - 40);
-  const cv = C.spProps, g = cv.getContext("2d");
-  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.translate(-ox, -oy);
-  drawNotebook(g, [n[0], n[1]], [n[2], n[3]], [n[4], n[5]], [n[6], n[7]], n[8]);
-  drawPencil(g, [p[0], p[1]], [p[2], p[3]]);
-  blitSprite(G, "s27d:spProps", cv, ox, oy, Z);
-}
-
-// ---------------------------------------------------------------- the owl
-// on the page (page px): perched on the top gold box by the nav, measured on the screen at 118.5 s
-const PAGE_OWL = { x: 2018, y: 122, s: 0.6 };   // feet on the box lid at OWL_PERCH (2022, 236); eye spacing 45 page px
-function paintPageOwl() {   // texture px (u,v) -> page (1880 + u/2, v/2)
-  const c = document.createElement("canvas"); c.width = 600; c.height = 520;
-  const g = c.getContext("2d");
-  g.scale(2, 2); g.translate(-1880, 0);
-  drawColorOwl(g, { x: PAGE_OWL.x, y: PAGE_OWL.y, s: PAGE_OWL.s, eyes: "open" });
-  return c;
-}
-// flight keys (read off 1–1.2x gridded crops; eye midpoint x,y; s = scale; rot; wings 0 folded..1 spread;
-// lift = wing raise; feet 0 tucked..1 down)
-const OWL_K = [
-  //  t       x     y     s      rot    wings lift feet
-  // 125.44–126.28 read on 1.6x gridded crops (owl_flight.jpg); 126.32–127.60 from the detected eye pair on every source
-  // frame (snapshots/s27-fix1-tools/owleyes.py: midpoint; s = 0.91 x iris spacing / 64, calibrated at 127.2 s)
-  [125.44, 1738, 344, 0.27, 0.00, 0.0, 0.5, 0.6],
-  [125.60, 1732, 340, 0.31, 0.00, 0.0, 0.5, 0.5],
-  [125.76, 1730, 362, 0.33, 0.00, 0.0, 0.5, 0.4],
-  [125.92, 1716, 372, 0.35, 0.00, 0.1, 0.5, 0.3],
-  [126.00, 1709, 386, 0.36, -0.02, 0.2, 0.5, 0.3],
-  [126.08, 1705, 387, 0.36, -0.03, 0.4, 0.6, 0.3],
-  [126.16, 1702, 391, 0.37, -0.04, 0.7, 0.7, 0.3],
-  [126.20, 1688, 391, 0.39, -0.05, 0.9, 0.7, 0.3],
-  [126.28, 1675, 391, 0.41, -0.06, 1.0, 0.5, 0.5],
-  [126.32, 1626, 382, 0.46, -0.07, 1.0, 0.45, 0.6],
-  [126.36, 1594, 378, 0.53, -0.08, 1.0, 0.4, 0.6],
-  [126.40, 1562, 375, 0.57, -0.08, 1.0, 0.45, 0.7],
-  [126.44, 1534, 375, 0.63, -0.08, 1.0, 0.5, 0.8],
-  [126.48, 1506, 374, 0.70, -0.07, 1.0, 0.7, 0.9],
-  [126.52, 1482, 376, 0.73, -0.06, 1.0, 0.9, 1.0],
-  [126.56, 1482, 376, 0.73, -0.06, 1.0, 0.9, 1.0],
-  [126.60, 1460, 384, 0.78, -0.05, 1.0, 1.0, 1.0],
-  [126.64, 1442, 397, 0.80, -0.045, 1.0, 0.85, 1.0],
-  [126.68, 1428, 414, 0.84, -0.04, 1.0, 0.7, 1.0],
-  [126.72, 1414, 433, 0.87, -0.03, 1.0, 0.85, 1.0],
-  [126.76, 1402, 453, 0.90, -0.02, 1.0, 1.0, 1.0],
-  [126.80, 1388, 477, 0.91, -0.01, 1.0, 0.9, 1.0],
-  [126.84, 1382, 499, 0.925, 0.00, 1.0, 0.8, 1.0],
-  [126.88, 1375, 520, 0.93, 0.00, 1.0, 0.3, 1.0],
-  [126.92, 1369, 535, 0.93, 0.00, 1.0, 0.0, 1.0],
-  [126.96, 1368, 537, 0.93, 0.00, 0.5, 0.0, 1.0],
-  [127.00, 1367, 536, 0.925, 0.00, 0.0, 0.0, 1.0],
-  [127.04, 1367, 532, 0.925, 0.00, 0.0, 0.0, 1.0],
-  [127.08, 1367, 526, 0.925, 0.00, 0.0, 0.0, 1.0],
-  [127.12, 1368, 520, 0.91, 0.00, 0.0, 0.0, 1.0],
-  [127.16, 1369, 514, 0.91, 0.00, 0.0, 0.0, 1.0],
-  [127.20, 1370, 509, 0.91, 0.00, 0.0, 0.0, 1.0],
-  [127.28, 1371, 506, 0.91, 0.00, 0.0, 0.0, 1.0],
-  [127.36, 1372, 504, 0.91, 0.00, 0.0, 0.0, 1.0],
-  [127.60, 1372, 504, 0.91, 0.00, 0.0, 0.0, 1.0],
-];
-// after the landing: the owl rides the keyboard while the camera starts round and turns toward a three-quarter view.
-// 127.6–128.4 from the detected eye pair; 128.4–129.32 read on 2.2x gridded crops (owl_face_end.jpg: both irises, the
-// beak tip, the near cup; x = head centre from the head's left edge; turn fitted to the feature positions)
-const OWL_END = [
-  [127.6, 1372, 504, 0.91, 0], [127.76, 1373, 506, 0.91, 0], [128.0, 1375, 511, 0.91, 0], [128.2, 1381, 517, 0.94, 0.14],
-  // (fix pass 2) 128.72–129.0 re-read on the new rig: head spans x 1308–1493, top 420, feet 736 at 128.8 (a rounder owl, not
-  // a smaller one)
-  [128.4, 1390, 525, 0.969, 0.36], [128.6, 1395, 529, 0.978, 0.5], [128.72, 1405, 538, 1.0, 0.62], [128.8, 1408, 546, 1.0, 0.76],
-  [128.92, 1400, 552, 1.02, 0.88], [129.0, 1390, 556, 1.03, 0.95], [129.04, 1376, 554, 1.035, 0.96], [129.2, 1353, 569, 1.037, 1.0],
-  [129.28, 1331, 573, 1.037, 1.0], [129.32, 1320, 575, 1.037, 1.0],
-];
-function owlEyes(t) { return t >= 126.86 && t < 126.98 ? "happy" : t >= 126.98 && t < 127.02 ? "wink" : "open"; }
-function drawOwlLive(G, t, Hs, Z) {
-  if (t < OWL_K[0][0]) return;
-  let [x, y, s, rot, wings, lift, feet] = linAt(OWL_K, t), turn = 0;
-  if (t > 127.6) { [x, y, s, turn] = keyAt(OWL_END, t); }
-  const cv = C.spOwl, g = cv.getContext("2d");
-  const ox = Math.round(x - 450), oy = Math.round(y - 330);
-  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
-  g.save();   // (the clip must not outlive this frame: the sprite canvas is reused)
-  g.translate(-ox, -oy);
-  if (t < 126.34) {   // still inside the screen: clipped to the display glass
-    const D = LT.DISP, q = [[D.x0, D.y0], [D.x1, D.y0], [D.x1, D.y1], [D.x0, D.y1]].map(([u, v]) => happly(Hs, u, v));
-    g.beginPath(); g.moveTo(q[0][0], q[0][1]); for (let k = 1; k < 4; k++) g.lineTo(q[k][0], q[k][1]); g.closePath(); g.clip();
+  if (!front && t >= 128.6) {
+    if (!lbC) { const r = G.texes.get("s27:lidBack"); lbC = canvas(r ? r.w : (LT.LID.x1 - LT.LID.x0) * LT.LID_SC + 8, r ? r.h : (LT.LID.y1 - LT.LID.y0) * LT.LID_SC + 8); }
+    drawTex(G.dyn("s27:lidFace", LT.paintLidBackFace(lbC, LT.lidBackRow(t))), 1);
   }
-  drawColorOwl(g, { x, y, s, rot, eyes: owlEyes(t), wings, lift, feet, turn });
+  return Hl;
+}
+let lbC = null;
+const PAGE_CANVAS = {};
+function pageTexCanvas(withOwl) {
+  if (!PAGE_CANVAS[withOwl]) {
+    const c = canvas(2206, 946), g = c.getContext("2d");
+    g.drawImage(hippiePageCanvas(), 0, 0);
+    if (withOwl) {
+      // (end-s27-fix1) the page's owl is the source's own page owl, traced in page coordinates from a registered median of the
+      // frontal hold (s27/pageOwl.js), so it turns with the page as it does in the source (narrow by 124–125) and sits
+      // upright with big eyes and dark headphones. It was the hand-built drawOwl (a white bun with its wings out). At 125.36
+      // the source's owl itself pops bigger as it starts to climb out; the traced climbing owl takes over there.
+      const pp = (a) => { const q = dec(a); g.moveTo(q[0] / 2, q[1] / 2); for (let i = 2; i < q.length; i += 2) g.lineTo(q[i] / 2, q[i + 1] / 2); g.closePath(); };
+      g.save(); g.lineJoin = "round";
+      for (const r of PAGE_OWL_REGIONS) { g.beginPath(); pp(r[1]); for (let k = 2; k < r.length; k++) pp(r[k]); g.fillStyle = r[0]; g.fill("evenodd"); g.lineWidth = 1.2; g.strokeStyle = r[0]; g.stroke(); }
+      for (const grp of PAGE_OWL_INK) { g.beginPath(); for (let k = 1; k < grp.length; k++) for (const q of grp[k]) pp(q); g.fillStyle = grp[0]; g.fill("evenodd"); }
+      g.restore();
+    }
+    PAGE_CANVAS[withOwl] = c;
+  }
+  return PAGE_CANVAS[withOwl];
+}
+
+// ---------- mug ----------
+// (end-s27-fix1) the mug through the end orbit, read off 2x gridded source crops (body edges, rim top + 7 = yt): left of
+// the owl with its handle on the left (127.64–128.2), behind the owl and between the owl and the lid (128.4–128.8), hidden
+// by the lid, then right of it (128.88–129.12, handle hidden, it shows on the right from 129.08). It used to slide in a
+// straight line from 127.64 to 129.16, which put it under the owl at 128.0 and right of the lid, handle showing, by 128.6.
+// [t, cx, yt, w, h]; blends from MUG_B at 127.4 and into MUG_C at 129.16
+const MUG_D = [[127.4, 1252.0, 527.5, 108.6, 130.0], [127.52, 1251.9, 530.5, 107.5, 130.2], [127.64, 1254.2, 533.5, 105.1, 130.6],
+  [127.84, 1274.5, 535, 105, 130.6], [128.0, 1310, 537, 105, 130.8], [128.2, 1364, 538, 106, 131], [128.52, 1487, 551, 111, 131],
+  [128.64, 1514, 553, 113, 131], [128.76, 1560, 560, 116, 131.5], [128.8, 1580, 561, 117, 131.5], [128.88, 1616.5, 566, 122, 132],
+  [128.96, 1654, 571, 124, 133], [129.04, 1696, 577, 126, 134], [129.08, 1713.5, 578, 127, 135], [129.12, 1733, 578, 128, 137],
+  [129.16, 1757.0, 577.8, 129.5, 138.8], [129.2, 1778.2, 580.0, 129.5, 138.8]];
+function mugState(t) {
+  if (t <= 120.8) { const [cx, yt, w, h] = crRows(MUG_A, Math.max(119.6, t)); return { cx, yt, w, h: Math.max(147, h), flip: false }; }
+  const a = MUG_A[MUG_A.length - 1];
+  const A = (tt) => ({ cx: a[1] - 55 * (tt - 120.8), yt: a[2], w: a[3], h: 147 });
+  if (t <= 121.4) return { ...A(t), flip: false };
+  const b0 = MUG_B[0];
+  if (t < b0[0]) {
+    const p = A(121.4), u = (t - 121.4) / (b0[0] - 121.4);
+    return { cx: p.cx + (b0[1] - p.cx) * u, yt: p.yt + (b0[2] - p.yt) * u, w: p.w + (b0[3] - p.w) * u, h: p.h + (b0[4] - p.h) * u, flip: u > 0.5 };
+  }
+  const bl = MUG_B[MUG_B.length - 1];
+  if (t <= 127.4) { const [cx, yt, w, h] = crRows(MUG_B, t); return { cx, yt, w, h, flip: true }; }
+  if (t < MUG_C[0][0]) {   // (end-s27-fix1) the end orbit, keyed on the source (MUG_D); handle left until it is behind the lid
+    const [cx, yt, w, h] = crRows(MUG_D, t); return { cx, yt, w, h, flip: t < 129.06 };
+  }
+  const [cx, yt, w, h] = crRows(MUG_C, t); return { cx, yt, w: 129.5, h: 138.8, flip: false };
+}
+
+// ---------- notebook ----------
+function drawNotebook(G, t, Z) {
+  const c = crRows(NOTEBOOK_K, Math.max(119.6, t));
+  const Hn = hmul(Z, hquad([[0, 0], [NB_TEX.W, 0], [NB_TEX.W, NB_TEX.D], [0, NB_TEX.D]], [[c[0], c[1]], [c[2], c[3]], [c[4], c[5]], [c[6], c[7]]]));
+  const strip = G.tex("s27:pages", paintPageStrip, { mip: false });
+  const outline = [[0, 0], [NB_TEX.W, 0], [NB_TEX.W, NB_TEX.D], [0, NB_TEX.D]];
+  const top = [];
+  for (let i = 0; i < 4; i++) { const a = outline[i], b = outline[(i + 1) % 4]; for (let k = 0; k < 8; k++) { const u = k / 8; top.push(happly(Hn, a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u)); } }
+  // (end-s27-tfix) a hardcover, not a pad: 30 px deep at 119.6 (source 119.0: top board edge 795 -> bottom ink 829 at x 1900),
+  // deeper as the camera drops toward the desk; the page block on three edges and the maroon spine face on the c3-c0 edge
+  // (it was a 20 px page strip all round and a thin half-round spine). A soft warm shadow on the desk below the lower edges.
+  const dep = 30 + 6 * clamp01((t - 120) / 3);
+  const bot = top.map((p) => [p[0], p[1] + dep]);
+  const sh = G.tex("s27:baseShadow", LT.paintContactShadow, { mip: false });
+  stripMesh(G, sh, bot, bot.map((p) => [p[0] - 6, p[1] + 12]));
+  // only the side faces that face the camera (outward normal pointing down the frame; the book is a convex prism
+  // extruded straight down), so a hidden back face never paints over a visible one
+  let area = 0; for (let i = 0; i < top.length; i++) { const a = top[i], b = top[(i + 1) % top.length]; area += a[0] * b[1] - b[0] * a[1]; }
+  const sideMesh = (tex, i0, i1) => {
+    const xy = [], uv = [], idx = [];
+    for (let i = i0; i <= i1; i++) { const a = top[i % top.length], b = bot[i % bot.length]; xy.push(a[0], a[1], b[0], b[1]); uv.push(4, 1, 4, tex.h - 1); }
+    for (let i = 0; i < i1 - i0; i++) {
+      const a = top[(i0 + i) % top.length], b = top[(i0 + i + 1) % top.length], ny = (a[0] - b[0]) * (area > 0 ? 1 : -1);
+      if (ny <= 0) continue;
+      const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+    }
+    if (idx.length) G.mesh(tex, xy, uv, idx);
+  };
+  sideMesh(strip, 0, 24);
+  sideMesh(G.tex("s27:spineFace", paintSpineFace, { mip: false }), 24, 32);
+  G.quadH(G.tex("s27:nb", () => paintNotebookTop(false)), hmul(Hn, [1 / NB_TEX.S, 0, 0, 0, 1 / NB_TEX.S, 0, 0, 0, 1]));
+}
+function drawPencil(G, t, Z) {
+  const [ex, ey, tx, ty] = crRows(PENCIL_K, Math.max(119.6, t));
+  const a = happly(Z, ex, ey), b = happly(Z, tx, ty);
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  const tex = G.tex("s27:pencil", () => { const c = canvas(1024, 64), g = c.getContext("2d"); g.scale(1024 / 100, 64 / 6.25); paintPencil(g, [0.5, 3.1], [99.5, 3.1], 4.4); return c; });
+  const w = 12 * Math.min(1, L / 330 + 0.35), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = -uy * w / 2 * 6.25 / 4.4, ny = ux * w / 2 * 6.25 / 4.4;
+  const q = [[a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny], [b[0] - nx, b[1] - ny], [a[0] - nx, a[1] - ny]];
+  G.quadH(tex, hquad([[0, 0], [1024, 0], [1024, 64], [0, 64]], q));
+}
+
+const GRAIN_K = 1.35;
+// ---------- compositing ----------
+const BG125 = hinv(lerpRows(BG, 125.0));
+const DBG = () => globalThis.__s27dbg || null;     // measuring hooks for the s27 tools (never set in the film)
+// The traced views of the room along the move: [bracket time, frame time of the trace, texture key, painter, box].
+// Between two neighbours the later one is laid first (it covers what the earlier one never saw), then the earlier one,
+// then the later one again at the cross-fade weight. Each is placed by the wall track relative to its own frame.
+// (end-s27-tfix) from 127.88 on the room is the end-orbit keys (OKEYS, one every 3 frames) drawn through per-frame meshes
+// (drawOrbit); TRACES ends on the first of them, so 127.6–127.88 still cross-fades from the 125.0 trace into it.
+const OK_BY_F = new Map(OKEYS.map((k) => [k[0], k]));
+const OK_F0 = OKEYS[0][0], OK_T0 = OK_F0 / 25;
+const okTexKey = (F) => `s27:okey:${F}`;
+const okPaint = (F) => () => { const k = OK_BY_F.get(F); return paintTrace(k[1], k[2], KEY_BOX); };
+const TRACES = (() => {
+  const L = [[119.8, 119.6, "s27:traceA", paintTraceA, A_BOX]];
+  for (const [tk, R, I] of KEYS) L.push([tk, tk, `s27:key:${tk}`, () => paintTrace(R, I, KEY_BOX), KEY_BOX]);
+  L.push([125.0, 125.0, "s27:traceB", paintTraceB, B_BOX], [127.6, 125.0, "s27:traceB", paintTraceB, B_BOX]);
+  L.push([OK_T0, OK_T0, okTexKey(OK_F0), okPaint(OK_F0), KEY_BOX]);
+  return L;
+})();
+// drop the room textures not in use (each is a full-frame canvas)
+function keepRoomTex(G, keep) {
+  for (const k of [...G.texes.keys()]) {
+    if (!(k.startsWith("s27:okey:") || k.startsWith("s27:key:") || k.startsWith("s27:trace"))) continue;
+    if (!keep.includes(k)) { G.gl.deleteTexture(G.texes.get(k).tex); G.texes.delete(k); }
+  }
+}
+let omIdx = null;
+function orbitMeshDraw(G, tex, str, alpha) {
+  const { GS, NX, NY, X0, Y0 } = OM_GRID, d = dec(str), xy = new Array(NX * NY * 2), uv = new Array(NX * NY * 2);
+  for (let j = 0, k = 0; j < NY; j++) for (let i = 0; i < NX; i++, k += 2) {
+    const x = X0 + i * GS, y = Y0 + j * GS;
+    xy[k] = x; xy[k + 1] = y; uv[k] = x + d[k] / 4 - KEY_BOX.x0; uv[k + 1] = y + d[k + 1] / 4 - KEY_BOX.y0;
+  }
+  if (!omIdx) { omIdx = []; for (let j = 0; j < NY - 1; j++) for (let i = 0; i < NX - 1; i++) { const k = j * NX + i; omIdx.push(k, k + 1, k + NX, k + 1, k + NX + 1, k + NX); } }
+  G.mesh(tex, xy, uv, omIdx, { alpha });
+}
+// the end orbit (127.88–129.28): on a key frame its trace as traced; between two keys each is carried onto the frame by the
+// source's own room motion (orbitMesh.js) and the two are blended by time
+function drawOrbit(G, t) {
+  const F = Math.round(t * 25);
+  if (OK_BY_F.has(F)) { keepRoomTex(G, [okTexKey(F)]); G.quadH(G.tex(okTexKey(F), okPaint(F)), [1, 0, KEY_BOX.x0, 0, 1, KEY_BOX.y0, 0, 0, 1]); return; }
+  const row = OM[F]; if (!row) return;
+  const [[a, sa], [b, sb]] = row;
+  keepRoomTex(G, [okTexKey(a), okTexKey(b)]);
+  const mode = (DBG() && DBG().omode) || "lin";
+  let u = (F - a) / (b - a);
+  if (mode === "cut") u = u > 0.5 ? 1 : 0;
+  if (u < 1) orbitMeshDraw(G, G.tex(okTexKey(a), okPaint(a)), sa, 1);
+  if (u > 0) orbitMeshDraw(G, G.tex(okTexKey(b), okPaint(b)), sb, u < 1 ? u : 1);
+}
+function traceH(Z, Wt, e) { return hmul(Z, hmul(Wt, hmul(hinv(wallH(e[1])), [1, 0, e[4].x0, 0, 1, e[4].y0, 0, 0, 1]))); }
+function drawTraces(G, t, Z, Wt) {
+  if (t >= OK_T0 - 1e-6) { drawOrbit(G, t); return; }
+  let i = 0; while (i < TRACES.length - 1 && TRACES[i + 1][0] <= t) i++;
+  const a = TRACES[i], b = TRACES[Math.min(i + 1, TRACES.length - 1)];
+  // keep only the textures in use (each is a full-frame canvas)
+  for (let k = 0; k < TRACES.length; k++) {
+    const e = TRACES[k], r = G.texes.get(e[2]);
+    if (r && e[2] !== a[2] && e[2] !== b[2]) { G.gl.deleteTexture(r.tex); G.texes.delete(e[2]); }
+  }
+  const ta = G.tex(a[2], a[3]);
+  if (b === a || t <= a[0]) { G.quadH(ta, traceH(Z, Wt, a)); return; }
+  const u = clamp01((t - a[0]) / (b[0] - a[0]));
+  const tb = G.tex(b[2], b[3]);
+  if (b[2] === a[2]) { G.quadH(ta, traceH(Z, Wt, a)); return; }
+  G.quadH(tb, traceH(Z, Wt, b));
+  G.quadH(ta, traceH(Z, Wt, a));
+  if (u > 0) G.quadH(tb, traceH(Z, Wt, b), { alpha: u });
+}
+function roomLayers(G, t, Z) {
+  if (DBG() && DBG().room === "mask") { G.quadH(G.tex("s27:dbgWhite", () => { const c = canvas(4, 4), g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, 4, 4); return c; }), [W / 4, 0, 0, 0, H / 4, 0, 0, 0, 1], { tint: [1, 0, 1, 1] }); return; }
+  const Wt = wallH(t);
+  // hand-painted underlay (shows only beyond the traced frames' edges): A frontal, B side, C behind
+  const wA = smooth((123.5 - t) / 1.1), wC = smooth((t - 128.5) / 0.5);
+  if (wA > 0) {
+    const HA = hmul(Z, hmul(Wt, [1, 0, A_BOX.x0, 0, 1, A_BOX.y0, 0, 0, 1]));
+    G.quadH(G.tex("s27:wallA", paintWallA), HA);
+    G.quadH(G.tex("s27:deskA", paintDeskA), HA);
+  }
+  if (wA < 1 && wC < 1) G.quadH(G.tex("s27:roomB", paintRoomB), hmul(Z, hmul(Wt, hmul(BG125, [1, 0, B_BOX.x0, 0, 1, B_BOX.y0, 0, 0, 1]))), { alpha: wA > 0 ? 1 - wA : 1 });
+  if (wC > 0) G.quadH(G.tex("s27:roomC", paintRoomC), hmul(Wt, hmul(hinv(wallH(129.28)), [1, 0, C_BOX.x0, 0, 1, C_BOX.y0, 0, 0, 1])), { alpha: wC });
+  drawTraces(G, t, Z, Wt);
+}
+let owlC = null;
+function owlTexture(G, t) {
+  const o = owlState(t);
+  if (!o) return null;
+  if (!owlC) owlC = canvas(W, H);
+  const g = owlC.getContext("2d");
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H);
+  // 125.40-129.28: the owl traced from the source on that very frame (owlTrace.js); the hand-built owl is the fallback
+  const tr = owlTraceAt(Math.max(t, 125.4));
+  g.save();
+  if (o.inScreen) {
+    const Hs = crRows(SCREEN, t), q = [[LT.DISP.x0, LT.DISP.y0], [LT.DISP.x1, LT.DISP.y0], [LT.DISP.x1, LT.DISP.y1], [LT.DISP.x0, LT.DISP.y1]].map(([x, y]) => happly(Hs, x, y));
+    g.beginPath(); g.moveTo(q[0][0], q[0][1]); for (const p of q.slice(1)) g.lineTo(p[0], p[1]); g.closePath(); g.clip();
+  }
+  if (tr) paintOwlTrace(g, tr); else drawOwl(g, o);
   g.restore();
-  blitSprite(G, "s27d:spOwl", cv, ox, oy, Z);
+  return G.dyn("s27:owlLayer", owlC);
+}
+// (end-s27-fix1) the chair back at the left edge (128.68–129.28), traced from the source on every frame (s27/chairTrace.js):
+// the room keys only had it from 129.12 on (it popped in), with light wall in its place before that
+let chC = null;
+function drawChair(G, t) {
+  if (t < 128.66) return;
+  let row = null; for (const r of CHAIR) if (Math.abs(r[0] - t) < 0.021) row = r;
+  if (!row) return;
+  if (!chC) chC = canvas(400, 460);
+  const g = chC.getContext("2d");
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, chC.width, chC.height); g.translate(0, -460); g.lineJoin = "round";
+  const pp = (a) => { const q = dec(a); g.moveTo(q[0] / 2, q[1] / 2); for (let i = 2; i < q.length; i += 2) g.lineTo(q[i] / 2, q[i + 1] / 2); g.closePath(); };
+  for (const r of row[1]) { g.beginPath(); pp(r[1]); for (let k = 2; k < r.length; k++) pp(r[k]); g.fillStyle = r[0]; g.fill("evenodd"); g.lineWidth = 1.2; g.strokeStyle = r[0]; g.stroke(); }
+  G.quadH(G.dyn("s27:chair", chC), [1, 0, 0, 0, 1, 460, 0, 0, 1]);
+}
+// (end-s27-fix1) the speaker by the owl, out of the 129.28 designer key (s27/speaker.js): the source shows it at 129.28
+let spC = null;
+function drawSpeaker(G, t) {
+  if (t < 129.27) return;
+  if (!spC) {
+    spC = canvas(160, 160); const g = spC.getContext("2d"); g.translate(-1140, -430); g.lineJoin = "round";
+    const pp = (a) => { const q = dec(a); g.moveTo(q[0] / 2, q[1] / 2); for (let i = 2; i < q.length; i += 2) g.lineTo(q[i] / 2, q[i + 1] / 2); g.closePath(); };
+    for (const r of SPEAKER_REGIONS) { g.beginPath(); pp(r[1]); for (let k = 2; k < r.length; k++) pp(r[k]); g.fillStyle = r[0]; g.fill("evenodd"); g.lineWidth = 1.0; g.strokeStyle = r[0]; g.stroke(); }
+    for (const grp of SPEAKER_INK) { g.beginPath(); for (let k = 1; k < grp.length; k++) for (const q of grp[k]) pp(q); g.fillStyle = grp[0]; g.fill("evenodd"); }
+  }
+  G.quadH(G.tex("s27:speaker", () => spC, { mip: false }), [1, 0, 1140, 0, 1, 430, 0, 0, 1]);
+}
+function drawRoom(G, t, Z) {
+  roomLayers(G, t, Z);
+  drawChair(G, t);
+  drawSpeaker(G, t);
+  if (!(DBG() && DBG().noshadow)) drawBase(G, t, Z, true);
+  const m = mugState(t);
+  G.quadH(G.tex(`s27:mug:${m.flip}`, () => paintMug(m.flip)), hmul(Z, mugH(m.cx, m.yt, m.w, m.h, m.flip)));
+  drawNotebook(G, t, Z);
+  drawPencil(G, t, Z);
+  drawBase(G, t, Z);
+  const owl = t >= OWL_START ? owlTexture(G, t) : null;
+  const behind = t >= 128.5;          // from here the camera is behind the lid and the lid hides part of the owl
+  if (owl && behind) G.quadH(owl, [1, 0, 0, 0, 1, 0, 0, 0, 1]);
+  drawLid(G, t, Z, t < OWL_START);
+  if (owl && !behind) G.quadH(owl, [1, 0, 0, 0, 1, 0, 0, 0, 1]);
 }
 
-// the owl's cast shadow on the deck: a soft purple-grey blob left of it on the trackpad side, which appears as it flies
-// out over the keyboard (source: the deck at (1150–1230, 705–730) drops from 208,195,176 at 126.4 to 159,124,116 at
-// 126.6 and stays so while it perches; blob measured over (1100–1325, 697–756) at 126.6 and (1120–1290, 693–743) at 127.0).
-// Drawn in the 125.0 s frame and carried by the base in the end orbit.
-const OSH_BOX = { x: 1040, y: 640, w: 360, h: 170 };
-function paintOwlShadow() {
-  const c = document.createElement("canvas"); c.width = OSH_BOX.w; c.height = OSH_BOX.h;
-  const g = c.getContext("2d"); g.translate(-OSH_BOX.x, -OSH_BOX.y);
-  // (fix pass 2) one even, neutral lavender-grey owl-shaped patch (source darkest 68,46,40, a* ~9; no dark core)
-  g.filter = "blur(12px)"; g.fillStyle = "rgba(72,58,72,0.5)";
-  g.beginPath(); g.ellipse(1230, 726, 118, 30, -0.05, 0, 7); g.fill();
-  return c;
-}
-function drawOwlShadow(G, t, Q, pre) {
-  const a = clamp01((t - 126.42) / 0.18) * (t < 128.5 ? 1 : clamp01((129.1 - t) / 0.6));
-  if (a <= 0) return;
-  let Hm = [1, 0, OSH_BOX.x, 0, 1, OSH_BOX.y, 0, 0, 1];
-  if (t > 127.6) { if (!BASE_127) BASE_127 = baseCornersMid(127.6); Hm = hmul(hquad(BASE_127, Q), Hm); }
-  G.quadH(C.owlShadow, pre(Hm), { alpha: a });
-}
-
-// ---------------------------------------------------------------- the shot
 export const shot = {
-  draw(ctx, local, t) {
+  draw(ctx, local, tRaw) {
+    const t = Math.round(tRaw * 25) / 25;           // the source's frame grid
     const G = getGL(W, H);
-    build(G);
-    const Z = whipZ(t);
-    if (Z) G.beginFBO(); else G.begin();
-    // backstop: desk colour under everything (the desk and wall planes are separate tracks and can part at the edges)
-    G.quadH(C.backstop, [W / 4, 0, 0, 0, H / 4, 0, 0, 0, 1]);
-    const pre = (Hm) => (Z ? hmul(Z, Hm) : Hm);
-    const Hs = screenH(t), Q = baseCorners(t);
-    const Hd = deskH(t, Q);
-    // desk: the held view's crisp front edge fades to a soft shade as the camera turns (source edge contrast -74 at
-    // 120.0, -45 at 120.75, -26 at 121.0, ~-15 after); the far desk once the edge has left the frame
-    const dH = pre(boxH(Hd, DESK_BOX, C.deskS)), dk = clamp01((t - 120.1) / 1.0);
-    if (t >= 123.3) { const de = clamp01((t - 128.2) / 0.3); if (de < 1) G.quadH(C.deskFar, dH); if (de > 0) G.quadH(C.deskEnd, dH, { alpha: de }); }
-    else { if (dk > 0) G.quadH(C.deskSoft, dH); if (dk < 1) G.quadH(C.desk, dH, { alpha: 1 - dk }); }
-    G.quadH(C.wall, pre(boxH(wallH(t), WALL_BOX, 1)));
-    // (fix pass 2) the boxes and books right of the laptop are nearer than the wall: in the end orbit they drift right
-    // of the wall plane (+60, +20 px by 129.28, measured against the source's box and book edges)
-    {
-      const k = clamp01((t - 128.6) / 0.68), e = k * k * (3 - 2 * k), Tl = [1, 0, 60 * e, 0, 1, 20 * e, 0, 0, 1];
-      G.quadH(C.wallLow, pre(hmul(Tl, boxH(wallH(t), WALL_BOX, 1))));
-      const ca = 1 - clamp01((t - 128.7) / 0.15);
-      if (ca > 0) G.quadH(C.wallCab, pre(hmul(Tl, boxH(wallH(t), WALL_BOX, 1))), { alpha: ca });
-      drawCabinet(G, t);
-    }
-    // the late sill right of the laptop (125.0 s frame coords, carried by the wall), fading in as the camera turns
-    const ls = clamp01((t - 121.0) / 1.4) * (1 - clamp01((t - 128.2) / 0.3));   // (fix pass 2) gone before it magnifies
-    if (ls > 0) G.quadH(C.lateSill, pre(boxH(hmul(wallH(t), C.wall125inv), LATE_SILL_BOX, 1)), { alpha: ls });
-    // the left shelf: A (held view, rides the wall) until the source swaps it behind his beanie, then B on its own track
-    if (t < SHELF_SWAP) G.quadH(C.shelfA, pre(boxH(wallH(t), SHELF_A_BOX, 2)));
-    else G.quadH(C.shelfB, pre(boxH(trackAt(SHELF_B, t), SHELF_B_BOX, 2)));
-    // once the camera has turned, the near desk along the bottom of the frame reads darker in the source (125.0:
-    // #bb9472 at y 900–920 against #dcbd93 higher up); a screen-space shade ramps in over 121.8–122.8
-    const ns = clamp01((t - 121.8) / 1.0);
-    if (ns > 0) G.quadH(C.nearShade, [W / 4, 0, 0, 0, 1, 640, 0, 0, 1], { alpha: ns });
-    drawDeskLight(G, t, Z);
-    drawDeskLeft(G, t, Z);
-    drawFarEdge(G, t);
-    // mug (behind the lid), base, notebook + pencil
-    drawMugSprite(G, t, Z);
-    drawBase(G, Q, pre, t);
-    drawOwlShadow(G, t, Q, pre);
-    drawPropsSprite(G, t, Z);
-    // lid with the page (and the page's own owl until it climbs out); from 128.72 the lid is in front of the owl
-    const lidFirst = t < 128.72;
-    if (lidFirst) {
-      drawLid(G, t, pre);
-      if (t < 125.44) G.quadH(C.pageOwl, pre(hmul(Hs, [0.5, 0, 1880, 0, 0.5, 0, 0, 0, 1])));
-    }
-    drawChair(G, t);
-    // from 128.9 the designer's right sleeve comes in front of the owl (source 129.28: it hides the owl's lower left)
-    if (t < 128.9) { drawDesigner(G, t); drawOwlLive(G, t, Hs, Z); } else { drawOwlLive(G, t, Hs, Z); drawDesigner(G, t); }
-    if (!lidFirst) drawLid(G, t, pre);
-    drawSunShaft(G, t);
-    if (Z) {
-      const [amt, floor, wash] = linAt(WHIP_FX, t);
-      G.zoomBlur(WHIP_C[0], WHIP_C[1], amt, [0.98, 0.975, 0.965, wash], 0, floor);
-    }
+    if (DBG() && DBG().des === "only") { G.begin(); drawDesigner(G, t); ctx.drawImage(G.end(), 0, 0); return; }   // measuring hook
+    if (DBG() && DBG().owl === "only") { G.begin(); const o = owlTexture(G, t); if (o) G.quadH(o, [1, 0, 0, 0, 1, 0, 0, 0, 1], { tint: [1, 1, 1, 1] }); ctx.drawImage(G.end(), 0, 0); return; }
+    const fx = t < 117.92 ? lerpRows(WHIP_FX, t) : [0, 0, 0, 0, 0, 0];
+    const blur = fx[0], flash = fx[1];
+    if (blur > 0) G.beginFBO(); else G.begin();
+    const Z = whipZoom(t) || [1, 0, 0, 0, 1, 0, 0, 0, 1];
+    drawRoom(G, Math.max(118.0, t), Z);
+    const rot = DBG() && DBG().rot !== undefined ? DBG().rot : (fx[2] || 0);
+    const zb = DBG() && DBG().zb ? DBG().zb : null;      // measuring override [cx, cy, amount scale]
+    const sym = zb && zb[5] !== undefined ? zb[5] : 1, ramp = zb && zb[6] !== undefined ? [zb[6], zb[7]] : [0.05, 0.45];
+    if (blur > 0) G.zoomBlur(zb ? zb[0] : fx[4], zb ? zb[1] : fx[5], blur * (zb ? zb[2] : 1), [0.93, 0.935, 0.925, zb && zb[4] !== undefined ? zb[4] : flash], rot, zb && zb[3] !== undefined ? zb[3] : fx[3], sym, ramp);
+    if (t >= 118.0 && !(DBG() && DBG().nodes)) drawDesigner(G, t);
     ctx.drawImage(G.end(), 0, 0);
-    // the source frame carries a 3-px dark band on its bottom edge from 117.92 on (rows 943–945)
-    if (t >= 117.9) { ctx.fillStyle = "#0d0605"; ctx.fillRect(0, 943, W, 3); }
   },
-  // (fix pass 2) grain back to 5/255: 8/255 amplified the grade's integer-hash row pattern into visible scanlines
-  // (row-mean std 4.4 vs the source's 1.3 on a flat wall patch)
-  grade() { return { grain: 5.0 / 255.0 }; },
-  release() {
-    if (C) { const G = getGL(W, H); G.release("s27d:"); C = null; }
-  },
+  // (end-s27-tfix) the source's grain is coarser and stronger here than the film's fine grain (flat-area residual std, luma
+  // minus its sigma-3 blur: source 2.8–5.0, render 2.3–3.2 over 118–129); post.js's grain amount raised x1.35 for this shot
+  grade() { return { grain: GRAIN_K * 6.0 / 255.0 }; },
+  release() { const G = getGL(W, H); G.release("s27:"); DES_IDX = null; omIdx = null; owlC = null; shC = null; dgC = null; lbC = null; chC = null; spC = null; PAGE_CANVAS.true = PAGE_CANVAS.false = null; releaseHippie(); },
 };

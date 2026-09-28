@@ -1,7 +1,8 @@
 // s24 (97.08–100.48): the flurry. Drawn by code: owl drawings, scissors, speed lines, flashes and the page beats are
 // procedural, placed and timed from measurements of the source (silhouette outlines, landmarks, tracks, angles,
 // timings) — no source pixels and no traced tone levels. The previous pass (vector traces of the source frames) is
-// archived in snapshots/s24-prev/.
+// archived in snapshots/s24-prev/. Ending fix (2026-09-27): the big owls (F, H, J) carry a procedural engraving pass
+// (s24/d/engr.js), J's face/hand/foot and F's face are refit, and the glow pass is a local order-independent copy.
 // Every beat is keyed to the source's 25 fps frames, k = source frame − 2420 (k7 = 97.08 s):
 //   k 7            the framed page (colour banner, shard cut lines, paper confetti) with three motion-smeared owls
 //   k 8–18         held slash: the big owl slashes left with scissors, a white arc trails from the blades, two small
@@ -29,7 +30,9 @@ import { whirlLayer, releaseWhirl } from "./s24/d/whirl.js";
 import { drawPageHold, drawPageSmear, drawPageWhip, ramp, releasePage } from "./s24/d/page.js";
 import { gv } from "../lib/owlInk.js";
 import { blurCanvas } from "../lib/sokoIll.js";
-import { FRAMED, addScreenGlow } from "../lib/sites.js";
+import { FRAMED } from "../lib/sites.js";
+// ending fix: the lib's glow pass, copied with its intermediate canvases cleared (order-independent; see s24/d/glow.js)
+import { addScreenGlowS24 as addScreenGlow } from "./s24/d/glow.js";
 
 const W = 2206, H = 946;
 // k = source frame − 2420. ceil(t·25 − 0.001) is exact at the render's k/25 times and also pairs tools/compare.sh

@@ -181,5 +181,12 @@ export function paintOwlTrace(g, tr) {
   g.save(); g.translate(tr.dx, tr.dy); g.lineJoin = "round";
   for (const r of REG) { g.beginPath(); tpath(g, r[1]); for (let k = 2; k < r.length; k++) tpath(g, r[k]); g.fillStyle = r[0]; g.fill("evenodd"); g.lineWidth = 0.9; g.strokeStyle = r[0]; g.stroke(); }
   for (const grp of INK) { g.beginPath(); for (let k = 1; k < grp.length; k++) for (const p of grp[k]) tpath(g, p); g.fillStyle = grp[0]; g.fill("evenodd"); }
+  // (end-s27-fix1) the moved 129.00 trace (129.04–129.28): its head's outline against the bright wall was traced pale and torn;
+  // the source keeps a clean dark keyline all round. A 2 px keyline inside the traced silhouette.
+  if ((tr.dx || tr.dy) && tr.f[3]) {
+    g.save(); g.beginPath(); tpath(g, tr.f[3]); g.clip();
+    g.beginPath(); tpath(g, tr.f[3]); g.lineWidth = 4.2; g.strokeStyle = "rgb(74,52,44)"; g.stroke();
+    g.restore();
+  }
   g.restore();
 }

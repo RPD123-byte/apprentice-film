@@ -54,10 +54,16 @@ const FEET = [
     toes: [[[1645, 783], [1642, 773], [1640, 765]], [[1657, 806], [1679, 826], [1700, 842], [1718, 851]], [[1653, 815], [1669, 840], [1686, 860], [1702, 871]], [[1648, 821], [1656, 845], [1665, 866], [1671, 879]]],
     w: [12, 19, 19, 18], claws: [11, 17, 17, 16], curl: [-1, 1, 1, 1] }];
 
+// ending fix: primaries for the barbs (tips = the silhouette's tips): the arm-wing's hang from the arm, the top wing's
+// radiate from behind the head
+const ARM_P = [[565, 703], [724, 817], [870, 842], [973, 832], [1053, 808], [1119, 793], [1173, 777], [1217, 763]].map((t) => ({ t, r: [t[0] + 40, t[1] - 165] }));
+const TOP_P = [[943, 69], [1016, 63], [1282, 69], [1494, 145], [1579, 220], [1600, 273], [1609, 330], [1618, 389], [1614, 445], [1598, 490]]
+  .map((t) => { const R = [1300, 430], k = 0.55; return { t, r: [t[0] + (R[0] - t[0]) * k, t[1] + (R[1] - t[1]) * k] }; });
+
 export const SPEC_H = { layers: [
   { type: "sil", ...H1, base: 0.93, rim: 0.82, depth: 10, blur: 10, ink: 2.4 },
   { type: "fine", clipPoly: H1.pts, dir: [1, 0.02], box: [1620, 600, 1840, 820], spacing: 4.5, len: [24, 70], w: [0.5, 1.0], v: 0.4, alpha: 0.7, seed: 31 },
-  { type: "sil", ...H0, base: 0.96, rim: 0.8, depth: 34, blur: 24, ink: 3,
+  { type: "sil", ...H0, base: 0.965, rim: 0.88, depth: 34, blur: 24, ink: 3,
     shades: [[1530, 770, 170, 60, 0.1, 0.74, 0.35, 26], [1620, 650, 60, 110, 0, 0.76, 0.3, 24]],
     hatch: [{ mode: "dir", dir: [0.4, 0.92], box: [560, 560, 1250, 850], dens: 2, len: [18, 46], w: [0.7, 1.2], v: 0.5, alpha: 0.55, seed: 28 },
       { mode: "dir", dir: [0.92, 0.4], box: [1250, 150, 1620, 520], dens: 2, len: [18, 46], w: [0.7, 1.2], v: 0.5, alpha: 0.55, seed: 29 }] },
@@ -65,6 +71,21 @@ export const SPEC_H = { layers: [
   { type: "fine", clipPoly: H0.pts, center: [1450, 600], rx: 250, ry: 200, r0: 0.5, gain: 1.6, max: 0.9, twist: 0.3, box: [1150, 420, 1700, 830], spacing: 5, len: [8, 22], w: [0.5, 0.9], v: 0.58, alpha: 0.6, seed: 24 },
   { type: "fine", clipPoly: H0.pts, center: [1180, 440], rx: 175, ry: 160, r0: 0.72, gain: 2.5, max: 1, box: [1000, 480, 1350, 620], spacing: 6, len: [8, 18], w: [0.5, 0.9], v: 0.55, alpha: 0.55, seed: 27 },
   { type: "fine", clipPoly: H0.pts, dir: [1, 0], box: [1640, 610, 1840, 710], spacing: 4.5, len: [20, 60], w: [0.5, 1.0], v: 0.42, alpha: 0.7, seed: 30 },
+  // ending fix — the engraving pass: barbs along the primaries of both wings, long strokes along the arm, fur tufts on
+  // the body gathering under the chin and along the lower belly, the face ringed by short radial strokes
+  { type: "barbs", list: ARM_P, n: 5, width: 34, from: [0.3, 0.5], to: [0.78, 0.94], w: [0.8, 1.4], v: 0.34, alpha: 0.85, seed: 481, clipPoly: H0.pts },
+  { type: "barbs", list: TOP_P, n: 5, width: 32, from: [0.25, 0.45], to: [0.75, 0.93], w: [0.8, 1.4], v: 0.34, alpha: 0.85, seed: 482, clipPoly: H0.pts },
+  { type: "tufts", clipPoly: H0.pts, box: [620, 570, 1260, 700], flow: [1, 0.04], seed: 483, blobs: [[900, 620, 300, 40, 0.6], [1150, 650, 90, 50, 0.5]], base: 0.05,
+    cell: 24, n: [3, 6], len: [30, 60], gap: 4.0, bend: 0.05, w: [0.7, 1.2], v: [0.5, 0.38], alpha: 0.8 },
+  { type: "contour", poly: H0.pts, box: [1240, 640, 1700, 860], rows: 10, gap: 6, dash: [25, 80], skip: [8, 30], fall: 0.85, w: [0.6, 1.3], v: 0.4, alpha: 0.8, seed: 487 },
+  { type: "tufts", clipPoly: H0.pts, box: [1150, 380, 1700, 850], flow: [0.9, 0.42], seed: 484,
+    blobs: [[1500, 790, 190, 50, 0.6], [1260, 640, 110, 45, 0.55], [1640, 600, 40, 130, 0.5], [1450, 650, 170, 110, 0.12]], base: 0.05,
+    cell: 28, n: [3, 6], len: [22, 44], gap: 4.2, bend: 0.06, w: [0.7, 1.2], v: [0.55, 0.42], alpha: 0.75 },
+  { type: "tufts", clipPoly: H0.pts, box: [1000, 300, 1400, 640], flow: [0.9, 0.42], centres: [[1170, 480, 200, "r", 1]], seed: 485,
+    blobs: [[1050, 540, 50, 60, 0.6], [1160, 590, 110, 35, 0.6], [1300, 520, 50, 60, 0.5], [1150, 410, 70, 30, 0.35]], base: 0.03,
+    cell: 20, n: [2, 5], len: [12, 26], gap: 3.4, bend: 0.1, w: [0.6, 1.1], v: [0.55, 0.4], alpha: 0.75 },
+  { type: "tufts", clipPoly: H0.pts, box: [1000, 20, 1650, 420], flow: [-0.6, -0.8], centres: [[1300, 430, 600, "r", 1]], seed: 486,
+    blobs: [[1350, 300, 200, 60, 0.45, 0.4], [1500, 380, 60, 90, 0.5]], base: 0.05, cell: 24, n: [3, 6], len: [26, 50], gap: 4.0, bend: 0.08, w: [0.7, 1.2], v: [0.5, 0.38], alpha: 0.8 },
   // the arm-wing: its upper edge along the arm, the primaries' separations, the covert row
   { type: "ink", pts: [[625, 585], [700, 595], [800, 604], [900, 612], [1000, 618]], w: 2.4, a: 0.3, b: 0.5, color: [0.25, 0.85] },
   { type: "notch", notch: [[562, 701], [656, 758], [755, 777], [857, 792], [953, 790], [1037, 780], [1099, 768], [1154, 756], [1199, 741]], dir: [0.3, -0.95], len: 75, w: 2.8, bend: -0.04 },
@@ -78,7 +99,8 @@ export const SPEC_H = { layers: [
   { type: "notch", notch: [[1775, 735], [1785, 696], [1786, 656]], dir: [-1, 0], len: 100, w: 2.4 },
   { type: "feet2", list: FEET, leg: 20 },
   // the face
-  { type: "bandage", x: 1093, y: 368, size: 96, rot: -0.8, cross: 1.55, sx: 1, sy: 1.05 },
+  // ending fix: the source's bandage — two equal plasters crossing in an X (read off a 3.5x grid of k58)
+  { type: "bandX", a: [1095, 367, 114, 30, -54], b: [1096, 367, 100, 30, 37], dots: 22, seed: 83 },
   { type: "eye2", ...EYE_R }, { type: "eye2", ...EYE_L },
   { type: "stroke", pts: BROW_R, ws: [3, 5.5, 5, 4, 1.2] },
   { type: "stroke", pts: CREASE, ws: [1, 3.5, 4, 3, 1] },
@@ -103,6 +125,9 @@ export const SPEC_H = { layers: [
   ...FINGERS.map((pts, i) => ({ type: "lobe", pts, ink: 3.2, rim: 0.72, depth: 10, blur: 7,
     strokes: [[[pts[0][0] + 14, pts[0][1] + 14], [pts[0][0] + 40, pts[0][1] + 10], [pts[0][0] + 70, pts[0][1] + 12]], [[pts[0][0] + 20, pts[0][1] + 26], [pts[0][0] + 50, pts[0][1] + 24], [pts[0][0] + 80, pts[0][1] + 27]]] })),
   { type: "stroke", pts: [[462, 607], [520, 609], [585, 607]], ws: [0.8, 2.6, 2.2, 0.6] },
+  // ending fix: the fingers engraved along their length (the source's feathered fist)
+  ...FINGERS.map((pts, i) => ({ type: "tufts", clipTo: pts, box: [440, 440, 640, 710], flow: [1, 0.03], seed: 490 + i, blobs: [[540, 600, 120, 120, 0.7]], base: 0.1,
+    cell: 16, n: [2, 4], len: [22, 44], gap: 3.6, bend: 0.1, w: [0.6, 1.1], v: [0.5, 0.4], alpha: 0.8 })),
   // the front of the right loop over the top finger
   { type: "ringArc", c: [577, 492], rx: 35, ry: 30, rot: -0.3, a0: -0.9, a1: 1.3, w: 7 },
 ] };

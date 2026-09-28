@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "npx --yes hyperframes@0.8.69 preview",
     "check": "npx --yes hyperframes@0.8.69 check",
-    "render": "npx --yes hyperframes@0.8.69 render",
+    "render": "npx --yes hyperframes@0.8.69 render --workers 1 --player-ready-timeout 900000 --protocol-timeout 1800000 --browser-timeout 900",
     "publish": "npx --yes hyperframes@0.8.69 publish"
   }
 }

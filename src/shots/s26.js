@@ -1,57 +1,54 @@
 // s26 (110.52–117.52) — the shattered page blows out into colour and the finished colour site is revealed.
-// Beats (film time, measured on the source frame by frame; see fidelity/s26.md for the numbers):
-//   A 110.52–111.52  the framed page on the lit screen, un-squashed after s25's 108.08 squash: the crack web
-//                    (connected polylines, s26/cracksA2.js) with long spokes from the two impact stars, a pair of
-//                    scissors stuck in each, the colour banner in the header, and s25's own standing owl drawing (wings
-//                    on its hips), so the same owl is on both sides of the cut. Camera: the ORB zoom s 1.0029 → 1.0
-//                    about (1150, 950).
-//   B 111.56         one jolt frame: the page thrown up and shrunk (x' = 0.9911x − 8.5, y' = 0.9905y − 19.6), no glow.
-//   C 111.60–112.68  the blast: a field of straight-edged, outlined glass shards (s26/fieldC2.js: the measured shard
-//                    edges extended to meet, each shard a tone-matched piece of our B&W page, colour strip or colour
-//                    page) under the field's measured per-frame affine; the colour page shows through the blast hole
-//                    with the blast's white streaks; the frame's own speed lines; the two scissors flung to the top
-//                    corners (finger loops tracked per frame); the white owl throws its wings open (the shared B&W owl
-//                    kit, s26/owlCD.js, posed per source frame); 111.80 is a double-exposed shake frame; eyes squeezed
-//                    shut 112.64–112.68.
-//   D 112.72–113.68  cut: the colour page arrives (hippie pageArrival) through a ring of outlined B&W glass shards
-//                    (s26/ringD2.js) moving with the ring's measured zoom; the white owl hovers over the designer,
-//                    head turned to the viewer's right, winking to 113.04; a dark motion ghost of it in the upper right.
-//   E 113.68–114.12  a huge out-of-focus shard sweeps across the lens from lower left to upper right (outline and
-//                    tones measured per frame); behind it the owl turns into the colour owl (first seen 114.08).
-//   F 114.08–117.52  the colour owl (s26/owlColour.js; wings from the per-frame fits, head / body / feet refitted,
-//                    face features measured per frame) flies up to the top-right box by the nav and perches from
-//                    117.04; the page camera settles at 114.9.
-import { drawFramedPage, sokoPageCanvas, HEADER, releaseSoko } from "../lib/sites.js";
-import { hippieBannerCanvas, hippiePageCanvas, pageArrival, releaseHippie } from "../lib/hippie.js";
+// End fix round 1 (2026-09-27): per the user's decision for the colour ending (STYLE.md), everything in this shot is
+// TRACED from the source — vector traces (colour regions + ink lines, stored as numbers /
+// polygon strings in s26/*.js and painted by code; no source pixels). See fidelity/s26.md for method and numbers.
+// End fix round 2: every traced colour (and s26's copy of the colour page) goes through a measured tone lift
+// (s26/tone.js; the traces were 4–10 code values dark in the midtones); the jolt frame shows the source's owl; 111.60 is
+// its own key with a tight owl zone; the lens shard's last tail at 114.16; the source's once-a-second held frames hold.
+// End fix round 3: beat A shows the source's traced owl (not s25's drawing) and its key is re-traced at 2x; both owls
+// re-traced at 2x; s26 paints its own trace of the source's settled colour page (not the hippie lib's page); the settling
+// page in F has a mirrored margin (no black border while s < 1); one-frame cross-fades at the two C key switches.
+// Beats (film time, measured on the source frame by frame):
+//   A 110.52–111.52  the cracked page on the lit screen with the standing owl (crack web, impact stars, stuck scissors,
+//                    the owl and its shadow, room glow: one trace of the median A frame, s26/pageKeyA.js). Camera: the
+//                    ORB zoom s 1.0029 → 1.0 about (1150, 950).
+//   B 111.56         the jolt frame: the page thrown up and shrunk (x' = 0.9911x − 8.5, y' = 0.9905y − 19.6), no glow.
+//   C 111.60–112.68  the blast: the shard field traced at key frames (s26/fieldKeysC.js, owl and scissors removed) and
+//                    carried by the field's measured affine (s26/fieldCam.js); 111.60 (the first blast frame) and 111.80
+//                    (the shake) are their own keys; the
+//                    flung scissors (s26/scissorsTrace.js) and the white owl throwing its wings open
+//                    (s26/owlTraceCD.js) traced on every frame.
+//   D 112.72–113.64  the colour page arrives (hippie pageArrival) through the ring of B&W shards, traced at key frames
+//                    (s26/ringKeysD.js) and carried by the ring's measured zoom RING_D; the white owl hovering over the
+//                    designer and the scissors traced per frame.
+//   E 113.68–114.16  the huge out-of-focus shard across the lens and the ring's last shards, traced per frame
+//                    (s26/lensTraceE.js; the lens shard traced coarse from a blurred copy and painted blurred; 114.16 is
+//                    its last dark tail over the top-right corner).
+//   F 114.08–117.52  the colour owl (cream, orange headphones — the same character as s27 / s40) climbs to the top-right
+//                    box by the nav and perches: traced per frame (s26/owlTraceF.js) over the settling colour page.
+import { pageArrival } from "../lib/hippie.js";
 import { rng } from "../lib/rng.js";
-import { STARS_A } from "./s26/cracksA.js";
-import { unpack } from "./s26/rig.js";
 import { FIELD_CAM } from "./s26/fieldCam.js";
-import { FIELD_C2, STREAKS_C } from "./s26/fieldC2.js";
-import { POSES_F, POSES_F_KEYS } from "./s26/posesF.js";
-import { FEAT_F, FEAT_F_KEYS } from "./s26/featF.js";
-import { drawColourOwl } from "./s26/owlColour.js";
-import { drawOwlCD, cdPose } from "./s26/owlCD.js";
-import { SC_KEYS, SPEED } from "./s26/fx.js";
-import { RING_D2 } from "./s26/ringD2.js";
-import { RING_CLEAR } from "./s26/ringClear.js";
-import { SLAB_E } from "./s26/slabE.js";
-import { drawScissors as drawScissorsF } from "./s26/scissorsFlung.js";
-import { CRACK_WEB } from "./s26/cracksA2.js";
-// beat A's owl is s25's standing drawing (read-only imports from s25's own modules), so the same drawing is on both
-// sides of the 110.52 cut (the source only un-squashes the frame there)
-import { paintDrawing, blitLayer } from "./s25/v2/draw.js";
-import { DRAW } from "./s25/v2/drawings.js";
-import { SCHED, SCHED_F0 } from "./s25/v2/sched.js";
-import { HEAD, HEAD_F0 } from "./s25/v2/headtrack.js";
-import { face, headphonesBack, headphonesFront, headOutline } from "./s25/v2/head.js";
-import { D_HEAD } from "./s25/v2/data/head.js";
+import { tracedLayer, paintTrace, toneMap } from "./s26/trace.js";
+import { TONE } from "./s26/tone.js";
+import { PAGEA } from "./s26/pageKeyA.js";
+import { PAGE_T } from "./s26/pageTraceF.js";
+import { FIELDK, FIELDK_KEYS } from "./s26/fieldKeysC.js";
+import { FIELDK90 } from "./s26/fieldKey2790.js";
+import { RINGK, RINGK_KEYS } from "./s26/ringKeysD.js";
+import { LENS_E, LENS_E_F0 } from "./s26/lensTraceE.js";
+import { OWL_CD, OWL_CD_F0 } from "./s26/owlTraceCD.js";
+import { OWL_F, OWL_F_F0 } from "./s26/owlTraceF.js";
+import { SC_T, SC_T_F0 } from "./s26/scissorsTrace.js";
 import { W, H } from "../config.js";
 
 const mk = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
 let C = null; // caches, built lazily inside draw
 const caches = () => (C || (C = {}));
+// the tone lift (s26/tone.js): AE on the traces of beats A-E, F on the colour owl (the traced page needs none)
+const tone = (k) => { const c = caches(); return c["tone" + k] || (c["tone" + k] = toneMap(TONE[k])); };
 const FR = (t) => Math.round(t * 25); // source frame index
+const mat = (m) => new DOMMatrix([m[0], m[3], m[1], m[4], m[2], m[5]]);
 
 // piecewise-linear keys [[t, a, b, ...], ...]
 function interp(keys, t) {
@@ -63,26 +60,69 @@ function interp(keys, t) {
   const a = keys[i], b = keys[i + 1], u = (t - a[0]) / (b[0] - a[0]);
   return a.slice(1).map((v, k) => v + (b[k + 1] - v) * u);
 }
-
-// ================================================================ pages
-// the B&W page with the colour banner pasted into the header (page coordinates)
-function pageWithBanner() {
-  const c = caches();
-  if (!c.pageWB) {
-    const src = sokoPageCanvas({ gaze: "down" });
-    const k = mk(src.width, src.height), g = k.getContext("2d");
-    g.drawImage(src, 0, 0);
-    g.drawImage(hippieBannerCanvas(), HEADER.x, HEADER.y, HEADER.w, HEADER.h);
-    c.pageWB = k;
-  }
-  return c.pageWB;
+// the nearest key frame (ties to the earlier one)
+function nearestKey(keys, F) {
+  let K = keys[0];
+  for (const k of keys) if (Math.abs(k - F) < Math.abs(K - F)) K = k;
+  return K;
 }
-// the colour page under a page->frame similarity
-function drawColourPage(ctx, s, tx, ty) {
+// a traced frame painted once into a cached full-frame canvas (opaque black under it, or transparent)
+function keyCanvas(slot, fr, opaque) {
+  const c = caches();
+  if (c[slot + "K"] !== fr) {
+    if (!c[slot]) c[slot] = mk(W, H);
+    const g = c[slot].getContext("2d");
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H);
+    if (opaque) { g.fillStyle = "#000"; g.fillRect(0, 0, W, H); }
+    paintTrace(g, fr, { col: tone("AE") });
+    c[slot + "K"] = fr;
+  }
+  return c[slot];
+}
+// a per-frame traced layer (owl, scissors), feathered at its zone's edge
+function layer(slot, frames, F0, F, feather, po) {
+  const i = Math.min(frames.length - 1, Math.max(0, F - F0)), c = caches();
+  if (!c[slot]) c[slot] = {};
+  if (c[slot + "F"] !== i) { tracedLayer(frames[i], W, H, c[slot], feather, po); c[slot + "F"] = i; }
+  return c[slot].c;
+}
+// the colour page, built once, under a page->frame similarity (hippie's measured arrival camera). End fix round 3: s26's
+// page is its own trace of the settled page as the source shows it (s26/pageTraceF.js: the median of 17 late frames, no
+// owl, traced at 2x, 160 colours), no longer the hippie lib's page, whose gear, designer and lamp differed from the
+// source at full size (F1 / F2 σ4 3.58 / 3.29 → 2.06 / 1.57).
+function colourPage() {
+  const c = caches();
+  if (!c.page) {
+    c.page = mk(W, H); const g = c.page.getContext("2d");
+    g.fillStyle = "#1c1b24"; g.fillRect(0, 0, W, H);
+    paintTrace(g, PAGE_T, {});
+  }
+  return c.page;
+}
+// F (from 114.16): the page is still settling (s 0.98 → 1) but in the source it runs past the frame; drawn plain it left
+// a black border up to 17 px wide round the brightest frames. So F draws a copy with the page's edges mirrored out by PM
+// px. D/E keep the plain page: there its edge is a real edge (the ring / black round it).
+const PM = 32;
+function colourPageM() {
+  const c = caches();
+  if (!c.pageM) {
+    const p = colourPage(), w = p.width, h = p.height, e = mk(w + 2 * PM, h + 2 * PM), g = e.getContext("2d");
+    g.drawImage(p, PM, PM);
+    g.save(); g.translate(PM, 0); g.scale(-1, 1); g.drawImage(p, 0, 0, PM, h, 0, PM, PM, h); g.restore();
+    g.save(); g.translate(PM + w, 0); g.scale(-1, 1); g.drawImage(p, w - PM, 0, PM, h, -PM, PM, PM, h); g.restore();
+    const r = mk(e.width, e.height); r.getContext("2d").drawImage(e, 0, 0);
+    g.save(); g.translate(0, PM); g.scale(1, -1); g.drawImage(r, 0, PM, e.width, PM, 0, 0, e.width, PM); g.restore();
+    g.save(); g.translate(0, PM + h); g.scale(1, -1); g.drawImage(r, 0, h, e.width, PM, 0, -PM, e.width, PM); g.restore();
+    r.width = r.height = 0;
+    c.pageM = e;
+  }
+  return c.pageM;
+}
+function drawColourPage(ctx, s, tx, ty, margin = false) {
   ctx.save();
   ctx.setTransform(s, 0, 0, s, tx, ty);
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(hippiePageCanvas(), 0, 0);
+  if (margin) ctx.drawImage(colourPageM(), -PM, -PM); else ctx.drawImage(colourPage(), 0, 0);
   ctx.restore();
 }
 
@@ -91,112 +131,27 @@ function drawColourPage(ctx, s, tx, ty) {
 // at 108.08; the source un-squashes at the 110.52 cut). The A camera (ORB affine against the pre-squash frame 107.88,
 // per frame): s 1.0029 at 110.52 easing to 1.0 by 111.52, fixed point ≈ (1150, 950).
 const CAM_A = [[110.52, 1.0029], [110.64, 1.0027], [110.8, 1.0015], [111.0, 1.0008], [111.2, 1.0006], [111.4, 1.0003], [111.52, 1.0]];
-// crack web (s26/cracksA2.js): connected polylines. Source cross-profile (median over 990 samples, graded): peak
-// ≈ 190–205 on ≈ 20, FWHM ≈ 3.3 px — a bright core with a soft shoulder
-function crackWebPath() {
-  const c = caches();
-  if (!c.webP) {
-    c.webP = new Path2D();
-    for (const p of CRACK_WEB) { c.webP.moveTo(p[0], p[1]); for (let i = 2; i < p.length; i += 2) c.webP.lineTo(p[i], p[i + 1]); }
-  }
-  return c.webP;
-}
-// fix #2: the colour banner is crossed by ≈ 15–20 fine cracks in the source (x 160–900 and 1500–2000, y 180–360) that
-// the traced web lacks: seeded straight cracks with a kink or two, 1.2–1.8 px, clipped to the banner band
-function bannerCracks() {
-  const c = caches();
-  if (!c.bannerCr) {
-    const r = rng(11052), P = new Path2D();
-    for (let i = 0; i < 20; i++) {
-      const x0 = i < 13 ? 160 + 740 * r() : 1500 + 500 * r(), y0 = 186 + 174 * r(), a = r() * Math.PI, L = 90 + 170 * r();
-      let x = x0 - Math.cos(a) * L / 2, y = y0 - Math.sin(a) * L / 2; P.moveTo(x, y);
-      for (let k = 1; k <= 3; k++) { const ak = a + (r() - 0.5) * 0.5; x += Math.cos(ak) * L / 3; y += Math.sin(ak) * L / 3; P.lineTo(x, y); }
-    }
-    c.bannerCr = P;
-  }
-  return c.bannerCr;
-}
-function drawCracksA(g) {
-  g.save();
-  g.lineCap = "round"; g.lineJoin = "round";
-  const P = crackWebPath();
-  for (const [w, col] of [[5.2, "rgba(210,210,208,0.28)"], [3.0, "rgb(242,242,240)"]]) { g.strokeStyle = col; g.lineWidth = w; g.stroke(P); }
-  g.save(); g.beginPath(); g.rect(150, 186, 1880, 174); g.clip();
-  g.strokeStyle = "rgba(236,236,234,0.9)"; g.lineWidth = 1.5; g.stroke(bannerCracks());
-  g.restore();
-  // the spokes: wide white wedges leaving each star, tapering to a crack (18 per star, measured on the median A frame:
-  // direction, reach and width at 72 px from the star centre)
-  g.fillStyle = "rgb(244,244,242)";
-  STAR_C.forEach(([cx, cy], k) => {
-    for (const [deg, L, w0] of SPOKES[k]) {
-      const w = Math.min(w0, 5);   // (fix #2: the source's spokes are 3–5 px at 72 px from the star; the measured widths were blob widths)
-      const a = (deg * Math.PI) / 180, ux = Math.cos(a), uy = Math.sin(a), nx = -uy, ny = ux;
-      const q = (r, hw, s) => [cx + ux * r + nx * hw * s, cy + uy * r + ny * hw * s];
-      const pts = [q(24, w * 0.75, 1), q(72, w * 0.5, 1), q(72 + (L - 72) * 0.45, Math.max(1.6, w * 0.22), 1), q(L, 0.9, 1), q(L, 0.9, -1), q(72 + (L - 72) * 0.45, Math.max(1.6, w * 0.22), -1), q(72, w * 0.5, -1), q(24, w * 0.75, -1)];
-      g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.fill();
-    }
-  });
-  g.restore();
-}
-const STAR_C = [[645, 391], [1522, 364]];
-// [angle (deg, y down), reach (px from the star centre), width at 72 px]
-const SPOKES = [
-  [[82, 284, 5], [96, 92, 5], [105, 84, 7], [132, 224, 6], [151, 300, 11], [163, 92, 6], [173, 68, 4], [191, 160, 5], [214, 212, 7], [226, 128, 7], [239, 300, 11], [248, 192, 6], [260, 264, 5], [288, 216, 7], [307, 212, 10], [321, 132, 9], [349, 284, 8], [359, 244, 8]],
-  [[16, 412, 10], [31, 200, 6], [59, 264, 6], [68, 328, 8], [78, 184, 9], [98, 352, 6], [119, 120, 10], [170, 248, 6], [194, 124, 6], [206, 184, 8], [216, 204, 5], [235, 272, 9], [246, 120, 5], [280, 108, 4], [292, 252, 10], [300, 216, 11], [338, 96, 6], [358, 236, 6]],
-];
-// the impact stars: a white burst with a black jagged ring round it (comic-style), traced outlines
-function drawStarsA(g) {
-  STARS_A && [STARS_A.L, STARS_A.R].forEach((P, k) => {
-    const [cx, cy] = STAR_C[k];
-    const path = (sc, jag) => {
-      g.beginPath();
-      P.forEach(([x, y], i) => {
-        const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy), f = sc * (1 + jag * ((i * 7) % 5) / 5);
-        const X = cx + dx * f, Y = cy + dy * f;
-        if (i) g.lineTo(X, Y); else g.moveTo(X, Y);
-      });
-      g.closePath();
-    };
-    // (the source bursts are ≈ 1.3x the traced outline with a heavy jagged black border)
-    g.save();
-    path(1.7, 0.25); g.fillStyle = "rgba(6,6,6,0.95)"; g.fill();
-    path(1.3, 0); g.fillStyle = "rgb(244,244,242)"; g.fill();
-    g.restore();
-  });
-}
-function paintA(g) {
-  // the page ends at y ≈ 912 (as in s25's standing phase)
-  g.fillStyle = "#000"; g.fillRect(140, 913, 1890, 40);
-  drawCracksA(g);
-  drawStarsA(g);
-  // the owl's shadow on the page round its feet (s25)
-  const gr = g.createRadialGradient(1085, 850, 10, 1085, 850, 330);
-  gr.addColorStop(0, "rgba(0,0,0,0.85)"); gr.addColorStop(0.55, "rgba(0,0,0,0.6)"); gr.addColorStop(1, "rgba(0,0,0,0)");
-  g.save(); g.translate(1085, 850); g.scale(1, 0.4); g.translate(-1085, -850); g.fillStyle = gr; g.fillRect(740, 500, 700, 700); g.restore();
-  // the stuck pairs (median A frame, 3x gridded crops): pivots, blade tips in the impact stars, finger-loop centres
-  // (fix #2: drawn in the flung style — thin chrome rims, dark holes, slotted screw — with the loops 18 px lower: the
-  // right pair's loops sit at y 440–480 / 510–560 in the source, ours were ≈ 20 px higher)
-  flungPair(g, [772, 477], Math.atan2(390 - 477, 640 - 772), 162, [843, 581], [868, 506], 1, true);
-  flungPair(g, [1395, 453], Math.atan2(364 - 453, 1522 - 1395), 160, [1317, 551], [1295, 473], 1, true);
-  // the floor round the feet is black in A (the page's figure below the owl does not show)
-  g.save(); g.translate(1085, 845); g.scale(1, 0.32); g.translate(-1085, -845);
-  const gr2 = g.createRadialGradient(1085, 845, 60, 1085, 845, 300);
-  gr2.addColorStop(0, "rgba(3,3,3,0.97)"); gr2.addColorStop(0.7, "rgba(3,3,3,0.9)"); gr2.addColorStop(1, "rgba(3,3,3,0)");
-  g.fillStyle = gr2; g.fillRect(700, 400, 800, 900); g.restore();
-  // (the owl sits under the screen glow here: drawing it after the glow, as s25 does, matched s25's last frame better
-  // (owl box σ8 9.4 -> 8.0) but the source worse (7.8 -> 8.2); the drawing is the same on both sides either way)
-  g.drawImage(owlAStage(), 0, 0);
-}
+// The page, cracks, stars, stuck scissors, the owl's shadow: PAGEA[0], the median of the 26 A frames moved to the
+// settled camera, traced (stage px). The room glow round the screen: PAGEA[1], traced from a blurred copy in fine tone
+// steps and softened 4 px (traced with the page it came out in visible bands). The jolt frame (B) has no room light:
+// the page alone, clipped to the screen (stage x 143–2020, y 128–914, measured on the median and on 111.56).
+// The standing owl is the source's own, in the traced key (PAGEA[0]) — end fix round 3: no longer s25's flat drawing on
+// top (owl box σ4 5.06 → 2.38). Its design changes at the 110.52 cut, where the source changes the whole frame anyway
+// (the owl grows ~10 %, a new crack web and stars appear); the cut's size is unchanged (render 28.2, source 25.8).
+const SCREEN_A = [143, 128, 1877, 786];
 function stageA(glow) {
   const c = caches(), k = glow ? "frameA" : "jolt";
   if (!c[k]) {
     c[k] = mk(W, H); const g = c[k].getContext("2d");
-    drawFramedPage(g, pageWithBanner(), { glow, over: paintA });
-    // the source's B&W page carries a faint green cast (graded BGR ≈ 71, 76, 71 against our neutral 72) that the
-    // colour strip does not: R, B × 0.97 and G + 3 outside the strip (frame y 186–360)
-    g.save(); g.beginPath(); g.rect(0, 0, W, 186); g.rect(0, 361, W, H - 361); g.clip();
-    g.globalCompositeOperation = "multiply"; g.fillStyle = "rgb(247,255,247)"; g.fillRect(0, 0, W, H);
-    g.globalCompositeOperation = "lighter"; g.fillStyle = "rgb(0,3,0)"; g.fillRect(0, 0, W, H);
+    g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+    if (glow) {
+      const t = mk(W, H), q = t.getContext("2d");
+      q.fillStyle = "#000"; q.fillRect(0, 0, W, H); paintTrace(q, PAGEA[1], { col: tone("AE") });
+      g.save(); g.beginPath(); g.rect(0, 0, W, H); g.rect(...SCREEN_A); g.clip("evenodd");
+      g.filter = "blur(4px)"; g.drawImage(t, 0, 0); g.filter = "none"; g.restore();
+    }
+    g.save(); g.beginPath(); g.rect(...SCREEN_A); g.clip();
+    paintTrace(g, PAGEA[0], { col: tone("AE") });
     g.restore();
   }
   return c[k];
@@ -209,188 +164,49 @@ function drawA(ctx, t) {
   ctx.restore();
 }
 
-// ================================================================ shards (C, D)
-// scissors flung out to the top corners (s26/fx.js: per-frame pivots and blade angles measured from the tracked finger
-// loops, 111.60–113.68); a faint ghost two frames behind (the source's motion echo)
-// each pair is drawn with s21's scissors (s26/scissorsFlung.js); the rings are placed on the measured loop centres
-// (fix #1: the flung pairs' rings are thinner chrome loops (t 0.05) whose holes show the background dimmed, with a
-// slotted pivot screw, as in the source; the stuck pairs of A keep the heavier loops they were measured with)
-function flungPair(ctx, piv, ang, L, lo, up, alpha, flung = false) {
-  const h = [-Math.cos(ang), -Math.sin(ang)], e2 = [-h[1], h[0]];
-  const ring = (p) => { const d = [p[0] - piv[0], p[1] - piv[1]]; return { u: (d[0] * h[0] + d[1] * h[1]) / L, v: (d[0] * e2[0] + d[1] * e2[1]) / L, rx: flung ? 0.15 : 0.16, ry: flung ? 0.21 : 0.22, rot: 0.1, t: flung ? 0.05 : 0.075, hole: flung ? "rgba(0,0,0,0.32)" : null }; };
-  ctx.save(); ctx.globalAlpha = alpha;
-  drawScissorsF(ctx, { x: piv[0], y: piv[1], ang, L: L * 0.95, open: 0.03, bw: 0.1, rings: [ring(up), ring(lo)], slot: flung });
-  ctx.restore();
-}
-function scAt(F) {
-  const i = Math.max(0, Math.min(SC_KEYS.length - 1, F - SC_KEYS[0][0]));
-  return SC_KEYS[i];
-}
-function flungScissors(ctx, t) {
-  const F = FR(t);
-  if (F > SC_KEYS[SC_KEYS.length - 1][0]) return;
-  // (the source trails each pair with faint echoes of its rings and a grey smoke of curls; two echoes here)
-  for (const [k, alpha] of [[4, 0.1], [2, 0.2], [0, 1]]) {
-    const r = scAt(F - k);
-    flungPair(ctx, [r[1], r[2]], r[3], r[4], [r[9], r[10]], [r[11], r[12]], alpha, true);
-    flungPair(ctx, [r[5], r[6]], r[7], r[8], [r[13], r[14]], [r[15], r[16]], alpha, true);
-  }
-}
-// the frame's own speed lines (s26/fx.js SPEED): tapered white wedges, outward
-function speedLinesF(ctx, F) {
-  const S = SPEED[F]; if (!S) return;
-  ctx.save(); ctx.fillStyle = "rgb(236,236,234)";
-  for (let i = 0; i < S.length; i += 6) {
-    const [x0, y0, x1, y1] = S.slice(i, i + 4), w0 = Math.max(1.2, S[i + 4]) / 2, w1 = Math.max(0.6, S[i + 5]) / 2;
-    const L = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / L, ny = (x1 - x0) / L;
-    ctx.beginPath(); ctx.moveTo(x0 + nx * w0, y0 + ny * w0); ctx.lineTo(x1 + nx * w1, y1 + ny * w1); ctx.lineTo(x1 - nx * w1, y1 - ny * w1); ctx.lineTo(x0 - nx * w0, y0 - ny * w0); ctx.closePath(); ctx.fill();
-  }
-  ctx.restore();
-}
-function bwPlain() {
-  const c = caches();
-  if (!c.bwPlain) { c.bwPlain = mk(W, H); drawFramedPage(c.bwPlain.getContext("2d"), pageWithBanner(), { glow: 1.4 }); }
-  return c.bwPlain;
-}
-// the shard field (s26/fieldC2.js): straight-edged shards, each holding a piece of our B&W page, colour page or black,
-// every shard outlined (a bright ≈2.4 px core with a soft halo, as the source's glass edges); the blast hole between them
-// shows the colour page, which stays put behind the field. The whole field moves under its measured per-frame affine.
-function fieldPaths() {
-  const c = caches();
-  if (c.fieldP) return c.fieldP;
-  const cells = FIELD_C2.map((r) => {
-    const p = new Path2D(); p.moveTo(r[7], r[8]); for (let i = 9; i < r.length; i += 2) p.lineTo(r[i], r[i + 1]); p.closePath();
-    let cx = 0, cy = 0; for (let i = 7; i < r.length; i += 2) { cx += r[i]; cy += r[i + 1]; }
-    const n = (r.length - 7) / 2;
-    return { t: r[0], p, cx: cx / n, cy: cy / n, M: r[0] === 2 ? null : new DOMMatrix([r[1], r[4], r[2], r[5], r[3], r[6]]) };
-  });
-  const edges = new Path2D(), bw = new Path2D();
-  for (const q of cells) { edges.addPath(q.p); if (q.t === 0) bw.addPath(q.p); }
-  c.fieldP = { cells, edges, bw };
-  return c.fieldP;
-}
-const mat = (m) => new DOMMatrix([m[0], m[3], m[1], m[4], m[2], m[5]]);
+// ================================================================ C: the blast
+// The shard field (with the frame's speed lines and the blast's white streaks) is the source's own, traced at key
+// frames with the owl and the scissors removed (s26/fieldKeysC.js), carried to each frame by the field's measured
+// affine FIELD_CAM (key -> frame). 111.80 is a double-exposed shake frame: its own key, drawn as traced. 111.60 (the first
+// blast frame, the owl still standing) is its own key too (s26/fieldKey2790.js): key 2792's filled owl hole left a dark
+// smear round the standing owl there.
+const SHAKE_F = 2795, BLAST_F = 2790;
 function drawFieldC(ctx, F) {
-  const c = caches(), P = fieldPaths(), cam = FIELD_CAM.cam[Math.min(2817, Math.max(2790, F))];
-  if (!c.patBWp) { c.patBWp = ctx.createPattern(bwPlain(), "no-repeat"); c.patCol = ctx.createPattern(hippiePageCanvas(), "no-repeat"); }
+  const Fc = Math.min(2817, Math.max(2790, F));
+  if (Fc === BLAST_F) { ctx.drawImage(keyCanvas("fk", FIELDK90[0], true), 0, 0); return; }
+  const K = Fc === SHAKE_F ? SHAKE_F : nearestKey(FIELDK_KEYS.filter((k) => k !== SHAKE_F), Fc);
+  const M = mat(FIELD_CAM.cam[Fc]).multiply(mat(FIELD_CAM.cam[K]).inverse());
   ctx.save();
   ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
-  // the colour page stays put behind the field (the blast hole shows it)
-  ctx.setTransform(mat(FIELD_CAM.Mc)); ctx.drawImage(hippiePageCanvas(), 0, 0);
-  ctx.setTransform(mat(cam));
-  for (const q of P.cells) {
-    if (q.t === 2) ctx.fillStyle = "#050505";
-    else { const pat = q.t === 0 ? c.patBWp : c.patCol; pat.setTransform(q.M); ctx.fillStyle = pat; }
-    ctx.fill(q.p);
+  ctx.setTransform(M); ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(keyCanvas("fk", FIELDK[FIELDK_KEYS.indexOf(K)], true), 0, 0);
+  // on the two frames where the nearest key changes mid-blast, the previous key at half strength (a one-frame cross-fade
+  // instead of a pop)
+  const K2 = XFADE_C[Fc];
+  if (K2) {
+    ctx.setTransform(mat(FIELD_CAM.cam[Fc]).multiply(mat(FIELD_CAM.cam[K2]).inverse())); ctx.globalAlpha = 0.5;
+    ctx.drawImage(keyCanvas("fk2", FIELDK[FIELDK_KEYS.indexOf(K2)], true), 0, 0);
   }
-  // the source's B&W shards are darker than our lit page (lower half mean V 68–80 vs 83–93 at 112.00)
-  ctx.fillStyle = "rgba(0,0,0,0.15)"; ctx.fill(P.bw);
-  ctx.lineCap = "round"; ctx.lineJoin = "round";
-  // (fix #2: thinner, dimmer glass edges — the source's are ≈ 1.5 px; 2.4 px cores doubled the outline density.
-  // 2793–2815: σ8 11.90 -> 11.34)
-  ctx.strokeStyle = "rgba(210,210,208,0.2)"; ctx.lineWidth = 3.4; ctx.stroke(P.edges);
-  ctx.strokeStyle = "rgb(210,210,208)"; ctx.lineWidth = 1.6; ctx.stroke(P.edges);
-  // the blast's white streaks over the hole: thin wedges, fine toward the blast centre, ≈4 px at the outer end
-  if (!c.streakP) {
-    c.streakP = new Path2D();
-    for (let i = 0; i < STREAKS_C.length; i += 4) {
-      const [x0, y0, x1, y1] = STREAKS_C.slice(i, i + 4), L = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / L, ny = (x1 - x0) / L;
-      c.streakP.moveTo(x0 + nx * 0.6, y0 + ny * 0.6); c.streakP.lineTo(x1 + nx * 2.1, y1 + ny * 2.1);
-      c.streakP.lineTo(x1 - nx * 2.1, y1 - ny * 2.1); c.streakP.lineTo(x0 - nx * 0.6, y0 - ny * 0.6); c.streakP.closePath();
-    }
-  }
-  ctx.fillStyle = "rgb(236,236,234)"; ctx.fill(c.streakP);
   ctx.restore();
 }
-function paintCBack(ctx, t) {
-  drawFieldC(ctx, FR(t));
-  speedLinesF(ctx, FR(t));
-  flungScissors(ctx, t);
+const XFADE_C = { 2801: 2798, 2806: 2803 };
+// the two flung pairs of scissors with their loop echoes (111.60–113.68) and the white owl (111.60–113.92), traced on
+// every source frame
+function scissorsT(ctx, F) {
+  if (F < SC_T_F0 || F >= SC_T_F0 + SC_T.length) return;
+  ctx.drawImage(layer("scT", SC_T, SC_T_F0, F, 3, { col: tone("AE") }), 0, 0);
 }
-function paintC(ctx, t) {
-  const shake = FR(t) === FR(111.8);
-  if (shake) {
-    // 111.80: a shake frame. Fix #2 (measured on a 2x grid of the source): the ghost of the page (the headline's "Mix"
-    // at ≈ (700–845, 60–140) against the real one at (740–880, 190–280), "own" likewise) shows only inside some of the
-    // shards, thrown ≈ (−35, −130); the whole frame is smeared horizontally (letter edges doubled ≈ 15 px apart)
-    const c = caches();
-    if (!c.tmp) { c.tmp = mk(W, H); c.tmp2 = mk(W, H); }
-    const g = c.tmp.getContext("2d");
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    paintCBack(g, t);
-    const P = fieldPaths(), cam = FIELD_CAM.cam[Math.min(2817, Math.max(2790, FR(t)))], r = rng(2795);
-    const g2 = c.tmp2.getContext("2d");
-    g2.setTransform(1, 0, 0, 1, 0, 0); g2.drawImage(c.tmp, 0, 0);
-    g2.save(); g2.setTransform(mat(cam));
-    const clip = new Path2D();
-    for (const q of P.cells) if (r() < 0.3 && q.cy < 560) clip.addPath(q.p);
-    g2.clip(clip); g2.setTransform(1, 0, 0, 1, 0, 0); g2.globalAlpha = 0.8; g2.drawImage(c.tmp, -35, -130);
-    g2.restore();
-    // horizontal smear: faint copies ±10 px either side
-    ctx.drawImage(c.tmp2, 0, 0);
-    for (const dx of [-10, 10]) { ctx.save(); ctx.globalAlpha = 0.25; ctx.drawImage(c.tmp2, dx, 0); ctx.restore(); }
-  } else paintCBack(ctx, t);
-  // the owl: the rig, posed per source frame (fits in s26/posesC.js); 111.60 still the standing drawing
-  if (t < 111.62) {
-    ctx.save(); ctx.translate(0, -25); ctx.drawImage(owlAStage(), 0, 0); ctx.restore();
-  } else {
-    const O = owlCD(t);
-    // (the shake frame smears the owl too: faint copies ±12 / ±24 px either side)
-    if (shake) for (const dx of [-24, -12, 12, 24]) { ctx.save(); ctx.globalAlpha = 0.15; ctx.drawImage(O, dx, 0); ctx.restore(); }
-    ctx.drawImage(O, 0, 0);
-  }
-}
-// The white owl of the blast (C) and the hover (D): the shared B&W owl kit (s26/owlCD.js) — engraved-white plumage,
-// layered wing feathers, merged head + body, scowl / sly / shut eyes, hooked beak, black cups on a slim band, talons —
-// posed per source frame (head on the tracked eyes, body + wings refitted to the source silhouette: s26/owlCDfit.js).
-// Eyes per source frame (2x crops): C angry, looking to the viewer's right; squeezed shut under furrowed brows at
-// 112.64–112.68. D: winking (its left eye = the viewer's right squeezed shut) to 113.04, half open 113.08, then both
-// open, sly.
-const SQUEEZE = { state: "scowl", top: 0.07, bot: 0.05, iris: 0.001, tilt: 0.4, brow: 1.45, browSlant: 0.95 };
-function eyesCD(F) {
-  if (F <= 2815) return { state: "scowl", look: [0.75, 0], over: { lookX: 0, lookGain: 1.2 } };
-  if (F <= 2817) return { state: "scowl", over: SQUEEZE };
-  const sly = { state: "sly", look: [0.35, 0], over: { lookX: 0, iris: 0.58, brow: 1.1, browSlant: 0.7 } };
-  if (F <= 2826) return { ...sly, right: SQUEEZE };
-  if (F === 2827) return { ...sly, right: { top: 0.22, bot: 0.2 } };
-  return sly;
-}
-function owlCD(t) {
-  const c = caches();
-  if (!c.owlCDc) { c.owlCDc = mk(W, H); c.owlCDl = mk(8, 8); }
-  const F = Math.min(2847, Math.max(2791, FR(t)));
-  if (c.owlCDF !== F) {
-    const g = c.owlCDc.getContext("2d");
-    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H);
-    drawOwlCD(g, F, { eyes: eyesCD(F), canvas: c.owlCDl });
-    c.owlCDF = F;
-  }
-  return c.owlCDc;
-}
-// The standing owl of beat A is s25's own drawing of this pose (s25/v2: the "hips2" body drawing and the head layer
-// with sly eyes), placed with s25's measured affines of its last frame (110.48, F2762) in stage px. s25 then squashes
-// its whole frame by 0.9836; the source un-squashes at the cut and the owl holds (its head and body move with the
-// page to < 2 px through A), so drawing it here un-squashed gives the identical owl on both sides of the cut.
-const A_F = 2762;
-function owlAStage() {
-  const c = caches();
-  if (!c.owlAS) {
-    c.owlAS = mk(W, H);
-    const g = c.owlAS.getContext("2d");
-    const row = SCHED[Math.min(SCHED.length - 1, A_F - SCHED_F0)];
-    blitLayer(g, paintDrawing(DRAW[row[0]]), row.slice(1));
-    const HL = paintDrawing(D_HEAD, { bb: [900, 250, 1285, 560], pre: headphonesBack, post: (q) => { headOutline(q, D_HEAD.hull); face(q, "sly"); headphonesFront(q); }, fade: [522, 552] });
-    blitLayer(g, HL, HEAD[Math.min(HEAD.length - 1, A_F - HEAD_F0)]);
-  }
-  return c.owlAS;
+const owlCD = (F) => layer("owlCD", OWL_CD, OWL_CD_F0, F, 3, { col: tone("AE") });
+function paintC(ctx, F) {
+  drawFieldC(ctx, F);
+  scissorsT(ctx, F);
+  ctx.drawImage(owlCD(F), 0, 0);
 }
 
-// ================================================================ D: the colour page arrives through the shards
-// D: the colour page arrives (hippie pageArrival) through a ring of shards flying apart.
-//   * RING_D: the ring's own motion per source frame, measured (ORB similarity frame to frame on the ring, left and
-//     right halves, chained): zoom s and translation (tx, ty) relative to 112.72 — it creeps out slowly, then
-//     accelerates (1.09 by 113.28, 1.33 by 113.68).
-//   * the ring = straight-edged shards over everything outside the measured colour window (s26/ringD2.js).
+// ================================================================ D: the colour page arrives through the ring
+// RING_D: the ring's own motion per source frame, measured (ORB similarity frame to frame on the ring, left and right
+// halves, chained): zoom s and translation (tx, ty) relative to 112.72 — it creeps out slowly, then accelerates (1.09 by
+// 113.28, 1.33 by 113.68).
 const RING_D = [[2818, 1.0, 0.0, 0.0],
    [2819, 1.0021, 4.7, -1.4],
    [2820, 1.0033, 4.9, 1.5],
@@ -425,294 +241,93 @@ const RING_D = [[2818, 1.0, 0.0, 0.0],
    [2849, 1.4504, -434.9, -270.9],
    [2850, 1.4526, -435.2, -272.7],
    [2851, 1.4572, -440.6, -275.1]];
-// after 112.68+1.36 s (frame 2842) the left half has left the frame and the right half's track is lost: the ring keeps
-// accelerating out about its measured fixed point (1091, 424) (growth 4 % a frame at 2842, +1 % per frame)
-function ringAt(F) {
-  if (F <= 2842) return interp(RING_D, F);
-  // (review #1 suggested driving the right half by rows 2843–2851; tried in fix #1: those rows hold the right half
-  // far too long — 113.80: σ8 ΔE 13.3 -> 13.8, 113.96: 11.6 -> 14.8 — so the measured-then-accelerating fling stays)
-  let [s0] = interp(RING_D, 2842), s = s0;
-  for (let f = 2843; f <= F; f++) s *= 1.04 + 0.01 * (f - 2842);
-  return [s, 1091 * (1 - s), 424 * (1 - s)];
+// The ring (and the owl's dark motion ghost) is the source's own, traced at key frames with the owl and the scissors
+// removed, transparent where the arriving page shows (s26/ringKeysD.js), carried to each frame by RING_D (key -> frame).
+function drawRingKeys(ctx, F) {
+  const Fc = Math.min(2841, Math.max(2818, F)), K = nearestKey(RINGK_KEYS, Fc);
+  const [s1, x1, y1] = interp(RING_D, K), [s2, x2, y2] = interp(RING_D, Fc), k = s2 / s1;
+  ctx.save(); ctx.setTransform(k, 0, 0, k, x2 - k * x1, y2 - k * y1); ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(keyCanvas("rk", RINGK[RINGK_KEYS.indexOf(K)], false), 0, 0); ctx.restore();
 }
-// the ring (s26/ringD2.js): straight-edged shards covering everything outside the measured colour window, each a piece
-// of our B&W page, of the colour page, black, or clear glass (the arriving page shows through), every shard outlined;
-// carried by the ring's measured motion
-// fix #2: RING_CLEAR (s26/ringClear.js) marks the shards that stop covering the arriving page, fitted per shard against
-// the source: from 112.72 = clear glass (outline + a faint dark tint); later = flung outward and faded over 3 frames.
-const RING_TINT = 0.12;
-function ringPaths() {
-  const c = caches();
-  if (c.ringP) return c.ringP;
-  const L = [], R = [];
-  RING_D2.forEach((r, k) => {
-    const p = new Path2D(); p.moveTo(r[7], r[8]); let cx = 0, cy = 0, n = 0;
-    for (let i = 9; i < r.length; i += 2) p.lineTo(r[i], r[i + 1]);
-    for (let i = 7; i < r.length; i += 2) { cx += r[i]; cy += r[i + 1]; n++; }
-    p.closePath();
-    const Fc = RING_CLEAR[k] ?? 0, glass = Fc === 2818;
-    (cx / n > 1091 ? R : L).push({ k, t: glass ? 3 : r[0], tint: glass, fling: Fc > 2818 ? Fc : 0, cx: cx / n, cy: cy / n, p,
-      M: r[0] >= 2 ? null : new DOMMatrix([r[1], r[4], r[2], r[5], r[3], r[6]]) });
-  });
-  const edges = (A) => { const e = new Path2D(); for (const q of A) e.addPath(q.p); return e; };
-  const still = (A) => A.filter((q) => !q.fling);
-  c.ringP = { L, R, eL: edges(still(L)), eR: edges(still(R)), bL: edges(still(L).filter((q) => q.t === 0)), bR: edges(still(R).filter((q) => q.t === 0)),
-    tL: edges(L.filter((q) => q.tint)), tR: edges(R.filter((q) => q.tint)) };
-  return c.ringP;
-}
-function ringCell(ctx, c, q) {
-  if (q.t === 3) return;                           // clear glass: the arriving page shows through, outline only
-  if (q.t === 2) ctx.fillStyle = "#050505";
-  else { const pat = q.t === 0 ? c.patBWp : c.patCol; pat.setTransform(q.M); ctx.fillStyle = pat; }
-  ctx.fill(q.p);
-  if (q.t === 0 && q.fling) { ctx.fillStyle = "rgba(0,0,0,0.13)"; ctx.fill(q.p); }
-}
-function ringEdges(ctx, e, rs) {
-  ctx.lineCap = "round"; ctx.lineJoin = "round";
-  // (fix #2: thinner, dimmer glass edges, as in the C field: 2821–2839 σ8 10.91 -> 10.47)
-  ctx.strokeStyle = "rgba(210,210,208,0.2)"; ctx.lineWidth = 3.4 / rs; ctx.stroke(e);
-  ctx.strokeStyle = "rgb(210,210,208)"; ctx.lineWidth = 1.6 / rs; ctx.stroke(e);
-}
-function drawRingD(ctx, F) {
-  const c = caches(), P = ringPaths();
-  if (!c.patBWp) { c.patBWp = ctx.createPattern(bwPlain(), "no-repeat"); c.patCol = ctx.createPattern(hippiePageCanvas(), "no-repeat"); }
-  const [rs, rtx, rty] = ringAt(F);
-  for (const [cells, edges, right] of [[P.L, P.eL, false], [P.R, P.eR, true]]) {
-    ctx.save(); ctx.setTransform(rs, 0, 0, rs, rtx, rty);
-    for (const q of cells) if (!q.fling) ringCell(ctx, c, q);
-    // (fix #2 also tried glass showing the arriving page displaced, fitted per shard (snapshots/s26-fix2-tools/
-    // ringglass.py): σ8 rose on D/E, 10.71 -> 10.79 with 38 shards, 10.72 with the 12 strongest; not used)
-    ctx.fillStyle = `rgba(0,0,0,${RING_TINT})`; ctx.fill(right ? P.tR : P.tL);
-    // the source's B&W shards are a little darker than our lit page (ring mean V 75 vs 85 at 112.72)
-    ctx.fillStyle = "rgba(0,0,0,0.13)"; ctx.fill(right ? P.bR : P.bL);
-    ringEdges(ctx, edges, rs);
-    ctx.restore();
-    // flung shards: pushed outward from the ring's centre (1091, 424) and faded over the 3 frames up to their fitted frame
-    for (const q of cells) {
-      if (!q.fling || F > q.fling) continue;
-      const u = Math.max(0, F - (q.fling - 3)), a = Math.min(1, (q.fling + 1 - F) / 3);
-      const fx = q.cx * rs + rtx - 1091, fy = q.cy * rs + rty - 424, fl = Math.hypot(fx, fy) || 1, d = 14 * u * u;
-      ctx.save(); ctx.globalAlpha = a; ctx.setTransform(rs, 0, 0, rs, rtx + (fx / fl) * d, rty + (fy / fl) * d);
-      ringCell(ctx, c, q); ringEdges(ctx, q.p, rs);
-      ctx.restore();
-    }
-  }
-}
-// the dark motion ghost of the owl in the upper right (113.08–113.88): a smoky, darkened, soft copy of the owl, its
-// head measured on 2x grids at ≈ (1510, 230) at 113.08 drifting to ≈ (1805, 265) by 113.72; drawn at half resolution
-// (fix #2: it is already there at 113.00 (F2825): starts at F2824 with a 2-frame fade-in)
-const GHOST = [[2824, 1470, 226], [2827, 1510, 230], [2835, 1650, 245], [2843, 1805, 265], [2847, 1880, 275]];
-function owlGhost(ctx, t) {
-  const F = FR(t);
-  if (F < 2824 || F > 2847) return;
-  const c = caches(), w = W >> 1, h = H >> 1;
-  if (!c.ghost) c.ghost = mk(w, h);
-  const g = c.ghost.getContext("2d"), hd = cdPose(F).head, [gx, gy] = interp(GHOST.map((r) => r), F), k = 0.85;
-  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h); g.globalCompositeOperation = "source-over";
-  g.filter = "blur(3px)";
-  g.setTransform(k / 2, 0, 0, k / 2, (gx - hd.x * k) / 2, (gy - hd.y * k) / 2); g.drawImage(owlCD(t), 0, 0);
-  g.filter = "none"; g.setTransform(1, 0, 0, 1, 0, 0);
-  // (a translucent grey version read closer by eye but scored worse at σ8 — 113.64: 12.5 -> 13.0 — so it stays dark)
-  g.globalCompositeOperation = "source-in"; g.fillStyle = "rgb(38,38,40)"; g.fillRect(0, 0, w, h); g.globalCompositeOperation = "source-over";
-  const fade = Math.min(1, (F - 2823) / 2, (2848 - F) / 3);
-  ctx.save(); ctx.globalAlpha = 0.38 * fade; ctx.imageSmoothingEnabled = true; ctx.drawImage(c.ghost, 0, 0, w, h, 0, 0, W, H); ctx.restore();
-}
-function paintD(ctx, t) {
+function paintD(ctx, t, F) {
   ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
   const A = pageArrival(Math.max(112.7, t));
   drawColourPage(ctx, A.s, A.tx, A.ty);
-  drawRingD(ctx, FR(t));
-  owlGhost(ctx, t);
-  flungScissors(ctx, t);
-  ctx.drawImage(owlCD(t), 0, 0);
+  drawRingKeys(ctx, F);
+  scissorsT(ctx, F);
+  ctx.drawImage(owlCD(F), 0, 0);
 }
+
 // ================================================================ E: the out-of-focus shard across the lens
-// 113.68–114.12: a huge B&W shard right at the lens, far out of focus, sweeps from the lower left to the upper right.
-// Per source frame (s26/slabE.js): its outline and the outlines of its lit parts, with the two measured grey levels;
-// the lit parts carry soft streaks (the out-of-focus hatching of the page piece, running ~80° as in the source). Built at
-// 1/4 resolution, blurred ~12 px (it is out of focus), scaled up with a soft edge.
-function paintSlab(ctx, t) {
-  const F = FR(t), E = SLAB_E[F];
-  if (!E) return;
-  const c = caches(), w = Math.round(W / 4), h = Math.round(H / 4);
-  if (!c.slabA) { c.slabA = mk(w, h); c.slabB = mk(w, h); c.slabM = mk(w, h); }
-  const A = c.slabA.getContext("2d"), B = c.slabB.getContext("2d"), Mk = c.slabM.getContext("2d");
-  // fix #2 (sampled on the source, graded): the slab is dark (≈ 41–44 there, pre-grade ≈ 0.14–0.19), its lit parts
-  // grey (≈ 62–73) with blurred light columns, a soft bright rim (≈ 130–175) along its leading (upper / right) edges,
-  // a faint green cast (G ≈ +3) and heavy grain. Here: dark base floor 0.06 (was 0.04), faint light columns, the rim,
-  // a softer blur (5 px at 1/4 res, was 3.5) and a grain layer. (Tried: floor 0.14 as sampled and the lit parts at 0.85
-  // with brighter columns: E σ8 11.20 -> 11.81 on 5 frames — our lit parts do not sit where the source's do, so any lift
-  // of the dark base adds error; the floor stays low.)
-  const grey = (v) => { const k = Math.max(0, Math.min(1, v)) * 255; return `rgb(${Math.round(k * 0.98)},${Math.round(Math.min(255, k * 1.03))},${Math.round(k * 0.99)})`; };
-  const path = (g, P) => { g.beginPath(); P.forEach(([x, y], i) => (i ? g.lineTo(x / 4, y / 4) : g.moveTo(x / 4, y / 4))); g.closePath(); };
-  A.setTransform(1, 0, 0, 1, 0, 0); A.clearRect(0, 0, w, h);
-  path(A, E.poly); A.fillStyle = grey(Math.max(E.vD, 0.06)); A.fill();
-  // streaks: seeded soft lines at ~80°, anchored to the shard (its outline's centroid)
-  let cx = 0, cy = 0; E.poly.forEach(([x, y]) => { cx += x / 4; cy += y / 4; }); cx /= E.poly.length; cy /= E.poly.length;
-  const dx = Math.cos(1.4), dy = Math.sin(1.4);
-  for (const G of E.grey) {
-    A.save(); path(A, G); A.clip();
-    A.fillStyle = grey(E.vG); A.fillRect(0, 0, w, h);
-    const r = rng(771);
-    for (let i = 0; i < 150; i++) {
-      const u = (r() - 0.5) * 700, L = 40 + r() * 180, v0 = (r() - 0.5) * 300, lw = 1.5 + r() * 5, lum = r() < 0.5 ? 0.5 + r() * 0.3 : 1.35 + r() * 0.4;
-      const x0 = cx + u * dy + v0 * dx, y0 = cy - u * dx + v0 * dy;
-      A.strokeStyle = grey(E.vG * lum); A.globalAlpha = 0.5 + r() * 0.4; A.lineWidth = lw;
-      A.beginPath(); A.moveTo(x0, y0); A.lineTo(x0 + dx * L, y0 + dy * L); A.stroke();
-    }
-    A.globalAlpha = 1; A.restore();
-  }
-  // light columns across the whole slab (the blurred highlights of the page piece), 4 per shard, seeded per shard
-  A.save(); path(A, E.poly); A.clip();
-  const rc = rng(4401);
-  for (let i = 0; i < 4; i++) {
-    const u = (rc() - 0.5) * 240, x0 = cx + u * dy - dx * 200, y0 = cy - u * dx - dy * 200;
-    A.strokeStyle = grey(0.3 + 0.1 * rc()); A.globalAlpha = 0.25; A.lineWidth = 3 + 4 * rc();
-    A.beginPath(); A.moveTo(x0, y0); A.lineTo(x0 + dx * 400, y0 + dy * 400); A.stroke();
-  }
-  // the bright rim along the leading edges (outward normal toward the upper right), ≈ 30 px, inside the outline
-  A.globalAlpha = 1; A.lineCap = "round";
-  const P = E.poly, n = P.length;
-  let area = 0; for (let i = 0; i < n; i++) { const p = P[i], q = P[(i + 1) % n]; area += p[0] * q[1] - q[0] * p[1]; }
-  const sg = area > 0 ? 1 : -1;
-  for (let i = 0; i < n; i++) {
-    const p = P[i], q = P[(i + 1) % n], ex = q[0] - p[0], ey = q[1] - p[1], L = Math.hypot(ex, ey) || 1;
-    const nx = (sg * ey) / L, ny = (-sg * ex) / L;                        // outward normal
-    const lead = nx * 0.7 - ny * 0.7;                                       // toward the upper right
-    if (lead < 0.2 || p[0] <= 1 && q[0] <= 1 || p[1] >= 944 && q[1] >= 944 || p[0] >= 2204 && q[0] >= 2204 || p[1] <= 1 && q[1] <= 1) continue;
-    A.strokeStyle = grey(0.5); A.globalAlpha = Math.min(0.85, lead); A.lineWidth = 7.5;
-    A.beginPath(); A.moveTo(p[0] / 4, p[1] / 4); A.lineTo(q[0] / 4, q[1] / 4); A.stroke();
-  }
-  A.restore();
-  B.setTransform(1, 0, 0, 1, 0, 0); B.clearRect(0, 0, w, h);
-  B.filter = "blur(5px)"; B.drawImage(c.slabA, 0, 0); B.filter = "none";
-  // soft-edged outline (the shard's edges are out of focus too)
-  Mk.setTransform(1, 0, 0, 1, 0, 0); Mk.clearRect(0, 0, w, h);
-  Mk.filter = "blur(2.5px)"; path(Mk, E.poly); Mk.fillStyle = "#fff"; Mk.fill(); Mk.filter = "none";
-  B.globalCompositeOperation = "destination-in"; B.drawImage(c.slabM, 0, 0); B.globalCompositeOperation = "source-over";
-  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(c.slabB, 0, 0, w, h, 0, 0, W, H);
-  // grain inside the slab (the source's out-of-focus shard is heavily grained): a seeded third-res noise layer
-  if (!c.slabN) {
-    const nw = Math.round(W / 3), nh = Math.round(H / 3); c.slabN = mk(nw, nh); const g = c.slabN.getContext("2d"), im = g.createImageData(nw, nh), r = rng(2849);
-    for (let i = 0; i < nw * nh; i++) { const v = Math.max(0, Math.min(255, 128 + (r() + r() + r() - 1.5) * 90)); im.data[i * 4] = im.data[i * 4 + 1] = im.data[i * 4 + 2] = v; im.data[i * 4 + 3] = 255; }
-    g.putImageData(im, 0, 0);
-  }
-  ctx.beginPath(); E.poly.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.clip();
-  ctx.globalCompositeOperation = "overlay"; ctx.globalAlpha = 0.22; ctx.drawImage(c.slabN, 0, 0, W, H);
-  ctx.restore();
+// 113.68–114.12 (F2842–2853): a huge B&W shard right at the lens, far out of focus, sweeps from the lower left to the
+// upper right. Per source frame (s26/lensTraceE.js): [back] the ring's last shards, [front] the lens shard, traced coarse
+// from a blurred copy and painted blurred 7 px over the owls.
+function paintE(ctx, t, F) {
+  const E = LENS_E[Math.min(LENS_E.length - 1, Math.max(0, F - LENS_E_F0))];
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+  const A = pageArrival(Math.max(112.7, t));
+  drawColourPage(ctx, A.s, A.tx, A.ty, F >= 2854);
+  paintTrace(ctx, E[0], { col: tone("AE") });
+  scissorsT(ctx, F);
+  if (F <= 2848) ctx.drawImage(owlCD(F), 0, 0);
+  if (F >= 2852) ctx.drawImage(owlF(F), 0, 0);
+  const c = caches();
+  if (!c.lensE) c.lensE = mk(W, H);
+  const g = c.lensE.getContext("2d");
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H);
+  paintTrace(g, E[1], { seam: 1.5, col: tone("AE") });
+  ctx.save(); ctx.filter = "blur(7px)"; ctx.drawImage(c.lensE, 0, 0); ctx.restore();
 }
 
 // ================================================================ F: the colour owl over the settling page
-// The colour owl: the rig in its colour look, posed per source frame (s26/posesF.js, fitted to the source's owl
-// silhouette = frame minus the clean page, plus the tracked pupils). Eye states read frame by frame on 2x crops.
-const F_BASE = { look: "colour", tail: null,
-  // head proportions measured on the perched owl at 117.36 (2x gridded crop; r = half the skull width, 53 px there)
-  head: { x: 0, y: 0, r: 100, rot: 0, yaw: 0, tuft: 0.3, cupR: 1.18, cupW: 0.22, cupH: 0.5, bandW: 1.2, bandH: 0.76, cupY: 0.19,
-    eyeSp: 0.425, eyeY: 0.17, eyeR: 0.3, eyeNear: 0.1, irisR: 0.78, discR: 0.5, discY: 0.08, chin: [0.8, 0.6, 0.6],
-    beakS: 0.52, beakY: 0.49, beakShift: 0.5, plY: -0.6 },
-  eyes: { L: "open", R: "open" }, body: { x: 0, y: 0, rx: 100, ry: 100, rot: 0 },
-  wings: [{ S: [0, 0], Wr: [0, 0], T: [0, 0], trail: 2, sec: 120, layer: "back" }, { S: [0, 0], Wr: [0, 0], T: [0, 0], trail: 1, sec: 120, layer: "back" }],
-  feet: [{ x: 0, y: 0, ang: 0, size: 40 }, { x: 0, y: 0, ang: 0, size: 40 }] };
-// eye states per source frame (read on 2x crops): angry (heavy lids slanted to the beak, brows, looking to the
-// viewer's right) to 114.56; an angry blink 114.60; half 114.64–114.68; open; a half-shut beat 115.96–116.04; happy
-// closed 116.52–116.92; half 116.96; open
-const EO = { s: "open" }, EH = { s: "open", lid: 0.5, low: 0.1 };
-function eyesF(F) {
-  const ang = { s: "open", almond: 0.62, brow: 1 };
-  if (F <= 2864) return { L: ang, R: ang, lookL: [0.75, 0], lookR: [0.6, 0] };
-  if (F === 2865) return { both: { s: "shut", brow: 1 } };   // an angry blink: both squeezed shut under the brows
-  if (F <= 2867) return { both: EH };
-  if (F <= 2898) return { both: EO, look: [0.05, 0] };
-  if (F === 2899) return { L: EO, R: EH };
-  if (F <= 2901) return { both: EH };
-  if (F <= 2912) return { both: EO };                          // (116.48 is still open; happy-closed from 116.52)
-  if (F <= 2923) return { both: { s: "closed" } };
-  if (F === 2924) return { both: EH };
-  return { both: EO, look: [0, 0.05] };
-}
-// the colour owl (s26/owlColour.js): wings and feet from the per-frame fits (s26/posesF.js), head, face features and
-// body from the cleaned per-frame measurements (s26/featF.js)
-function owlF(t) {
-  const c = caches();
-  if (!c.owlFc) c.owlFc = mk(W, H);
-  const F = Math.min(2937, Math.max(2853, FR(t)));
-  if (c.owlFF !== F) {
-    const g = c.owlFc.getContext("2d");
-    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H);
-    const P = unpack(POSES_F_KEYS, POSES_F[F], F_BASE);
-    const Q = unpack(FEAT_F_KEYS, FEAT_F[F], {});
-    P.head = { ...P.head, x: Q.head.x, y: Q.head.y, r: Q.head.r, rot: Q.head.rot, yaw: Q.head.yaw };
-    P.body = { ...P.body, ...Q.body };
-    P.feet = P.feet.map((f, i) => ({ ...f, ...Q.feet[i] }));
-    // fix #2 (2x gridded crops): 114.12–114.68 the near wing is ≈ 100 px shorter than the fit and droops (its tip at
-    // ≈ (1830, 210) at 114.24, the trailing feathers down to ≈ (1780, 430)): shortened about the shoulder and turned down
-    if (F <= 2875) {
-      const e = F <= 2868 ? 1 : (2875 - F) / 7, k = 1 - 0.2 * e, a = 0.12 * e, w = P.wings[1], ca = Math.cos(a), sa = Math.sin(a);
-      const rp = (q) => { const d = [(q[0] - w.S[0]) * k, (q[1] - w.S[1]) * k]; return [w.S[0] + d[0] * ca - d[1] * sa, w.S[1] + d[0] * sa + d[1] * ca]; };
-      P.wings[1] = { ...w, Wr: rp(w.Wr), T: rp(w.T), trail: w.trail + a, sec: w.sec * (1 - 0.1 * e) };
-    }
-    // 116.32–116.84: the fitted feet nearly coincide; the source shows two, ≈ 36–40 px apart, their middle ≈ 18 px
-    // right of ours at 116.52
-    if (F >= 2908 && F <= 2921) {
-      const e = F <= 2913 ? (F - 2907) / 6 : (2922 - F) / 9, [f0, f1] = P.feet, m = (f0.x + f1.x) / 2 + 18 * e;
-      if (Math.abs(f1.x - f0.x) < 36) { f0.x = m - 18; f1.x = m + 18; } else { f0.x += 18 * e; f1.x += 18 * e; }
-    }
-    // perched from 117.04: the wings fold against the body sides, the toes hook over the lid
-    if (F >= 2926) {
-      P.wings = P.wings.map((w, i) => ({ ...w, type: "folded", layer: "mid", ...(Q.wings?.[i]?.S?.[0] != null ? Q.wings[i] : {}) }));
-      // the lid's front edge is at y ≈ 232 (117.04–117.52): three toes per foot hook over it
-      P.feet.forEach((f) => { f.mode = "perch"; f.ang = 0; f.size = Math.max(f.size, 30); f.lid = 232 - f.y; });
-    }
-    const E = eyesF(F);
-    // the band: thick, padded, hugging the crown; the cups smaller than the measured blob extents suggested (review #1)
-    drawColourOwl(g, P, { eyeSp: Q.eyeSp, beak: [Q.beak.x, Q.beak.y], plaster: [Q.plaster.x, Q.plaster.y], cupL: [Q.cupL.x, Q.cupL.y], cupR: [Q.cupR.x, Q.cupR.y],
-      bandW: 2.4, bandY: -1.08, cupS: 0.8, tuft: 0.6, beakS: 1.05,
-      eyes: { ...E, catchSide: Q.head.yaw > 0 ? -1 : 1 } });
-    c.owlFF = F;
-  }
-  return c.owlFc;
-}
+// the colour owl, traced on every source frame 114.08–117.48 (s26/owlTraceF.js); its traced ink lines at 0.75 opacity
+// (traced at full strength they read as a heavy brown-black contour next to the source's thin line)
+const owlF = (F) => layer("owlF", OWL_F, OWL_F_F0, F, 1.5, { col: tone("F"), inkAlpha: 0.75 });
 // the fine white glitter the owl sheds as it climbs (115.28–115.96): each source frame from 115.28 to 115.72 drops a
-// seeded puff of 1–2 px specks round the owl's lower body (FEAT_F), which stay where they fell, sink a little and fade
-// over 6 frames — so they trail below and behind the owl
+// seeded puff of 1–2 px specks round the owl's lower body, which stay where they fell, sink a little and fade over 6
+// frames (90 specks a frame, at most 1.6 px: the source's cloud is dense and fine). GLITTER_BODY: [F, x, y, rx, ry] of the owl's body (measured in the earlier fix passes)
+const GLITTER_BODY = [[2882,1488.3,429.7,83,106.7],[2883,1499.4,419.1,83,104.1],[2884,1509.6,403.1,82.1,101.6],[2885,1518.2,383.6,80.4,97.5],[2886,1536.1,367.8,78.4,93.8],[2887,1563.4,357.9,76.2,90.4],[2888,1582.6,349,74.6,88.7],[2889,1595.3,338.9,73.8,87.1],[2890,1608,327.9,73.1,83.8],[2891,1624.4,318.2,70.4,81.6],[2892,1644,308.1,65.9,79.7],[2893,1661.6,294.5,63.4,77.6]];
 function drawGlitter(ctx, F) {
   ctx.save(); ctx.fillStyle = "#fffaf0";
   for (let e = Math.max(2882, F - 6); e <= Math.min(2893, F); e++) {
-    const Q = unpack(FEAT_F_KEYS, FEAT_F[e], {}), B = Q.body, age = F - e, r = rng(9000 + e);
+    const [, bx, by, rx, ry] = GLITTER_BODY[e - 2882], age = F - e, r = rng(9000 + e);
     ctx.globalAlpha = 0.75 * (1 - age / 7);
-    for (let i = 0; i < 40; i++) {
-      const u = r(), v = r(), x = B.x + (u * 2.6 - 2.2) * B.rx, y = B.y + (-0.2 + v * 2.2) * B.ry + age * 1.5, sz = 1 + r() * 1.2;
+    for (let i = 0; i < 90; i++) {
+      const u = r(), v = r(), x = bx + (u * 2.6 - 2.2) * rx, y = by + (-0.2 + v * 2.8) * ry + age * 1.5, sz = 1 + r() * 0.6;
       ctx.fillRect(x, y, sz, sz);
     }
   }
   ctx.restore();
 }
-function paintF(ctx, t) {
+function paintF(ctx, t, F) {
   const A = pageArrival(t);
-  drawColourPage(ctx, A.s, A.tx, A.ty);
-  if (t < 114.2) drawRingD(ctx, FR(t));
-  drawGlitter(ctx, FR(t));
-  if (FR(t) >= 2852) ctx.drawImage(owlF(t), 0, 0);
+  drawColourPage(ctx, A.s, A.tx, A.ty, true);
+  drawGlitter(ctx, F);
+  ctx.drawImage(owlF(F), 0, 0);
 }
 
+const HOLDS = new Set([2814, 2839, 2864, 2889, 2914]);
 export const shot = {
   draw(ctx, local, t0) {
     // snap to the source frame: exact at the render's k/25 times, and it pairs tools/compare.sh (whose seeks land up
     // to 1/30 s early) with the right source frame (same rule as s25)
-    const t = Math.ceil(t0 * 25 - 0.001) / 25;
-    if (t < 111.54) { drawA(ctx, t); return; }
-    if (t < 111.58) {
+    let t = Math.ceil(t0 * 25 - 0.001) / 25, F = FR(t);
+    // the source repeats one frame a second here (a 24 -> 25 fps pulldown): 112.56, 113.56, 114.56, 115.56, 116.56 are
+    // exact copies of the frame before, so every layer holds too
+    if (HOLDS.has(F)) { F -= 1; t = F / 25; }
+    if (F <= 2788) { drawA(ctx, t); return; }
+    if (F === 2789) {
       // B (111.56): the jolt frame — the page thrown up and shrunk (affine vs stage: x' = 0.9911x − 8.5,
       // y' = 0.9905y − 19.6), the room light gone
       ctx.save(); ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
       ctx.setTransform(0.9911, 0, 0, 0.9905, -8.5, -19.6); ctx.drawImage(stageA(0), 0, 0); ctx.restore();
       return;
     }
-    if (t < 112.7) { paintC(ctx, t); return; }
-    if (t < 114.0) { paintD(ctx, t); paintSlab(ctx, t); return; }
-    paintF(ctx, t);
-    paintSlab(ctx, t);
+    if (F <= 2817) { paintC(ctx, F); return; }
+    if (F <= 2841) { paintD(ctx, t, F); return; }
+    if (F <= 2854) { paintE(ctx, t, F); return; }   // 2854: the lens shard's last dark tail (s26/lensTraceE.js)
+    paintF(ctx, t, F);
   },
-  release() { C = null; releaseSoko(); releaseHippie(); },
+  release() { C = null; },
 };
+

@@ -10,6 +10,19 @@ The goal: rebuild the source film **as closely as possible, drawn entirely in co
   user's own originals — recreate them faithfully. The only third-party-looking thing is the retro "Pure Imagination"
   site on the laptop (24–32 s): that page is an original design in `src/lib/pureimg.js` — no third-party logos.
 
+**User decision (2026-09-27), the ending:** for the colour ending — s26, s27, s28 and the colour site `src/lib/hippie.js` —
+the user has approved **traced geometry**: vector traces of source frames (colour regions, ink lines, rotoscoped keys,
+fitted gains) redrawn by code, as in the archived builds in `archive/prev-builds/`. Fidelity to the source comes first
+there. Still no source pixels, crops or image files in the render: traces are stored as numbers/paths and painted by code.
+
+**Rendering (2026-09-27):** render with ONE worker (`npm run render` is pinned to `--workers 1`). With several Chrome
+workers on the GPU at once, the heavier traced ending made the workers lose their WebGL contexts part-way through and the
+rest of each worker's chunk rendered black (2 renders, ~2,000 black frames). A single page renders the whole film cleanly
+(checked frame by frame: no context loss). Always gate a full render with `python3 tools/verify_render.py NEW.mp4 OLD.mp4`
+(black frames, error bars, per-shot distance to the source vs the previous render) before sharing it.
+`tools/compare.sh` can time out loading every shot; `snapshots/gpu-diag/probe.mjs` and the critic's harness
+(`snapshots/end-critic/tools/shoot.mjs`) load the live composition without a protocol timeout.
+
 ## Architecture
 
 - `src/main.js` — clock → `renderAt(t)`: clears a 2206×946 2D canvas to black, calls the active shot's `draw`, then the

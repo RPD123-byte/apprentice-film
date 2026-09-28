@@ -54,7 +54,7 @@ export const BP = { arm: 0.04, col: 1.2, up: 1.8 };
 // the column: copies stepped up/down (px per step), alpha per copy, per frame
 const COL = { 2566: [70, 0.1], 2567: [70, 0.14], 2568: [60, 0.16], 2569: [60, 0.16], 2570: [60, 0.16], 2571: [60, 0.16], 2572: [60, 0.15], 2573: [60, 0.15], 2574: [60, 0.14] };
 
-export function drawBurst(g, f, blit, hovM = null) {
+export function drawBurst(g, f, blit, hovM = null, { arms = true, owl = true, col: colK = 1 } = {}) {
   if (!TMP) TMP = mk(W, H);
   const tg = TMP.getContext("2d");
   // 1) the ghost column
@@ -62,12 +62,12 @@ export function drawBurst(g, f, blit, hovM = null) {
   if (col) {
     const [step, al] = col;
     tg.setTransform(1, 0, 0, 1, 0, 0); tg.globalCompositeOperation = "source-over"; tg.clearRect(0, 0, W, H);
-    const owl = OWL[f] ? ["dive~s", echoAffine("dive", ...OWL[f].slice(0, 4))] : ["hov2~s", null];
+    const src = OWL[f] ? ["dive~s", echoAffine("dive", ...OWL[f].slice(0, 4))] : ["hov2~s", null];
     for (let k = -5; k <= 8; k++) {
       if (k === 0) continue;
-      const m = (owl[1] || hovM).slice();
+      const m = (src[1] || hovM).slice();
       m[5] -= k * step;
-      blit(tg, owl[0], m, BP.col * al * (k < 0 ? 0.7 : k >= 3 ? BP.up : 1));
+      blit(tg, src[0], m, colK * BP.col * al * (k < 0 ? 0.7 : k >= 3 ? BP.up : 1));
     }
     tg.globalCompositeOperation = "destination-in";
     tg.drawImage(stripes(), CX0, 0);
@@ -77,7 +77,7 @@ export function drawBurst(g, f, blit, hovM = null) {
     g.restore();
   }
   // 2) the smeared X of wings
-  const aa = ARM_A[f];
+  const aa = arms ? ARM_A[f] : 0;
   if (aa) {
     for (const [ex, ey] of ARMS) {
       const R = ex < C0[0] ? REACH_L[f] : REACH_R[f];
@@ -91,7 +91,7 @@ export function drawBurst(g, f, blit, hovM = null) {
     }
   }
   // 3) the owl itself
-  const o = OWL[f];
+  const o = owl ? OWL[f] : null;
   if (o) blit(g, "dive", echoAffine("dive", o[0], o[1], o[2], o[3]), o[4]);
 }
 export function releaseBurst() { STRIPE = null; TMP = null; }

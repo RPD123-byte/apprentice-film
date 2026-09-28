@@ -9,12 +9,25 @@ function ringsPath(g, rings) {
     g.closePath();
   }
 }
+// a few traced colours were written with a negative channel (e.g. "#3008-1"); canvas ignores an invalid fillStyle and
+// keeps the previous one, so they are read here channel by channel and clamped
+const OKHEX = /^#[0-9a-f]{6}$/i;
+function col(h) {
+  if (OKHEX.test(h)) return h;
+  const out = []; let i = 1;
+  while (i < h.length && out.length < 3) {
+    const tok = h[i] === "-" ? h.slice(i, i + 2) : h.slice(i, i + 2);
+    out.push(Math.max(0, Math.min(255, h[i] === "-" ? -parseInt(tok.slice(1), 16) : parseInt(tok, 16)))); i += 2;
+  }
+  while (out.length < 3) out.push(0);
+  return "#" + out.map((v) => v.toString(16).padStart(2, "0")).join("");
+}
 export function drawRegions(g, regions, { grow = 0.8 } = {}) {
   for (const R of regions) {
-    let fill = R.c;
+    let fill = col(R.c);
     if (R.g) {
       const gr = g.createLinearGradient(R.g[0], R.g[1], R.g[2], R.g[3]);
-      gr.addColorStop(0, R.c); gr.addColorStop(1, R.c1);
+      gr.addColorStop(0, col(R.c)); gr.addColorStop(1, col(R.c1));
       fill = gr;
     }
     ringsPath(g, R.r);
@@ -24,10 +37,11 @@ export function drawRegions(g, regions, { grow = 0.8 } = {}) {
 }
 export function drawInk(g, ink, { alpha = 1, darken = 0 } = {}) {
   g.save(); g.globalAlpha *= alpha;
-  for (const layer of [0, 1]) for (const sh of ink) {
+  // layer 2 (fine hatching, added 2026-09-27) goes under the two main ink levels
+  for (const layer of [2, 0, 1]) for (const sh of ink) {
     if (sh.l !== layer) continue;
     ringsPath(g, sh.r);
-    g.fillStyle = sh.c; g.fill("evenodd");
+    g.fillStyle = col(sh.c); g.fill("evenodd");
   }
   g.restore();
 }

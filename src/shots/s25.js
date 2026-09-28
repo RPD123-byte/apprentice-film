@@ -22,6 +22,11 @@
 //     affine (s25/v2/headtrack.js)
 //   scissors: a parametric model (s25/v2/scis.js) fitted per placement; smoke: fitted rotated gaussian puffs; cracks:
 //     measured straight segments refined on the source's ridge map; page light / room glow: fitted gain grid / gains
+// End targeted fix (2026-09-27, s25/v3/): the standing owl's head redrawn in the source's manner (thinner grey ink, the
+// smirk's beak, face modelling, feathered plumage edge, darker ribbed headphones; v3/head3.js painted by v3/paint3.js);
+// the scissors restyled as closed silver pairs (v3/scis3.js); the four echo owls at 102.64–102.68 (v3/burst3.js).
+// (A v3 repaint of the standing bodies — thin ink, no dark ring, feather texture — looked softer but scored 0.2 worse
+// σ4 over the standing phase and at the 110.52 cut, so the bodies stay v2's; see fidelity/s25.md.)
 // Previous version (per-frame traced vectorisations) archived in snapshots/s25-prev/.
 import { drawFramedPage, sokoPageCanvas, HEADER, FRAMED, releaseSoko } from "../lib/sites.js";
 import { hippieBannerCanvas, releaseHippie } from "../lib/hippie.js";
@@ -31,18 +36,21 @@ import { drawPuffs, smokeLayer, drawSmokeLayer, shadow, sparkle, bandY0, bandPat
 import { paintDrawing, blitLayer, bboxOf, gray } from "./s25/v2/draw.js";
 import { SCHED, SCHED_F0, CHAOS, CHAOS_F0, ECHO, ECHO_F0 } from "./s25/v2/sched.js";
 import { DRAW } from "./s25/v2/drawings.js";
-import { blitScissors } from "./s25/v2/scis.js";
+import { blitScissors } from "./s25/v3/scis3.js";
 import { FSC, SCX, SCX_F0 } from "./s25/v2/scisdata.js";
 import { SMOKE, SMOKE_F0 } from "./s25/v2/smoke.js";
 import { LIGHT, LIGHT_FIX, LIGHT_FIX2, PAGE_TINT, PAGE_OFFSET } from "./s25/v2/light.js";
 import { drawLoop, LOOP_F0, LOOP_F1, releaseLoop } from "./s25/v2/loop.js";
 import { ECHOES2, echoAffine, drawTrail } from "./s25/v2/echo2.js";
 import { drawBurst, releaseBurst } from "./s25/v2/burst.js";
+import { drawBurst3, releaseBurst3 } from "./s25/v3/burst3.js";
 import { HEAD, HEAD_F0 } from "./s25/v2/headtrack.js";
-import { face, headphonesBack, headphonesFront, headOutline } from "./s25/v2/head.js";
 import { D_HEAD } from "./s25/v2/data/head.js";
 import { CHEAD, chaosHead } from "./s25/v2/chead.js";
 import { FEATH, bodyFeathers } from "./s25/v2/feathers.js";
+import { paintOwl3 } from "./s25/v3/paint3.js";
+import { face3, headOutline3, headphonesBack3, nearCup3 } from "./s25/v3/head3.js";
+
 
 const W = 2206, H = 946;
 let PAGE = null, STAGE = null, FXC = null, TMP = null, LAYERS = null;
@@ -117,7 +125,7 @@ function linesLayer(key) {
 function headLayer(st) {
   const key = "head:" + st;
   if (!LAYERS) LAYERS = new Map();
-  if (!LAYERS.has(key)) LAYERS.set(key, paintDrawing(D_HEAD, { bb: [900, 250, 1285, 560], pre: headphonesBack, post: (g) => { headOutline(g, D_HEAD.hull); face(g, st); headphonesFront(g); }, fade: [522, 552] }));
+  if (!LAYERS.has(key)) LAYERS.set(key, paintOwl3(D_HEAD, { bb: [900, 250, 1285, 560], pre: headphonesBack3, post: (g) => { headOutline3(g, D_HEAD.hull); face3(g, st); nearCup3(g); }, fade: [522, 552], rim: [0.1, 8], edge: [0.22, 2] }));
   return LAYERS.get(key);
 }
 const GLOW_TINT_L = [0.89, 0.915, 0.88], GLOW_TINT_R = [0.93, 0.955, 0.92];
@@ -226,13 +234,13 @@ function paintStanding(g, f) {
       if (i < 0) continue;
       const [lx, ly, lr, rx, ry, rr] = SPIN[i];
       g.save(); g.globalAlpha = al;
-      blitScissors(g, moved(tighten(FSC.fscL, 0.15), PIV_L, lx, ly, lr));
-      blitScissors(g, moved(tighten(FSC.fscR, 0.15), PIV_R, rx, ry, rr));
+      blitScissors(g, moved(tighten(FSC.fscL, 0.21), PIV_L, lx, ly, lr));
+      blitScissors(g, moved(tighten(FSC.fscR, 0.21), PIV_R, rx, ry, rr));
       g.restore();
     }
   } else if (f >= SPIN_F0 + SPIN.length) {
-    blitScissors(g, tighten(FSC.fscL, 0.15));
-    blitScissors(g, tighten(FSC.fscR, 0.15));
+    blitScissors(g, tighten(FSC.fscL, 0.21));
+    blitScissors(g, tighten(FSC.fscR, 0.21));
   }
 }
 
@@ -256,10 +264,12 @@ function paintChaos(g, f, t) {
   // fix pass 2: the echo owls placed by their head (s25/v2/echo2.js): the bottom-centre echo, the left echo (the
   // top-right drawing mirrored; replaces the eFl slab), the four converging echoes; translucent, with smoke trails
   for (const e of ECHOES2) {
+    if (f >= 2566 && f <= 2567) continue;   // end targeted fix: the converging echoes' last two frames are burst3's
     const i = e.rows.findIndex((r) => r[0] === f);
     if (i < 0 || e.off) continue;
-    const [, hx, hy, sc, rot, al] = e.rows[i];
+    const [, hx, hy, sc, rot, al0] = e.rows[i];
     if (e.trail) { e.rows.trail = e.trail; e.rows.trailA = e.trailA; }
+    const al = al0;
     if (e.trail && !e.trailA) drawTrail(g, e.rows, i, al);
     const soft = e.soft || (e.softFrom && f >= e.softFrom);
     blit(g, e.key + (soft ? "~s" : ""), echoAffine(e.key, hx, hy, sc, rot, !!e.mirror), al);
@@ -276,11 +286,18 @@ function paintChaos(g, f, t) {
     // 102.64–102.68: the hovering owl rises into a vertical smear (ghost copies above it) as the echoes close in
     const m = CHAOS[CHAOS.length - 1].slice(1);
     if (f === 2567) m[5] -= 40;
-    drawBurst(g, f, blit, m);
-    blit(g, "hov2", m, f === 2566 ? 1 : 0.7);
+    drawBurst(g, f, blit, m, { col: 1.2 });
+    // end targeted fix: the central owl at its size on the source at 102.64, then the four big echo owls with their
+    // motion streaks (s25/v3/burst3.js; v2's softened converging echoes are skipped on these two frames)
+    const hm = f === 2566 ? HOV_2566 : m;
+    blit(g, "hov2", hm, f === 2566 ? 1 : 0.7);
+    drawBurst3(g, f, blit);
   }
 }
 
+// the central owl at 102.64: hov2 (head (1033, 405), 124 px) scaled 1.16 about its head to (1037, 391) (source: head
+// ~144 px); at 102.68 it stays v2's (tried 1.2x at (1037, 379): 1.1 worse)
+const HOV_2566 = [1.16, 0, 0, 1.16, 1037 - 1.16 * 1033, 391 - 1.16 * 405];
 // paper chips (fix pass 2): the per-frame detections include pieces of the owls, their scissors, dust and the slash
 // arcs; on the source no chip sits on an owl or on an arc. Chaos frames: drop a chip when the chaos layer drawn so far
 // (owls, echoes, slashes, the loop) is opaque (alpha > 0.3) at its centre or within 12 px of it. Standing frames: see
@@ -297,6 +314,8 @@ function layerAlpha(key) {
 }
 function filterChips(row, g, f) {
   if (!row) return null;
+  // end targeted fix: in the burst the source's chips fly over the owls and the smears: keep them all
+  if (f >= 2566 && f <= 2574) return row;
   const out = [];
   if (f >= 2575) {
     // standing phase: drop the chips that fall on the owl (its painted layer is opaque there, tested through the
@@ -436,5 +455,5 @@ export const shot = {
       ctx.putImageData(id, 0, 0);
     }
   },
-  release() { PAGE = null; STAGE = null; FXC = null; TMP = null; LAYERS = null; releaseFx(); releaseLoop(); releaseBurst(); releaseSoko(); releaseHippie(); },
+  release() { PAGE = null; STAGE = null; FXC = null; TMP = null; LAYERS = null; releaseFx(); releaseLoop(); releaseBurst(); releaseBurst3(); releaseSoko(); releaseHippie(); },
 };

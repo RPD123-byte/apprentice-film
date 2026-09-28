@@ -18,12 +18,12 @@ void main(){ vec4 c = texture2D(uTex, vUV); c.rgb = mix(c.rgb, uTint.rgb * c.a, 
 const ZVS2 = `#version 300 es
 in vec2 aP; out vec2 vUV; void main(){ vUV = aP*0.5+0.5; gl_Position = vec4(aP,0.0,1.0); }`;
 const ZFS2 = `#version 300 es
-precision highp float; in vec2 vUV; uniform sampler2D uTex; uniform vec2 uC; uniform float uAmt; uniform float uRot; uniform float uFloor; uniform vec4 uFlash; out vec4 o;
+precision highp float; in vec2 vUV; uniform sampler2D uTex; uniform vec2 uC; uniform float uAmt; uniform float uRot; uniform float uFloor; uniform float uSym; uniform vec2 uRamp; uniform vec4 uFlash; out vec4 o;
 void main(){
   vec4 acc = vec4(0.0); float ws = 0.0;
   vec2 d = (vUV - uC) * vec2(2.33, 1.0); float r = length(d);
-  float k = uAmt * mix(uFloor, 1.0, clamp((length(d * vec2(1.0, 0.55)) - 0.05) / 0.45, 0.0, 1.0));
-  for (int i = 0; i < 48; i++) { float u = float(i)/47.0; float s = 1.0 - k*u;
+  float k = uAmt * mix(uFloor, 1.0, clamp((length(d * vec2(1.0, 0.55)) - uRamp.x) / uRamp.y, 0.0, 1.0));
+  for (int i = 0; i < 48; i++) { float u = float(i)/47.0; float s = 1.0 - k*(u - 0.5*uSym);   // uSym 1: samples symmetric about the pixel (no net magnification)
     // swirl: the samples also turn about the centre (in square pixels), so the streaks bend like the source's
     float a = uRot * u * k / max(uAmt, 1e-4); float ca = cos(a), sa = sin(a);
     vec2 v = (vUV - uC) * vec2(2.33, 1.0) * s; v = vec2(ca * v.x - sa * v.y, sa * v.x + ca * v.y);
@@ -57,7 +57,7 @@ class GLComp {
     this.u = { res: gl.getUniformLocation(this.p, "uRes"), tex: gl.getUniformLocation(this.p, "uTex"), alpha: gl.getUniformLocation(this.p, "uAlpha"), tint: gl.getUniformLocation(this.p, "uTint") };
     if (this.v2) {
       this.pz = prog(ZVS2, ZFS2);
-      this.uz = { tex: gl.getUniformLocation(this.pz, "uTex"), c: gl.getUniformLocation(this.pz, "uC"), amt: gl.getUniformLocation(this.pz, "uAmt"), flash: gl.getUniformLocation(this.pz, "uFlash"), rot: gl.getUniformLocation(this.pz, "uRot"), floor: gl.getUniformLocation(this.pz, "uFloor") };
+      this.uz = { ramp: gl.getUniformLocation(this.pz, "uRamp"), tex: gl.getUniformLocation(this.pz, "uTex"), c: gl.getUniformLocation(this.pz, "uC"), amt: gl.getUniformLocation(this.pz, "uAmt"), flash: gl.getUniformLocation(this.pz, "uFlash"), rot: gl.getUniformLocation(this.pz, "uRot"), floor: gl.getUniformLocation(this.pz, "uFloor"), sym: gl.getUniformLocation(this.pz, "uSym") };
     }
     this.vb = gl.createBuffer(); this.ub = gl.createBuffer(); this.ib = gl.createBuffer(); this.qb = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.qb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
@@ -126,7 +126,8 @@ class GLComp {
     this.begin();
   }
   // zoom blur the FBO onto the canvas. c: centre in frame px; amt: fraction of the radius smeared toward the centre
-  zoomBlur(cx, cy, amt, flash = [1, 1, 1, 0], rot = 0, floor = 0) {
+  // (end-s27-tfix) ramp = [r0, width]: the blur grows from `floor` at radius r0 to full over `width` (normalised units)
+  zoomBlur(cx, cy, amt, flash = [1, 1, 1, 0], rot = 0, floor = 0, sym = 0, ramp = [0.05, 0.45]) {
     const gl = this.gl;
     this._target = null;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -136,7 +137,7 @@ class GLComp {
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.fbo.t);
     gl.uniform1i(this.uz.tex, 0);
     gl.uniform2f(this.uz.c, cx / this.W, 1 - cy / this.H);
-    gl.uniform1f(this.uz.amt, amt); gl.uniform1f(this.uz.rot, rot); gl.uniform1f(this.uz.floor, floor);
+    gl.uniform1f(this.uz.amt, amt); gl.uniform1f(this.uz.rot, rot); gl.uniform1f(this.uz.floor, floor); gl.uniform1f(this.uz.sym, sym); gl.uniform2f(this.uz.ramp, ramp[0], ramp[1]);
     gl.uniform4f(this.uz.flash, flash[0], flash[1], flash[2], flash[3]);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.qb);
     gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
@@ -164,7 +165,7 @@ class GLComp {
   }
   // Draw texture rect (sx,sy,sw,sh in texture px; default whole) through homography H (texture px -> frame px),
   // perspective-correct. H: [h11,h12,h13,h21,h22,h23,h31,h32,h33].
-  quadH(r, H, { alpha = 1, src = null, tint = null } = {}) {
+  quadH(r, H, { alpha = 1, src = null, tint = null, mul = false } = {}) {
     const [sx, sy, sw, sh] = src || [0, 0, r.w, r.h];
     const P = [[sx, sy], [sx + sw, sy], [sx + sw, sy + sh], [sx, sy + sh]];
     const pos = new Float32Array(12), uv = new Float32Array(8);
@@ -173,7 +174,10 @@ class GLComp {
       pos[i * 3] = X; pos[i * 3 + 1] = Y; pos[i * 3 + 2] = Wh;
       uv[i * 2] = u / r.w; uv[i * 2 + 1] = v / r.h;
     });
+    // mul: 2x multiply (dst *= 2 * texture), for gain fields painted at gain / 2
+    if (mul) this.gl.blendFunc(this.gl.DST_COLOR, this.gl.SRC_COLOR);
     this._draw(r, pos, uv, [0, 1, 2, 0, 2, 3], alpha, tint);
+    if (mul) this.gl.blendFunc(this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA);
   }
   // Draw a texture through an arbitrary mesh: xy = frame positions [x0,y0,x1,y1,...], uv = texture px, idx = triangles.
   mesh(r, xy, uv, idx, { alpha = 1, tint = null } = {}) {

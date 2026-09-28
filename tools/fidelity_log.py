@@ -30,10 +30,10 @@ traced geometry for some layers.
 
 METHOD = {
     "s02": "drawn", "s05": "drawn", "s13": "drawn", "s19": "drawn", "s20": "drawn", "s21": "drawn", "s23": "drawn",
-    "s25": "drawn", "s27": "drawn", "s28": "drawn",
+    "s25": "drawn",
     "s04": "traced", "s06": "traced", "s07": "traced", "s08": "traced", "s12": "traced", "s16": "traced", "s18": "traced",
-    "s22": "traced",
-    "s01": "mixed", "s09": "mixed", "s14": "mixed", "s15": "mixed", "s17": "mixed", "s24": "mixed", "s26": "mixed",
+    "s22": "traced", "s26": "traced", "s27": "traced", "s28": "traced",
+    "s01": "mixed", "s09": "mixed", "s14": "mixed", "s15": "mixed", "s17": "mixed", "s24": "mixed",
     "s40": "mixed",
 }
 

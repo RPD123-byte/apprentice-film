@@ -2,9 +2,9 @@
   "name": "apprentice-film",
   "private": true,
   "type": "module",
-  "description": "The Apprentice, a 140.8 s short film rebuilt frame for frame in code (HyperFrames + Canvas2D/WebGL, synthesized score).",
+  "description": "The Apprentice, a 140.8 s short film rebuilt shot for shot in code (HyperFrames + Canvas2D/WebGL, synthesized score).",
   "engines": {
-    "node": ">=18"
+    "node": ">=22.12.0"
   },
   "scripts": {
     "setup": "bash scripts/setup.sh",

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Gate a full render before it is shared: frame count, black frames, error bars, regressions vs a previous render,
-and per-shot distance to the source (mean abs diff after a sigma-4 blur, 8-bit levels, on 1/4-scale frames).
+and per-shot distance to the source (mean abs diff, 8-bit levels, on 1/4-scale frames after a sigma-1 blur, which is
+about sigma 4 at full size).
 
 Usage: python3 tools/verify_render.py renders/new.mp4 [renders/old.mp4]
 

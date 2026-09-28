@@ -33,7 +33,7 @@ These scripts are kept **as they ran**, not as a polished toolkit:
   `*.json` specs and masks. The pixel intermediates were never kept, and neither were most generated outputs. Small input
   specs *are* included. The scripts' comments and usage lines say what each step reads and writes.
 - **Dependencies.** Python 3 with `numpy`, `opencv-python`, `scipy` and `scikit-image` (a few also use `matplotlib`,
-  `Pillow`, `fontTools`, `soundfile`/`librosa`, `scikit-learn`, `numba`, `playwright`). Node 18+ with
+  `Pillow`, `fontTools`, `soundfile`/`librosa`, `scikit-learn`, `numba`, `playwright`). Node 22.12+ with
   `puppeteer`/`puppeteer-core` for the headless render harnesses.
 - A folder keeps the layout it had where it was found, so scripts that import each other still sit side by side. Harness
   folders ran with `src/` and `assets/` **symlinked** next to them. Those links were not copied, so link the repo's own

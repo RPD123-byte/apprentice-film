@@ -6,7 +6,8 @@ into it. The source track was only **analysed**: onset times, 20 ms peak levels,
 pitches and chords. Those measurements were written down as numbers in the cue table (`tools/sound/cues.py`), and the
 generator reads only that table.
 
-The timed cue list is in `audio/CUES.md`. It is generated from the cue table on every render.
+The timed cue list is in `audio/CUES.md`. `tools/sound/score.py` (`npm run score`) rewrites it from the cue table each
+time it runs. Rendering the film only reads the committed `audio/score.wav` and regenerates neither file.
 
 ## Regenerate
 
@@ -75,7 +76,7 @@ python3 tools/sound/calibrate.py X.wav        # optional: re-measure the mix and
   sections: the same room-tone colour, the drones' pitches, the event types in the same places, and the music's
   chords, register and rhythm.
 
-## What does not match (be honest)
+## What does not match
 
 - **Timbre is approximate everywhere.** The source's foley and voices are recorded, organic sounds; these are physical
   models.
@@ -101,14 +102,3 @@ python3 tools/sound/calibrate.py X.wav        # optional: re-measure the mix and
 - **Levels come from calibration.** The last step of level matching is the automatic trims in the `*_cal.json` files.
   They are gains derived from source measurements, and they are why the envelope tracks so closely. The first
   uncalibrated render had a mean error of ~3.3 dB.
-
-## Using it in the composition
-
-The film's timeline (`index.html`, not owned by F5) needs one audio element for the whole film, for example:
-
-```html
-<audio id="score" src="audio/score.wav" data-start="0" data-duration="140.8" data-track-index="9"></audio>
-```
-
-(The owner of `index.html` should add it. Converting it to 320 kbps AAC/MP3 for the final mux is fine; the WAV is the
-master.)

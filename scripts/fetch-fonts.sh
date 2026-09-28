@@ -9,15 +9,17 @@
 #   https://www.fontshare.com/terms   (the full text is License/FFL.txt inside the download)
 #
 # The film uses the web build, Fonts/WEB/fonts/Satoshi-Variable.woff2, exactly as Fontshare ships it.
-# The script checks it against the SHA-256 of the copy the film was rendered with.
+# The script compares it with the SHA-256 of the copy the published video was rendered with. If Fontshare has since
+# shipped a new build, the checksum differs: by default the script warns (the end-card lettering in shot s40 may then
+# differ slightly from the published video) and uses the new build anyway. --strict turns that warning into an error.
 #
-# Usage: scripts/fetch-fonts.sh [--dest DIR] [--force] [--allow-update]
-#   --dest DIR      install into DIR instead of assets/fonts/ (for testing)
-#   --force         replace an existing Satoshi-Variable.woff2 whose checksum does not match
-#   --allow-update  accept a newer Satoshi build from Fontshare whose checksum differs from the pinned one
-#                   (the end-card lettering in shot s40 may then differ slightly from the original render)
+# Usage: scripts/fetch-fonts.sh [--dest DIR] [--force] [--strict]
+#   --dest DIR   install into DIR instead of assets/fonts/ (for testing)
+#   --force      download again and replace an installed Satoshi-Variable.woff2, whatever its checksum
+#   --strict     exit with an error if the installed or downloaded file does not match the pinned SHA-256
 #
-# Safe to run again: if the verified file is already in place it does nothing.
+# Safe to run again. A file already in place that is a valid WOFF2 is kept (with the warning above if its checksum
+# differs from the pin, or an error with --strict). A file that is not a valid WOFF2 is downloaded again.
 set -euo pipefail
 
 URL="https://api.fontshare.com/v2/fonts/download/satoshi"
@@ -28,14 +30,14 @@ SHA256="e739aff9b4d02c264341d6d4872edcda28e79373aeda936f659566a1cd3eb47f"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEST="$ROOT/assets/fonts"
 FORCE=0
-ALLOW_UPDATE=0
+STRICT=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --dest) DEST="${2:?--dest needs a directory}"; shift 2 ;;
     --force) FORCE=1; shift ;;
-    --allow-update) ALLOW_UPDATE=1; shift ;;
-    -h|--help) sed -n '2,21p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --strict) STRICT=1; shift ;;
+    -h|--help) awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "fetch-fonts: unknown option $1 (try --help)" >&2; exit 2 ;;
   esac
 done
@@ -49,6 +51,14 @@ sha256() {
 
 is_woff2() { [ -s "$1" ] && [ "$(head -c 4 "$1")" = "wOF2" ]; }
 
+# A valid WOFF2 whose checksum differs from the pin: most likely a newer Satoshi build from Fontshare.
+# Warn and carry on, or fail with --strict.  $1 = which file, $2 = its sha256
+mismatch() {
+  local msg="$1 is a different Satoshi build from the one the published video was rendered with (sha256 $2, pinned $SHA256)."
+  [ "$STRICT" = 0 ] || die "$msg Failing because of --strict."
+  echo "fetch-fonts: warning: $msg Fontshare has probably shipped a new build. The film still renders, but the end card (shot s40) may differ slightly from the published video. Continuing; use --strict to make this an error." >&2
+}
+
 for tool in curl unzip; do
   command -v "$tool" >/dev/null 2>&1 || die "needs '$tool' on PATH"
 done
@@ -57,17 +67,17 @@ command -v sha256sum >/dev/null 2>&1 || command -v shasum >/dev/null 2>&1 || die
 TARGET="$DEST/$NAME"
 
 # Already installed?
-if [ -e "$TARGET" ]; then
+if [ -e "$TARGET" ] && [ "$FORCE" = 0 ]; then
   have="$(sha256 "$TARGET")"
   if [ "$have" = "$SHA256" ]; then
     echo "fetch-fonts: $TARGET is present and verified (sha256 $SHA256)"
     exit 0
   fi
-  if [ "$ALLOW_UPDATE" = 1 ] && is_woff2 "$TARGET"; then
-    echo "fetch-fonts: $TARGET is present (a different Satoshi build, sha256 $have; accepted with --allow-update)"
+  if is_woff2 "$TARGET"; then
+    mismatch "$TARGET" "$have"
     exit 0
   fi
-  [ "$FORCE" = 1 ] || die "$TARGET exists but its sha256 is $have, not $SHA256. Rerun with --force to replace it."
+  echo "fetch-fonts: $TARGET is not a valid WOFF2 file; downloading it again" >&2
 fi
 
 mkdir -p "$DEST"
@@ -86,13 +96,7 @@ unzip -p "$TMP/satoshi.zip" "$member" > "$TMP/$NAME"
 
 is_woff2 "$TMP/$NAME" || die "$member in the download is not a WOFF2 file"
 got="$(sha256 "$TMP/$NAME")"
-if [ "$got" != "$SHA256" ]; then
-  if [ "$ALLOW_UPDATE" = 1 ]; then
-    echo "fetch-fonts: warning: Fontshare now ships a different Satoshi build (sha256 $got, pinned $SHA256); installing it because of --allow-update" >&2
-  else
-    die "Fontshare's Satoshi-Variable.woff2 has sha256 $got, not the pinned $SHA256 the film was rendered with. Rerun with --allow-update to use it anyway."
-  fi
-fi
+[ "$got" = "$SHA256" ] || mismatch "Fontshare's current $NAME" "$got"
 
 # Install atomically: copy next to the target, then rename over it.
 cp "$TMP/$NAME" "$TARGET.part.$$"

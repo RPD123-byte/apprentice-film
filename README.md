@@ -1,45 +1,86 @@
 # The Apprentice, rebuilt in code
 
-A 140.8-second short film (2206×946, 25 fps) rebuilt frame for frame in code by Claude Opus 5.5 agents.
+A 140.8-second short film (2206×946, 25 fps) rebuilt shot for shot in code by Claude Opus 5.5 agents. Its 26 shots
+are cut and timed to the original's frames; 9 of them are close to the original and 17 are approximate (see
+[Shots](#shots)).
 
-Nothing from the original film is embedded here: no frames, crops, pixels or audio. Every frame is drawn at render
-time by JavaScript on a 2D canvas and finished by a WebGL grade, and the soundtrack is synthesized by a Python program.
-The original was used only to measure against (positions, timing, camera moves, tone, sound levels). For some shots
-those measurements go further: vector traces of source frames, rotoscoped key drawings and camera tracks are stored as
-numbers in the shot's data files and painted by code. The shot table below says which method each shot uses.
+No bitmaps, frames, crops or pixels of the original are embedded, and none of its audio. Every frame is drawn at
+render time by JavaScript on a 2D canvas and finished by a WebGL grade, and the soundtrack is synthesized by a Python
+program. 11 shots (method **traced** in the shot table) are largely per-frame vector traces of the original: outlines,
+colour regions and ink strokes traced off its frames, stored as numbers in the shot's data files and painted by code.
+The other 15 are drawn in code from measurements of the original (positions, timing, camera moves, tone, some coarse
+shapes); 7 of them (method **mixed**) also paint some traced layers.
 
 The repository also builds a stacked comparison video, the recreation above the original, if you have a copy of the
-original. The original is the author's own film and is not part of this repository.
+original. The original is not part of this repository; see [The original film](#the-original-film).
 
-- [Requirements](#requirements) · [Quickstart](#quickstart) · [How it works](#how-it-works) · [Repository map](#repository-map)
-- [Shots](#shots) · [How the data was made](#how-the-data-was-made) · [How it was built](#how-it-was-built)
-- [Rendering notes](#rendering-notes) · [Known gaps](#known-gaps) · [Licences](#licences) · [History](#history)
+- [Requirements](#requirements) · [The original film](#the-original-film) · [Quickstart](#quickstart)
+- [How it works](#how-it-works) · [Repository map](#repository-map) · [Shots](#shots)
+- [How the data was made](#how-the-data-was-made) · [How it was built](#how-it-was-built)
+- [Rendering notes](#rendering-notes) · [Known gaps](#known-gaps) · [License](#license) · [History](#history)
 
 ## Requirements
 
-- **Node.js 18+** and npm. The renderer is [HyperFrames](https://github.com/heygen-com/hyperframes), run with
-  `npx` at a pinned version (`hyperframes@0.8.69`). It downloads its own headless Chrome.
+- **Node.js 22.12 or newer** and npm. The renderer is [HyperFrames](https://github.com/heygen-com/hyperframes), run
+  with `npx` at a pinned version (`hyperframes@0.8.69`, which needs Node 22). It downloads its own headless Chrome.
+  `puppeteer-core` 25.12.0, used by `tools/harness/`, needs Node 22.12.
 - **ffmpeg** and ffprobe.
-- **Python 3.11**, for the soundtrack generator and the tools. `tools/requirements.txt` pins the packages.
-- curl and unzip, to download the one font that cannot be redistributed (Satoshi, see [Licences](#licences)).
-- Internet access: npm packages, Chrome and Satoshi (from Fontshare) on the first run. GSAP is fetched from jsDelivr
-  whenever the composition loads.
-- About 1 GB free for a render (the MP4 is about 600 MB).
-- Optional: a copy of the original film (2206×946, 25 fps, 140.8 s), passed as `APPRENTICE_SOURCE=/path/to/original.mp4`.
-  You need it only for the per-shot distance in `npm run verify`, the comparison video and the measuring tools.
-  Rendering the recreation does not use it.
+- **Python 3.11**, for the soundtrack generator and the tools. Rendering does not need it. `tools/requirements.txt`
+  pins the packages.
+- curl and unzip, to download the one font that cannot be redistributed (Satoshi, see [License](#license)).
+- Internet access: npm packages, Chrome and Satoshi (from Fontshare) on the first run, and GSAP from jsDelivr on every
+  render (see [Rendering notes](#rendering-notes)).
+- Disk: about 2–3 GB for `.venv/`, Chrome and the npx cache, plus about 630 MB for each rendered MP4.
+- Optional: a copy of the original film, passed as `APPRENTICE_SOURCE=/path/to/original.mp4` (see
+  [The original film](#the-original-film)). You need it only for the per-shot distance in `npm run verify`, the
+  comparison video and the measuring tools. Rendering the recreation does not use it.
+
+Installing the tools:
+
+```sh
+# macOS (Homebrew). node@22 is keg-only, so put it on PATH.
+brew install node@22 ffmpeg python@3.11
+export PATH="$(brew --prefix node@22)/bin:$PATH"
+
+# Debian 12 / Ubuntu. The distributions' own nodejs is older than 22.12: use nvm (or NodeSource's nodejs 22).
+sudo apt install ffmpeg python3.11 python3.11-venv curl unzip   # Ubuntu 24.04: python3.11 from the deadsnakes PPA
+nvm install 22
+```
 
 The film has been rendered on macOS on Apple silicon (an M4 Max) with the GPU. Other platforms should work through
 HyperFrames' own GPU detection, but they have not been tried.
 
+## The original film
+
+"Original" in this repository means the source film, *The Apprentice*, which the author generated with the Seedance
+video model. It is not included here. The comparison video, the per-shot distances in `npm run verify` and the
+measuring tools read your copy from `APPRENTICE_SOURCE`.
+
+Everything was measured against this encode. Check yours with `shasum -a 256` (or `sha256sum`):
+
+| | |
+|---|---|
+| SHA-256 | `7f482e13c1bd76344e198c5b5e59cb78714cdd99b3dd26d996ebd50ea71a35a3` |
+| size | 198,853,272 bytes |
+| video | H.264, 2206×946, 25 fps, 3,520 frames, 140.8 s |
+| audio | AAC |
+
+Another encode at the same size and frame rate works with the tools, but its distances will differ slightly from the
+numbers in this README.
+
 ## Quickstart
 
 ```sh
-git clone <this repository> apprentice-film && cd apprentice-film
+git clone https://github.com/RPD123-byte/apprentice-film.git && cd apprentice-film
 npm run setup      # checks tools; .venv with Python packages; npm install; Chrome; downloads Satoshi
-npm run render     # -> renders/film.mp4   (15–18 min on an M4 Max; one worker, see Rendering notes)
+npm run render     # -> renders/film.mp4   (about 18 min on an M4 Max; one worker, see Rendering notes)
 npm run verify     # gate: 3,520 frames, no black frames, no error bars
 ```
+
+Rendering needs only Node and ffmpeg, plus the Satoshi font that setup downloads (HyperFrames fetches its own Chrome).
+Python 3.11 is for `npm run score`, `npm run verify`, `npm run fidelity` and the tools in `tools/`. If setup cannot
+set Python up, it prints a warning saying so and finishes the other steps. `bash scripts/setup.sh --help` lists its
+options.
 
 More:
 
@@ -58,7 +99,8 @@ npm run compare                        # -> comparison/renders/opus-5.5-vs-origi
 
 `npm run setup` makes `.venv/` with Python 3.11, and the npm scripts use it through `scripts/py`. To run a tool in
 `tools/` directly, activate it first (`source .venv/bin/activate`). To use your own interpreter instead, set
-`PYTHON=/path/to/python` for both setup and the npm scripts.
+`PYTHON=/path/to/python` for both setup and the npm scripts. It should be a venv or conda interpreter: Homebrew's
+Python and most system Pythons refuse pip installs (PEP 668), so setup cannot install the packages into them.
 
 ## How it works
 
@@ -113,16 +155,23 @@ drawings are cached on the first call, never at module load.
 | `rng.js` | Seeded random numbers, hash and value noise, easing helpers (`smooth`, `span`, …). |
 | `engrave.js` | The black-and-white "scratchboard" look. A `Plate` holds a grey value and a stroke direction per pixel and cuts white engraved lines whose width follows the value. |
 | `ink.js`, `paths.js` | Tapered ink strokes, hatching, wobble; smooth paths, curve sampling, shape fills, caching and blitting helpers. |
-| `owlInk.js` | The black-and-white owl kit (parts, poses, eye states) used by several shots. |
-| `sites.js`, `sokoIll.js` | The designer's own site ("MIXING DOWN, LATE AT NIGHT.") and its hero illustration. See [`docs/soko.md`](docs/soko.md). |
-| `pureimg.js`, `notecard.js` | The retro "Pure Imagination" page on the laptop and the feedback note card. See [`docs/pureimg.md`](docs/pureimg.md). |
-| `hippie.js` | The finished colour site of the ending, drawn from traced geometry. See [`docs/hippie.md`](docs/hippie.md). |
+| `owlInk.js` | F4: the black-and-white owl kit (parts, poses, eye states) used by several shots. See [`docs/owl.md`](docs/owl.md). |
+| `sites.js`, `sokoIll.js` | F1: the designer's own site, sōko ("MIXING DOWN, LATE AT NIGHT."), and its hero illustration. See [`docs/soko.md`](docs/soko.md). |
+| `pureimg.js`, `notecard.js` | F3: the retro "Pure Imagination" page on the laptop and the feedback note card. See [`docs/pureimg.md`](docs/pureimg.md). |
+| `hippie.js` | F2: the finished colour site of the ending, drawn from traced geometry. See [`docs/hippie.md`](docs/hippie.md). |
 | `post.js` | The WebGL grade (above). |
+
+**Foundations F1–F5.** The build first made five shared pieces, and the logs, docs and workflow scripts refer to them
+by number. F1 is the sōko page, the designer's own site (`src/lib/sites.js` + `sokoIll.js`, [`docs/soko.md`](docs/soko.md)).
+F2 is the colour site of the ending (`hippie.js`, [`docs/hippie.md`](docs/hippie.md)). F3 is the Pure Imagination page
+and the note card (`pureimg.js` + `notecard.js`, [`docs/pureimg.md`](docs/pureimg.md)). F4 is the owl kit (`owlInk.js`,
+[`docs/owl.md`](docs/owl.md)). F5 is the soundtrack (`tools/sound/`, [`docs/audio.md`](docs/audio.md)).
 
 Most shots also have a helper folder `src/shots/<id>/` with their own drawing code and data modules. The data modules
 are plain JavaScript holding numbers or compactly encoded paths (traced vectors, key drawings, tracks, fitted tone
 gains). Most of them name the script that wrote them in a header comment; those scripts are in
-[`tracing/`](tracing/README.md).
+[`tracing/`](tracing/README.md). Sub-folders named after build passes (for example `s25/v2`, `s20/b3`, `s24/d`,
+`s05/drawn`, `s02/hand`) are live code that the render loads; each is named for the pass that wrote it.
 
 ### The soundtrack
 
@@ -167,8 +216,9 @@ the same shot and staging with visibly simpler drawing. The methods:
 
 The ids come from the project's shot list, so the numbering has gaps.
 
-"Diff" is the mean absolute difference from the original, in 8-bit levels, after a σ≈4 px blur on quarter-size
-frames. It was measured by `tools/verify_render.py` on a render of this code (lower is closer).
+"Diff" is the mean absolute difference from the original, in 8-bit levels, measured by `tools/verify_render.py` on a
+render of this code (lower is closer). It compares quarter-size frames (552×236) after a Gaussian blur of σ = 1 px,
+which is about σ = 4 px at full size.
 
 | id | time (s) | what happens | method | status | diff | code |
 |---|---|---|---|---|---|---|
@@ -214,6 +264,15 @@ files, and are not needed to render the film. Large generated outputs (the numbe
 ones the film uses are in `src/`. [`tracing/MANIFEST.tsv`](tracing/MANIFEST.tsv) and
 [`tracing/NOT_INCLUDED.tsv`](tracing/NOT_INCLUDED.tsv) account for every file.
 
+The header comments in `src/` name these scripts by the paths they had during the build: `snapshots/…` (the agents'
+scratch folder), `tools/trace-scripts/…` or `archive/…`. None of those folders is in this repository. To find a
+script now, search the manifest for the tail of its path, or look it up in `tracing/<id>/README.md`:
+
+```sh
+grep -F 's25-tools/extract3.py' tracing/MANIFEST.tsv   # named in src/shots/s25/v2/data/dash84.js
+# -> s25/snapshots-s25-tools/extract3.py  ...
+```
+
 ## How it was built
 
 Claude Opus 5.5 agents wrote the film, coordinated by the workflow scripts in [`process/`](process/README.md). An
@@ -227,8 +286,8 @@ interactive session first set up the composition, the tools and the first shots.
 4. `4-repo-cleanup.js`: this clean-up.
 
 Every agent worked from the same brief, [`docs/STYLE.md`](docs/STYLE.md): measure the original, build, render
-side-by-side pairs, fix, and log the result honestly in `docs/fidelity/<id>.md`. The prompts in the workflow scripts
-are exactly what each agent was asked to do.
+side-by-side pairs, fix, and record the result and the remaining gaps in `docs/fidelity/<id>.md`. The prompts in the
+workflow scripts are exactly what each agent was asked to do.
 
 ## Rendering notes
 
@@ -236,14 +295,18 @@ are exactly what each agent was asked to do.
   heavier shots of the ending made workers lose their WebGL contexts part-way through, and the rest of each worker's
   chunk rendered black: two renders had about 2,000 black frames. One page renders the whole film cleanly.
   `node tools/harness/probe.mjs 0 140.76` checks for context loss frame by frame.
-- **Time.** 15–18 minutes on an M4 Max, most of it frame capture. The generous timeouts in the render script are
-  there because loading every shot module (over 100 MB of JavaScript, mostly the ending's traced data) takes a while.
+- **Time.** A render from a clean clone took 18 min 22 s on an Apple M4 Max (48 GB) with one worker, most of it frame
+  capture. The generous timeouts in the render script are there because loading every shot module (over 100 MB of
+  JavaScript, mostly the ending's traced data) takes a while.
+- **Disk.** About 2–3 GB for `.venv/`, Chrome and the npx cache, plus about 630 MB for each rendered MP4.
+- **Network.** `index.html` loads GSAP 3.14.2 from jsDelivr, so every render needs internet access, even after setup.
 - **Gate every render** with `npm run verify` (`tools/verify_render.py`). It checks for 3,520 frames, no black frames
   and no red error bars from a failing shot. With `APPRENTICE_SOURCE` it also prints the per-shot distance to the
   original, and given an older render it fails if any shot got worse by more than 0.5.
-- **Deterministic.** On the same machine, a render from a clean copy of this commit was byte-identical (same SHA-256)
-  to the earlier render of the same code, which the "diff" numbers above come from. Other GPUs and drivers may differ
-  slightly.
+- **Deterministic.** A render from a fresh clone was byte-identical to the published video: SHA-256
+  `1da041d11ac4c935b89458c441fb7ca9b5afe19cb3c2200ae3a4d6f33bd51b8e` (check yours with
+  `shasum -a 256 renders/film.mp4`). The "diff" numbers above were measured on a render of the same code. Other GPUs
+  and drivers may give slightly different pixels.
 - **Stills.** `node tools/harness/shoot.mjs OUTDIR 12.5,60,120` renders exact frames without HyperFrames' per-seek
   timeout. `tools/compare.sh` (render|original pairs) uses `hyperframes snapshot`, which can time out while all the
   shots load.
@@ -263,19 +326,23 @@ are exactly what each agent was asked to do.
 - 17 of 26 shots are **approx**: same staging, timing and camera, with visibly simpler drawing. Each log in
   `docs/fidelity/` lists that shot's gaps. For example, the s01→s02 cut lands one frame late, and the owl visibly
   changes drawing at the s25→s26 cut.
-- s06 and s07 are dense vector traces of source frames. Their logs flag that this method needs the author's sign-off.
-  The author approved traced geometry for the colour ending (s26–s28) only; see `docs/STYLE.md`.
+- The method of every shot is labelled in the [shot table](#shots): drawn, traced or mixed. Some per-shot logs,
+  written during the build, say a shot's tracing awaits the author's decision; see the note in
+  [`docs/FIDELITY.md`](docs/FIDELITY.md).
 - The soundtrack follows the original's timing and levels closely, but every sound is a physical model, so the timbres
   are approximate. See [`docs/audio.md`](docs/audio.md) (What does not match).
 
-## Licences
+## License
 
-- **Fonts**: see [`assets/fonts/LICENSES.md`](assets/fonts/LICENSES.md). Nine files are under the SIL Open Font
-  License 1.1 and are committed. Satoshi (Indian Type Foundry, ITF Free Font License) may not be redistributed, so it is
-  git-ignored, and `scripts/fetch-fonts.sh` downloads it from Fontshare, checking its SHA-256.
+No licence is granted: all rights reserved. The code is published so that you can read it and reproduce the video.
+
+- The characters (the young designer and the owl), the "rapport" mark on the end card, the websites shown in the film
+  and the film itself are all rights reserved.
+- **Fonts** keep their own licences: see [`assets/fonts/LICENSES.md`](assets/fonts/LICENSES.md). Nine files are under
+  the SIL Open Font License 1.1 and are committed. Satoshi (Indian Type Foundry, ITF Free Font License) may not be
+  redistributed, so it is git-ignored, and `scripts/fetch-fonts.sh` downloads it from Fontshare.
 - **GSAP** 3.14.2 is loaded from jsDelivr when the page loads (HyperFrames inlines it at render time). It is not
-  redistributed here, and its own licence applies.
-- The characters (the young designer and the owl) and the websites in the film are the author's own designs.
+  redistributed here and keeps its own licence.
 
 ## History
 

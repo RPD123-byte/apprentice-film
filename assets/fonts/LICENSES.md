@@ -93,8 +93,10 @@ scripts/fetch-fonts.sh
 The script downloads `https://api.fontshare.com/v2/fonts/download/satoshi` (the zip behind the Download button on
 [fontshare.com/fonts/satoshi](https://www.fontshare.com/fonts/satoshi)). It extracts
 `Fonts/WEB/fonts/Satoshi-Variable.woff2`, checks that it is a WOFF2 file with the pinned SHA-256 above, and installs
-it here. If a verified copy is already there, it does nothing. Run `scripts/fetch-fonts.sh --help` for its options:
-`--dest`, `--force`, and `--allow-update` (which accepts a newer Satoshi build if Fontshare has replaced the pinned one).
+it here. If a verified copy is already there, it does nothing. If Fontshare has replaced the pinned build, or a
+different valid build is already installed, it warns that the end card may differ slightly from the published video
+and uses that build. Run `scripts/fetch-fonts.sh --help` for its options: `--dest`, `--force` (download again), and
+`--strict` (fail instead of warning when the checksum differs; `npm run setup -- --strict-fonts` passes it).
 The render needs the font: `src/main.js` loads it before the first frame, and the end card in shot `s40` (`src/shots/s40/card.js`) is set in it.
 
 ## SIL Open Font License 1.1

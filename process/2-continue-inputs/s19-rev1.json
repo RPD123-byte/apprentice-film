@@ -1,0 +1,104 @@
+{
+ "fidelity": "approx",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "58.44–62.24 (sit, bow, stand, throw, lift; back-view owl from draw/back2.js)",
+   "what": "The outer silhouette is placed well: at 61.25 the cup-to-cup and belly widths are within about 15 px of the source, and at 59.00 the cup centre is (1065,580) against the source's (1077,595). The drawing inside it does not match. The owl is a flat white cut-out with a hard 4–5 px dark outline and only faint strokes. Mean of the lower body at 59.00 (x 860–1060, y 650–830) is 209, against 174 in the source. The source has hatched grey shading on the shadow side and a darker ruff under the head. With neither, head and body merge into one column, and in 61.3–62.2 the owl reads as a bowling pin instead of a round head on a plump body. In the sit (58.4–59.6) the headphone band is a thin strip of about 12 px, where the source has a strap of about 35 px with a slider near (1040–1080, 650–700). The crest is a white leaf shape at (820–880, 540–610); the source has a wispy tuft going up and left at (855–935, 540–575). The wings are scalloped clip-art fans with an outline on every feather; the source's are soft and layered.",
+   "fix": "In back2.js, paint a value gradient: body 0.93 on the lit upper left, down to about 0.68 on the lower right and bottom (target mean ≈175 in the box above). Add directional feather-hatch strokes that follow the form. Add a darker crease or ruff under the head (≈0.6 value, about 15 px wide) across y≈600–620 at 61.25. Cut the outline to 2–3 px and taper it. For SIT: thicken the band to about 32 px, with a segmented slider at the cup. Replace the crest leaf with 4–6 tapered strands going up-left from (930,560) to (855,540). Soften the wing feather outlines to hatch-weight lines."
+  },
+  {
+   "severity": "high",
+   "at": "59.80–62.24 (legs and feet)",
+   "what": "The render owl sits on stubs. At 61.00–61.25 its body bottom is at y≈800 with the feet at ≈815. The source's body ends at ≈775, with about 50 px of thin tarsus showing and feet at ≈830–835. During the bow (59.80–60.12) the source is already up on bent legs (visible from 59.88, frame 1497) while the render still crouches with its belly on the floor. At 61.8–62.24 the render's feet float as detached marks below the body with a visible gap. The source's right foot lifts and kicks out, the owl leans and dances, and at 62.00 the source's left foot is about 60–90 px left of the render's (x≈1110–1175 against ≈1210–1240 at y 800).",
+   "fix": "Add tarsi (about 45–50 px long, 10–12 px wide, dark outlined) joining the body to the feet in BOW3/BOW4/UP1–3/STAND/STEP/OPEN/SPREAD/LIFT1–7. Raise the body bottom by about 25 px and drop the feet to y≈830. Key the legs visible from 59.88. In LIFT3–LIFT6 (61.76–62.16), lift and kick the right foot and move the left foot to x≈1120–1170. Never draw feet detached from the legs."
+  },
+  {
+   "severity": "high",
+   "at": "57.72–61.44 (the owl's and ball's floor shadow on the lit floor)",
+   "what": "The source has a strong black shadow pool; the render's is missing or misplaced. Ball: at 57.92, floor x 1250–1450, y 830–946 is 43.6 in the source and 91.9 in the render, and at 57.82 the floor at x 1300–1700 is 69.7 in the source and 89.1 in the render. Standing, at 60.50: at y 850–946, x 950–1150 the source is 4–10 and the render 18–35, so the render is not dark enough. At y 810–850, x 950–1200 the render is dark (37–55) where the source floor is lit (93–118), so the render's shadow starts about 40 px too high. The pool is clearly visible in every source frame from 59.88 to 61.44 (x 1000–1350, below y 850), and the render has nothing that reads as it.",
+   "fix": "In owlShadow19: start the wedge at the real foot line, y≈850 (clamp base to at least 845 and no higher than the feet + 15). Widen w from 0.8·rx to about 1.1·rx. Raise the restore alphas so that only about 0.05 of the light remains in the 850–946 band (the bands' k sums to about 1 today, but the a factors 0.95/0.85/0.7 leave too much light). For ballShadow: add a pool from 57.68 to 57.96, offset down and left along the rays from (1365,725), about 0.85 dark, with its top about 10 px below the ball's contact at y≈845."
+  },
+  {
+   "severity": "high",
+   "at": "Whole shot, floor (y 780–946), most visible on the unlit left (x 0–700) and right (x 1650–2206)",
+   "what": "Near the horizon the floor is a dense, sub-pixel speckled hairline field. At 1:1 it reads as TV static or moiré. It is also too grey: left floor (x 0–600, y 790–946) mean 17–20 against 10; right floor (x 1750–2206) 25 against 18. The source has sparse, separate, tapering white strokes 2–5 px wide on black. Under the card, the lit floor (x 1300–1700, y 800–946) is about 9 levels too dark (90 against 99), and its rays are hard binary stripes where the source's are soft and tapered, with grey falloff.",
+   "fix": "In room.js, give the floor engraving a minimum line spacing of at least 6 px and a minimum stroke width of about 1.5 px as rows approach the horizon (clamp the perspective compression). Drop the unlit floor value to about 0.04, so that only 1 in 3–4 rays survives. Taper strokes to a point toward the horizon. Raise the lit-floor gain by about 10%, and add a soft grey falloff (blur 1–2 px) along the ray edges."
+  },
+  {
+   "severity": "medium",
+   "at": "57.96–58.36 (landing and skid)",
+   "what": "The switch from ball to landed owl is one frame late. Source frame 1449 (57.96) already shows the owl unrolled, head down and tail up; the render still draws the ball, because drawOwl19 uses t < 57.98. The poses also read wrong. The render draws a horizontal loaf (about x 950–1200, y 610–850), a tail of three pointed spikes like a crown or bunny ears, and the headphone band as a vertical 'C' at the right end (x≈1180–1230). The source has the head down on the floor at lower right (1100–1300, 560–800), with the band wrapping the back of the head diagonally (58.22: from about (1100,560) to (1270,700)). Its back is arched up to the left, there is one soft tail tuft, and a wing trails forward on the floor (1200–1340, 780–840). At 58.16 the render's first dust puff is a small grey block that looks like a brick.",
+   "fix": "In owl.js, switch at t < 57.94 and key LAND0 at 57.96. Redraw LAND0, LAND1, LIE, LIE2 and RISE: head touching the floor at lower right, band diagonal across the back of the head, a single tail tuft instead of three spikes, back peaking at y≈560–600, a wing laid forward on the floor to x≈1340. Start the dust at 58.20 as a rounded lobe, not a block."
+  },
+  {
+   "severity": "medium",
+   "at": "57.40–57.96 (ball tumble, draw/ball.js)",
+   "what": "The ball's track and radius match within about 15 px. Its look does not. The 6-sample rotational blur (ball.js line 132) produces stroboscopic ghosts: the crest shows as 4–5 translucent spike copies at 57.72–57.84. The dark backing ellipse (line 141, #0e0d0c) shows as a smeared dark crescent, about 15–20 px, on the ball's leading and lower edge wherever it is over the white card (57.72–57.92). The eyes are bull's-eye concentric rings. The band is a grey comb-like block at 57.52 (≈2120–2200, 530–560). The crest is 4–5 white spikes. The source has small dizzy spiral eyes, a dark curved band, a small tuft, and two feet sticking out (57.72: right side; 57.82: top left near (1510,560) and left near (1540,650)).",
+   "fix": "Replace the N=6 discrete shutter with a continuous blur: at least 16 samples, or a canvas blur along the tangent. Remove or shrink the dark backing ellipse so that it never extends past the outline over the card. Draw single spiral eyes (≈25 px), the band as a dark strap 25–30 px wide, one small tuft, and two feet from 57.64 at the source's positions."
+  },
+  {
+   "severity": "medium",
+   "at": "61.08–61.20 (wing throw)",
+   "what": "About two frames late and unblurred. In the source the wings start opening at 61.08, are fully out horizontally (motion-blurred) at 61.12 (frame 1528), and are raised in a V at 61.16. The render keys OPEN at 61.20, so at 61.12 its wings are still small and low. From 61.16 on, the source's wings are raised about 20–30° above horizontal; the render's spread flat or slightly drooping.",
+   "fix": "In owl.js, move OPEN to 61.12 and SPREAD to 61.16. Add a directional blur (about 20 px) to the wings at 61.08–61.12. Raise the wing angle about 25° in SPREAD and LIFT1–LIFT7."
+  },
+  {
+   "severity": "medium",
+   "at": "61.72–62.28 (lift sway into the carry)",
+   "what": "The render holds a rigid, symmetric back view. In the source the owl leans and dances, with one leg kicked out, its body tilting left and then right. Its head turns steadily to the right: by 62.20–62.24 it is nearly three-quarter, with the right cup in profile and the face starting to show. The render then cuts hard to the three-quarter carry drawing at 62.28, and the pose visibly pops.",
+   "fix": "Add head-yaw keys from 62.04 to 62.24 (move the cups and band so the right cup reads in profile and the face edge appears by 62.20), body tilt of ±6–8° following the source's sway, and the kicked right leg at 61.76–61.92. Hand over to the carry through an intermediate pose at 62.24, or dissolve over 1 frame."
+  },
+  {
+   "severity": "medium",
+   "at": "62.28–63.08 (carry owl, draw/carry.js)",
+   "what": "The headband is a thin wire loop, like a hook, rising above the head, instead of a thick padded arc. The cup is a flat disc of CG-looking concentric rings. The beak is a grey two-part stacked pill at (1640–1700, 420–480) at 62.40, with a thin line running down-left to about (1600,530). Together they read as a headset microphone boom. The body is a smooth vector sphere with a hard outline and almost no hatching. The source has a small pointed beak at (1620–1655, 425–470), a dark engraved cup, and a feathery, shaded body.",
+   "fix": "Remove the stray line from the beak. Draw a small hooked beak about 35×45 px at the source's position. Make the band about 22 px thick, following the skull. Draw the cup dark (≈60), with an engraved rim instead of rings. Add grey shading and feather hatching to the body, with the lower right at about 0.7."
+  },
+  {
+   "severity": "medium",
+   "at": "Whole shot, room plate (draw/room.js)",
+   "what": "The wall, guitar case and right cabinet are filled with uniform long vertical or diagonal white 'rain' streaks (for example x 450–750, y 0–300, and x 1640–1800). The source has structured wood planks and case grain. The guitar case lacks its handle (≈270–330, 220–260) and double contour. The top of the crate is a flat fan of white arcs (≈340–700, 330–370) instead of a heavy black coiled cable with highlights. The hanging cable is thin (≈10 px) where the source's is about 25 px, black, dropping to the floor at x≈740–800. The tweeter (≈1000,30) and woofer surround are uniform bright concentric rings: the woofer surround averages 131 against the source's 139, lacks the shaded cone (dark on the left, highlight on the right), and the thick black rim is missing. The bottom edge of the top-right sign (≈1650–1800, 0–35) is missing. At 62.6–63.08 the jack panel has no hanging cables (the source's run from 1560–1700 down to about y 700).",
+   "fix": "Replace the streak fills with plank or grain strokes that follow each surface's direction, with gaps and taper. Add the case handle and an inner contour. Draw the cable coil as 4–6 thick black loops with white rim highlights, and the drop cable about 25 px wide to the floor at x 740–800. Give the woofer a thick black rim (about 20 px) and a shaded cone. Tone the tweeter down to its source value. Add the sign's lower edge and the cables hanging from the jack panel."
+  },
+  {
+   "severity": "medium",
+   "at": "62.60–63.08 (scissors and cobwebs revealed)",
+   "what": "The scissor handles are large, round and white-rimmed, and their holes are filled flat: black on the left, grey on the right. The source's holes show the post and web behind them. The blades are flat pale grey. The cobwebs are a few straight lines and triangles. The source has dark engraved metal with rust speckle, ornate tilted handles (left ≈1150–1280 × 120–330, right ≈1360–1460 × 120–260), and dense sagging webs across 1300–1480 × 200–700.",
+   "fix": "Make the handle holes transparent, so the post and web show through. Thin the rims to about 12 px and give them engraved shading. Darken the blades to about 120, with speckled rust and an engraved edge highlight. Draw 15–25 curved, sagging web strands between the handles, the blades and the post."
+  },
+  {
+   "severity": "medium",
+   "at": "57.32 (first frame) and 63.12 (frame after the last)",
+   "what": "Each boundary is one frame late. At 57.32 (frame 1433) the render still shows s18's synth; the source shows s19 from frame 1433. At 63.12 (frame 1578) the render still shows s19; the source has cut to s20 (the render reaches s20 at 63.16). The time reaching main.js is a hair below n/25, so shotAt (t >= s.start) picks the previous shot. Inside the shot, timing is on the grid: s19 floors to the same frame, and the card matches the source per frame within ±3 px across 61.68–62.56. s01's fidelity note reports the same issue, so it is global and in main.js, not in s19.js.",
+   "fix": "For the main.js owner: snap the time before choosing a shot, e.g. `const tf = Math.round(t*FPS)/FPS; shotAt(tf)`, or compare `t >= s.start - 1e-6`. Then re-check that frames 1433 and 1578 land on the correct shot."
+  },
+  {
+   "severity": "low",
+   "at": "58.12–58.96 (dust, draw/dust.js)",
+   "what": "The cloud is greyer than the source's white inked lobes: 0.22 of the pixels in x 1380–1580, y 650–810 are below 200 at 58.52, against 0.13. It breaks up about one frame late: the source is already curls at 58.62, the render still solid. It fades about 1–2 frames early: at 58.92 the source's curl cluster is still clear, the render's is nearly gone. At 58.72 a hard-edged flat grey triangle (the tail wedge) is left on the floor at about (1470–1630, 830–850).",
+   "fix": "Raise the lobe fill to about 0.9 value, keeping the ink outlines. Start the curl breakup at 58.60. Hold the curls at full alpha until 58.92 and fade them out by 59.00. Fade or feather the tail wedge out before 58.68."
+  },
+  {
+   "severity": "low",
+   "at": "Whole shot, card surface and smiley",
+   "what": "The card face shows faint regular horizontal ruling (row-mean std 1.29 against 0.49 in the source) instead of blotchy paper grain. The smiley is slightly over-saturated: mean BGR (116,201,216) against (127,187,209).",
+   "fix": "Replace the ruled texture with a low-frequency noise grain, amplitude about ±4 levels. Desaturate the smiley yellow by about 10%. If the texture comes from the shared notecard.js, override it in s19's card warp."
+  },
+  {
+   "severity": "low",
+   "at": "Whole shot, film grain",
+   "what": "In the static room, the render changes from frame to frame by 2.1 mean absolute level, against about 1.2 in the source. The render's grain is roughly 1.7× the source's. This comes from the global post.js, not s19.",
+   "fix": "Optionally return grade: () => ({ grain: <≈0.6× default> }) from s19 through the grade hook, or have the post.js owner re-measure the grain."
+  },
+  {
+   "severity": "low",
+   "at": "src/shots/s19/ (legacy files)",
+   "what": "owldata.js (about 12 MB), roomdata.js, roomtrace.js, dustdata.js and trace/ still sit in src. By the fidelity note's own account they are vector traces of source frames. They are not in s19.js's import graph (checked: only the unused anim.js and roomtrace.js reference them), but they would ship with the project source.",
+   "fix": "Whoever owns these files, or the orchestrator, should move them out of src/ (for example to snapshots/s19b-prev/) or delete them, so nothing can import them by accident."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "s19 has the right staging and is timed to the frame, but the drawing is visibly simplified. Its builder rated it 'approx', and that is honest, though generous for the owl. The camera is locked. The card matches the source within ±3 px per frame through the lift (61.68–62.56), and the floor-light fade and region tones match well. Blurred MAE (σ 8, graded) is 10.8–14.9 at 24 in-shot samples; whole-frame means are within ±2 levels.\n\nThe most visible gaps:\n- The owl is a flat, over-bright white cut-out (+35 levels on the body) with no hatched shading and no head/body separation. It lacks legs and has detached feet in the stand and lift.\n- The source's dark floor shadow under the ball and the owl is missing, weak or starts too high.\n- The unlit floor near the horizon is a speckled moiré of hairlines and is 7–10 levels too grey.\n- The landing and skid poses are wrong: a crown-like three-spike tail and a vertical headphone 'C'. The ball-to-landing switch is one frame late.\n- The wing throw is about 2 frames late and unblurred. The lift has no head turn or lean before the carry pops in at 62.28.\n- The carry owl's beak reads as a headset microphone.\n- The room is filled with uniform 'rain' streaks, and the scissors and cobwebs are generic.\n- Both cuts land one frame late (57.32 still shows s18; 63.12 still shows s19). This comes from main.js shotAt, not from s19.js.\n\nChecks:\n- Determinism: the same timestamps (59.00, 61.52, 62.25) are byte-identical (max diff 0) across three separate compare runs. The static room does not boil; frame-to-frame change is grain only.\n- No placeholder text, red error bars or console errors were seen.\n- None of the retired traced source data is imported. Those files still sit in src/shots/s19/.\n\nOutputs in /Users/computer/rootline/apprentice-film/snapshots/:\n- s19-rev1-cmp: 25 dense pairs.\n- s19-rev1-mot: 10 fps motion sheet.\n- s19-rev1-dense: every frame at 57.36–58.16 and 61.44–62.56.\n- s19-rev1-bnd: boundary and determinism frames.\n- s19-rev1-src: source frames 1426–1582.\n- s19-rev1-ana: crops, heatmaps and phase sheets.\n\nNo artifacts were published in this run, so there is nothing to delete."
+}

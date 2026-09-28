@@ -1,0 +1,92 @@
+{
+ "fidelity": "approx",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "100.48–102.96 (chaos), main owl + echoes; e.g. 100.52 crown (480–590, 20–100), 100.76 head (650–860, 250–450), 101.24 (1450–1560, 600–680), 101.52 V-sign head (1700–1830, 560–640), 102.00 face (1060–1280, 210–350), 102.24/102.52 face, 102.76",
+   "what": "The chaos owls have garbled faces. Dark grey blobs sit on the crown and over the face (they read as a black mop or a bruised face), the eyes, bandage X and beak are unreadable, and scissors are partly missing. The source owl has a clean white head with clear angry eyes, the bandage X, beak and headphones. The cause is the chaos drawings (dive, vs2/vs3, dash84, hov/hov2, eTR/eFl/eSt, pop, rem48/52): their hull is filled at base 0.30–0.37, and the face's light areas are broken up by ink lines into pieces smaller than the 400 px² light-part threshold, so they were dropped and the dark base shows through.",
+   "fix": "In v2/draw.js for the chaos drawings, keep light parts down to ~40 px² inside the head box, or paint the hull at ~0.85 and add the dark pieces explicitly. Also overlay the hand-built head kit (head.js face + headphonesBack/Front) on every chaos pose, placed by that pose's head position and angle (dive head centre (775,385) in drawing px). At minimum, never let base < 0.7 show inside the head outline."
+  },
+  {
+   "severity": "high",
+   "at": "102.64–102.96 (burst)",
+   "what": "The source shows a huge motion-smeared owl: an X of streaked wings spanning about x 460–1750, a vertical ghost column above the head up to y≈0, and the headline hidden. At 102.96 a bright radial smear cloud is still at the centre (about 1100–1500, 380–680). The render shows one crisp mid-size dive owl (head ≈(960,420), ~1.4×) in soft white fog, the headline stays readable, and at 102.96 the frame is nearly empty. σ8 is 13.9–16.8 here, the worst of the shot.",
+   "fix": "Build the smear from 8–12 copies of the dive/hov2 layer along the motion vector (up-right, about −35°), 1.8–2.2× scale (source wingspan ~1100 px), alpha 0.25 falling to 0.05 plus a blur(6–10px) pass. Add a vertical ghost column: 4–6 copies at −70 px steps, alpha 0.2. Hold a fading radial smear (alpha ~0.5) through 102.96 instead of clearing it."
+  },
+  {
+   "severity": "high",
+   "at": "100.76–101.48 echo owls; worst at 101.24 left echo (40–375, 700–850)",
+   "what": "The left echo owl is an opaque, flat, posterised light-grey slab with torn edges. The source has a semi-transparent flying owl (headphones, face and scissors readable) with a translucent smoke streak trailing to x=0. At 100.76 the bottom-left echo is too bright and opaque. The bottom-centre motion-echo owl (source ≈(960,780)) is drawn as a grey smoke blob, not an owl.",
+   "fix": "Draw echoes at alpha ≈0.5–0.6 using the softened owl drawing (dive~s) rather than the eFl/eSt slab data. Add the bottom-centre echo as a softened dive owl at ≈(960,780), alpha 0.45. Draw the trailing streak as elongated puffs (see smoke fix)."
+  },
+  {
+   "severity": "high",
+   "at": "102.20–102.60 slash ellipse; 102.76 lower-right arc",
+   "what": "The big slash ellipse is incomplete. The source draws one thick, continuous, closed ellipse across the frame: x ≈160→2020, top ≈y 80, left end ≈(160,350), right end ≈(2020,330), lower arc through ≈(860,710). The render has only the top arc (≈(200,320)→(1860,180)) and short left pieces, so the lower half and right end are missing. At 102.76 the source's long lower-right arc (≈(1300,810)→(2000,570)) is also missing.",
+   "fix": "Fit one ellipse per frame over 2555–2566 on the source (centre ≈(1090,400), semi-axes ≈(930,320); measure the rotation) and stroke the full arc with the existing slash style, broken only where the owl occludes it. Add the 102.76 lower-right arc."
+  },
+  {
+   "severity": "medium",
+   "at": "100.60–102.60 smoke; e.g. 100.76 top-left, 101.24 centre",
+   "what": "The source smoke is a long diagonal streak along the dive path (at 101.24 from ≈(900,450) to (1600,750)) and semi-transparent, so the banner colour shows through it (pink smoke over the banner at 100.76, x 200–600). The render has rounded white blobs: one opaque glow at 100.76 top-left ≈(380–520,180–260) and one round blob over the desk at 101.24 ≈(800–1200, 560–840). This makes the chaos frames brighter: the right side of the frame is +10…+24 too bright at 101.5.",
+   "fix": "Stretch the puffs along the path direction (aspect 3–5:1, rotated to the per-frame velocity from CHAOS affines). Composite them at alpha ≤0.5 ('screen') so the banner colour survives. Cap the puff peak at ~0.75."
+  },
+  {
+   "severity": "medium",
+   "at": "103.96–110.48 scissors (held, spinning 106.92–108.48, floating 108.52–110.48)",
+   "what": "The scissors look like thin wireframes. Render rings are about 43×32 px outer with ~5 px metal, and the blades are ~15 px wide and grey. The source pairs are bold solid silver: rings about 61×43 px outer with ~11–12 px bright metal and a thick dark outline, blades ~25 px wide at the root, bright (~235) with a dark bevel line. The spinning pairs have none of the source's doubled or smeared motion blur. Placement and angles do match (checked at 107.5 and 109.5).",
+   "fix": "In v2/scis.js DESIGN: w 17→26, ring outer sizes up ~1.4× (to ~60×42), ring metal t 9→12, metal fill 0.92 with a 2 px dark (≈0.1) outline and a dark blade bevel line. For SPIN frames, draw 2 extra copies at the previous two frames' angles with alpha 0.3."
+  },
+  {
+   "severity": "medium",
+   "at": "103.00 pop; 103.08–103.60 landing",
+   "what": "The pop frame (103.00) is missing the grey smoke haze around the owl. Left of the owl (760–880,100–560): render 87 vs source 113. Above the screen (800–1400,0–90): 101 vs 117. The landing dust is too small and dim: the source cloud billows across x≈700–1750, y 800–946. At 103.25, (700–1000,800–946) is 134 vs 158 and (1400–1750,780–946) is 59 vs 75. The render's dust is a narrow flat white band (≈820–1250, 850–900).",
+   "fix": "Add a haze layer at 103.00: a soft grey gaussian ≈(1100,250), σ≈300 px, peak alpha 0.35. Widen the DUST puffs to x 700–1750 with 6–10 overlapping billows (σ 40–90 px) rising up to y≈800, raise peak brightness ~+25, and fade them over 103.08–103.60."
+  },
+  {
+   "severity": "medium",
+   "at": "103.08–110.48 standing owl drawing",
+   "what": "The silhouette is exact (IoU 0.92–0.97 in every sample from 103.0 to 110.5), but the inside is simplified. The wings and flanks are flat mid-grey planes (at 105.00, x 940–958 y 700 the render is ~125–148 flat, while the source has crisp feather lines alternating 62↔212). The chest V-feather strokes and wing feather tips are missing. The body texture is short vertical grey ticks, which looks mechanical. On the head, the beak hook is ~20 px shorter than the source's, the left eye sits ~20 px right (109.5), the facial-disc cheek lines are missing, and the near cup cushion has regular vertical stripes where the source has smooth dark shading with a highlight.",
+   "fix": "Draw 6–9 tapered feather strokes per wing along the wing edge (0.1 ink on white), a chest V of 3–4 curved strokes, and curved feather flicks along the body contour instead of vertical ticks. In head.js: extend the beak tip ~20 px down, move the left eye/brow ~18 px left, add cheek arcs, and replace the cup stripes with a radial dark gradient plus one highlight arc."
+  },
+  {
+   "severity": "medium",
+   "at": "110.48→110.52 (s25→s26 cut)",
+   "what": "The owl changes design at the cut. The s25 owl (flat body, its face kit, striped cup) cuts to s26's differently drawn owl, with a different head shape, face and bandage placement. In the source the owl is the same drawing across the cut; only the scissors and the un-squash change.",
+   "fix": "Share one head/face drawing across s25's last standing frames and s26's A phase (110.52–111.52). Either s26 uses s25's head layer (headLayer('sly') under s26's head affine), or s25 renders its standing head through s26's rig. Coordinate with the s26 owner."
+  },
+  {
+   "severity": "medium",
+   "at": "105.92–106.48 blade glint (e.g. 106.00)",
+   "what": "The eight-point glint on the big blade is far too small. At 106.00 the source star is centred ≈(607,676), with a horizontal reach of ≈±85 px, a vertical reach of ≈±75 px and a bright core. The render's sparkle is at ≈(599,663) with spikes of only ≈±20 px, even though GLINT[2]=80.",
+   "fix": "In fx2.sparkle, carry the long spikes to the full reach r, 4–6 px wide at the base tapering to 0, near-white for 70% of their length. Use a core radius of ~8 px at value 1.0 and move the centre to (607,676)."
+  },
+  {
+   "severity": "low",
+   "at": "page light, standing phase (103.6–110.5)",
+   "what": "The page's lower screen area is too dark: x 800–1400 y 800–946 is −12…−19, and x 1400–2000 y 480–946 is −6…−11. Left-mid (x 400–600, y 320–480) is +9…+13 too bright. The source page has a slight green cast (G +3–4 over R/B) that the render lacks. The page illustration itself (F1 sōko page vs the source's room) is still the largest remaining standing-phase difference, but it lives in sites.js.",
+   "fix": "In light.js, raise the gain grid in the bottom two rows at x 800–1400 by ×1.2 and lower-right by ×1.12, and lower it by ×0.88 around (400–600, 320–480). Multiply the page canvas by (0.98, 1.02, 0.98)."
+  },
+  {
+   "severity": "low",
+   "at": "room glow around the screen, whole shot",
+   "what": "The room glow is magenta-tinted and too bright during the chaos. At 105.0 left edge: render (53,45,45) vs source (47,42,40). At 101.0 near the right edge: render (66,58,58) vs source (54,50,47).",
+   "fix": "Tint the glow toward RGB ratio ≈(1.0, 0.93, 0.88) and scale GLOW by ~0.85 over 100.60–102.96."
+  },
+  {
+   "severity": "low",
+   "at": "100.48 (first frame), under the wipe band, x≈2030–2206, y 300–946",
+   "what": "Under the wipe band, the rem48 remnant shows a hard-edged, blotchy, posterised grey vertical strip. The source has a smooth soft grey gradient there (the wall edge).",
+   "fix": "Replace the strip in rem48/rem52 with a linear gradient (≈0.22→0.32 across x 2030–2206), or blur that part at σ≈12."
+  },
+  {
+   "severity": "low",
+   "at": "100.56 negative frame",
+   "what": "Inverting the room glow puts a dark ring outside the screen (top-left ≈(60–200, 60–400), top-right ≈(2000–2200,120–500)). The source surround is flat light grey (~190). The source's inverted banner clouds are solid black; the render's are grey outlines. σ8 is 17.2.",
+   "fix": "Apply negLut only inside FRAMED.screen and fill the surround with a flat ~0.75 grey. Force inverted banner pixels to ≤0.12 where the positive banner is ≥0.6."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "s25 is approx. Every beat lands on its source frame, the silhouettes and camera match, and the chaos owls and burst are clearly worse than the rest.\n\n**Timing and framing: effectively exact.**\n- The standing silhouette IoU is 0.92–0.97 in every 0.25 s sample from 103.00 to 110.50.\n- The 108.08 page squash matches: render d=0.983, f=+12.8 against source 0.984, +12.0.\n- Checked at 5 fps over the whole shot and 12.5 fps over 100.48–103.20: every pose change is on its source frame (±0).\n- Cracks broadly match (ridge overlap: precision 0.85–0.97, recall 0.83–0.92).\n\n**Scores (σ8 mean |Δ| per /255).**\n- Standing phase: 9.2–10.4.\n- Wings up and thrown pairs: 11.0–12.3.\n- Chaos: 9–16.\n- Burst: up to 16.8.\n- The 110.50 compare sample (19.3) is a tool artefact: the reference there is s26's frame 2763, while the render correctly shows 2762.\n\n**Most visible gaps.**\n- The chaos owls have garbled faces and dark hull blobs from dropped light parts.\n- The burst is a crisp mid-size owl instead of a giant smear.\n- Echo owls are opaque slabs.\n- The slash ellipse is missing its lower half.\n- The scissors look like thin wireframes.\n- The glint is tiny, and the landing dust and pop haze are weak.\n- The owl changes design at the s26 cut.\n\n**Determinism.** Two separate compare runs at 101.00, 102.72, 105.00 and 107.40 were bit-identical (max diff 0), and also identical to the dense run. The builder's puppeteer harness differs from the compare tool by up to 67/255 (mean 0.74). That is a different render path (it logged a 404 on a resource), not the shot.\n\n**Errors.** No placeholder text, red error bars or console errors.\n\n**Files.** Output is in `snapshots/s25-rev1-{dense,src,work,motion5,motion12,detA,detB,exact}` under `/Users/computer/rootline/apprentice-film`. I did not create any Artifacts, edit any source files, or delete anything; these output folders are the only things this run created, so they are the only ones to remove if you want them gone."
+}

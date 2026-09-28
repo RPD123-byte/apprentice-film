@@ -1,0 +1,313 @@
+[
+ {
+  "id": "s02",
+  "steps": [
+   "fix1",
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl"
+  ],
+  "interrupted": "fix #1",
+  "hasRev2": false
+ },
+ {
+  "id": "s04",
+  "steps": [
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl"
+  ],
+  "interrupted": "fix #1 (a second, longer pass)",
+  "hasRev2": false
+ },
+ {
+  "id": "s05",
+  "steps": [
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl",
+   "soko",
+   "pureimg"
+  ],
+  "interrupted": "fix #1 (a second, longer pass)",
+  "hasRev2": false
+ },
+ {
+  "id": "s06",
+  "steps": [
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl"
+  ],
+  "interrupted": null,
+  "hasRev2": false
+ },
+ {
+  "id": "s07",
+  "steps": [
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl",
+   "pureimg"
+  ],
+  "interrupted": null,
+  "hasRev2": false
+ },
+ {
+  "id": "s08",
+  "steps": [
+   "fix2"
+  ],
+  "deps": [
+   "pureimg"
+  ],
+  "interrupted": null,
+  "hasRev2": true
+ },
+ {
+  "id": "s09",
+  "steps": [
+   "fix2"
+  ],
+  "deps": [
+   "owl"
+  ],
+  "interrupted": "fix #2",
+  "hasRev2": true
+ },
+ {
+  "id": "s12",
+  "steps": [
+   "fix2"
+  ],
+  "deps": [
+   "owl"
+  ],
+  "interrupted": null,
+  "hasRev2": true
+ },
+ {
+  "id": "s13",
+  "steps": [
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl"
+  ],
+  "interrupted": null,
+  "hasRev2": false
+ },
+ {
+  "id": "s14",
+  "steps": [
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl"
+  ],
+  "interrupted": null,
+  "hasRev2": false
+ },
+ {
+  "id": "s15",
+  "steps": [
+   "fix1",
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl"
+  ],
+  "interrupted": "fix #1",
+  "hasRev2": false
+ },
+ {
+  "id": "s16",
+  "steps": [
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl"
+  ],
+  "interrupted": null,
+  "hasRev2": false
+ },
+ {
+  "id": "s17",
+  "steps": [
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl",
+   "soko"
+  ],
+  "interrupted": null,
+  "hasRev2": false
+ },
+ {
+  "id": "s18",
+  "steps": [
+   "fix1",
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl",
+   "soko"
+  ],
+  "interrupted": "fix #1",
+  "hasRev2": false
+ },
+ {
+  "id": "s19",
+  "steps": [
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl",
+   "pureimg"
+  ],
+  "interrupted": null,
+  "hasRev2": false
+ },
+ {
+  "id": "s20",
+  "steps": [
+   "fix2"
+  ],
+  "deps": [
+   "owl",
+   "pureimg"
+  ],
+  "interrupted": null,
+  "hasRev2": true
+ },
+ {
+  "id": "s21",
+  "steps": [
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl",
+   "soko"
+  ],
+  "interrupted": null,
+  "hasRev2": false
+ },
+ {
+  "id": "s22",
+  "steps": [
+   "fix1",
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl",
+   "soko"
+  ],
+  "interrupted": "fix #1",
+  "hasRev2": false
+ },
+ {
+  "id": "s23",
+  "steps": [
+   "fix1",
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl",
+   "soko",
+   "hippie"
+  ],
+  "interrupted": "fix #1",
+  "hasRev2": false
+ },
+ {
+  "id": "s24",
+  "steps": [
+   "fix1",
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl",
+   "soko",
+   "hippie"
+  ],
+  "interrupted": "fix #1",
+  "hasRev2": false
+ },
+ {
+  "id": "s25",
+  "steps": [
+   "fix1",
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl",
+   "soko",
+   "hippie"
+  ],
+  "interrupted": null,
+  "hasRev2": false
+ },
+ {
+  "id": "s26",
+  "steps": [
+   "fix1",
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "owl",
+   "soko",
+   "hippie"
+  ],
+  "interrupted": "fix #1",
+  "hasRev2": false
+ },
+ {
+  "id": "s27",
+  "steps": [
+   "fix1",
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "hippie"
+  ],
+  "interrupted": null,
+  "hasRev2": false
+ },
+ {
+  "id": "s28",
+  "steps": [
+   "fix1",
+   "review2",
+   "fix2"
+  ],
+  "deps": [
+   "hippie"
+  ],
+  "interrupted": "fix #1",
+  "hasRev2": false
+ }
+]

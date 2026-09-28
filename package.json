@@ -2,10 +2,22 @@
   "name": "apprentice-film",
   "private": true,
   "type": "module",
+  "description": "The Apprentice, a 140.8 s short film rebuilt frame for frame in code (HyperFrames + Canvas2D/WebGL, synthesized score).",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
+    "setup": "bash scripts/setup.sh",
     "dev": "npx --yes hyperframes@0.8.69 preview",
     "check": "npx --yes hyperframes@0.8.69 check",
-    "render": "npx --yes hyperframes@0.8.69 render --workers 1 --player-ready-timeout 900000 --protocol-timeout 1800000 --browser-timeout 900",
-    "publish": "npx --yes hyperframes@0.8.69 publish"
+    "lint": "npx --yes hyperframes@0.8.69 lint",
+    "score": "scripts/py tools/sound/score.py",
+    "render": "npx --yes hyperframes@0.8.69 render --workers 1 --player-ready-timeout 900000 --protocol-timeout 1800000 --browser-timeout 900 -o renders/film.mp4",
+    "verify": "scripts/py tools/verify_render.py renders/film.mp4",
+    "compare": "bash scripts/compare.sh",
+    "fidelity": "scripts/py tools/fidelity_log.py"
+  },
+  "devDependencies": {
+    "puppeteer-core": "25.12.0"
   }
 }

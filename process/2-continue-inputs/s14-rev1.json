@@ -1,0 +1,80 @@
+{
+ "fidelity": "approx",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "40.00–40.68, right half: frame x≈1390–2206, y≈50–560 (shelving, synth, lamp)",
+   "what": "The architecture is wrong. The source has two receding wooden shelf levels on vertical posts (x≈1690 and ≈2170 at 40.00), with cable tangles hanging from the shelf boards (x 1390–2050, y 60–300). It also has a large angled groovebox/drum machine with a pad grid, knob rows and a front keyboard (x≈1630–2130, y 285–530), lit by the lamp. The render draws thin diagonal rafters and rods, so it reads as an A-frame attic, plus a small keyboard synth and a big dark wedge. The tile x1472–1840, y315–630 is 14–17 luma too dark on every dolly frame (blurred σ8 MAE 24.7 at 40.00, 25.0 at 40.16, 25.7 at 40.48). It is the worst region of the move.",
+   "fix": "In s14/geo3.js and room3.js, replace the rafter and rod faces with real shelf boards. Each needs a top face and a front edge (~25 px thick at 40.00) along the source's perspective lines, e.g. the upper board front edge from (1390,300) to (2050,90). Add vertical posts at x≈1690 and ≈2170 and 4–6 hanging cable loops (inkCurve, dark 0.15) under each board. Redraw the synth as a wide box angled toward the camera, x 1630–2130, y 285–530: a 4×4 pad grid, two knob rows, a display at top right and a keyboard strip at its front edge. Refit its tone so the x1472–1840, y315–630 tile rises about 15 luma, and add the lamp's glow spill around (1660,350)."
+  },
+  {
+   "severity": "high",
+   "at": "40.00–40.36 top centre, frame x≈1000–1600, y 0–200; also inside the lit gap from 36.96 (gap-crop top) and at 39.84–39.92",
+   "what": "The ceiling is drawn as sparse, short, bright white dashes over a bright glow patch at top centre. It reads as falling rain or snow. The source's ceiling is dense, continuous, dark-grey plank lines (value ~40–60) that converge on the corridor end, with no bright streaks and no glow.",
+   "fix": "Replace the ceiling faces' streak texture with continuous lines converging on the corridor end (≈(1340,300) in frame at 40.00). Space them 4–8 px apart at the top edge, value 0.15–0.25 with slightly lighter plank seams. Remove the bright glow on the ceiling (cap the ceiling layer's gain/ramp so p95 there is ≤70 luma)."
+  },
+  {
+   "severity": "high",
+   "at": "40.08–40.68 floor around and ahead of the owl, frame x≈600–1600, y≈700–946",
+   "what": "The floor reads as manga speed lines: bright hatching radiating from the vanishing point, in the direction of the dolly, plus a bright lit patch. The source floor is calm: cross-hatched planks with halftone dots, darker toward the walls. Only the desk plank carries motion smear. The effect is strongest at 40.48–40.64 (tiles x368–736 and x1104–1472, y630–946: blurred MAE 23–27).",
+   "fix": "Re-texture the floor faces with two-direction cross-hatch at about ±30° to the plank direction, plus sparse halftone dots. Nothing should be aligned radially to C=(1104.5,642.9). Hold the floor layer's shutter at ≤0.1 frame, darken toward the walls (ramp −20 luma at x<500 and x>1700), and keep the owl's contact shadow dark rather than on a bright patch."
+  },
+  {
+   "severity": "high",
+   "at": "40.60–40.68 (the last 3 frames; the handoff into s15), right third: frame x≈1330–2206, y 0–946",
+   "what": "The render smears the whole right side into vertical blur: the right-wall stack, the desk leg and the under-desk box. The source shows crisp, lit box stacks right of the corridor (x≈1330–2206, y 0–800) with dark gaps between them. Only the plank (x≈1470–2206, y≈130–550) is motion-blurred. At 40.64 the tile x1472–1840, y315–630 is 43.5 luma too dark (blurred MAE 51.3) and x1840–2206 has MAE 35.7. The frame MAE rises to 24.9.",
+   "fix": "In drawRoomDolly at t>40.62, keep the 14-sample smear only on deskTop. Set Bmap for 'right', 'under', 'deskBase' and 'synth' to ≤0.1 of a frame; the 'right' layer currently gets the default 0.3 shutter. Replace what shows under the plank with the source's crisp box stack (x 1330–1750, y 450–800, lit faces ~150–190) and the dark corridor gap at x≈1200–1330."
+  },
+  {
+   "severity": "high",
+   "at": "37.12–38.48 side/turn view: headphone band and cup, frame x 630–730, y 505–645",
+   "what": "The band is a thin (~8 px) '?' hook. It rises from the cup yoke and ends in mid-air above the crown at ~(716,525), well above the head outline. The source band is a ~14 px dark (~70 luma) inverted U. It runs from the yoke (660–680, 540–565) up to (665,520), across the crown at (705,512) and back down to meet the head at ~(720,548), with a black gap visible between band and head. The cup is ~15–20% too big: render outer ≈62×65 px at x 635–697, y 575–640, source ≈52×57 at x 648–700, y 575–632. Its plate is light grey (~110) where the source's is dark (~70).",
+   "fix": "In s14/owl.js, set SIDE_SPEC.band (and the TURN_SPEC bands) to ≈[[664,552],[664,530],[672,516],[690,510],[708,514],[718,530],[720,548]]. Draw it with darkBand width ≈L(7) (14 px) and a thin lighter inner edge. Set SIDE_SPEC.cup to c≈[674,604], rx≈26, ry≈29, and darken the plate to ~0.28 with a lit outer rim."
+  },
+  {
+   "severity": "medium",
+   "at": "38.52–40.68, the owl seen from behind",
+   "what": "The owl reads as a flat white cut-out. Interior luma std is 10–12 against the source's 17–26, and fine detail (high-pass) is 2.5 against 4–5.8. The headphones are faint grey outline cups floating ~10–15 px outside the head silhouette, with a hairline band. The source has solid dark cups hugging the head and a thick dark band. The legs are long white sticks. Their bbox height is 13–33 px taller than the source's (241 vs 211 at 39.52, 192 vs 159 at 39.68), while width and wing extents match within ±2 px. At 40.48–40.64 the far cup sits well outside the head.",
+   "fix": "In s14/back.js: add soft engraved shading (value 0.75–0.85) on the back of the head below the band, the nape and the lower back. Fill the cups solid dark (0.2–0.3) with a thin light rim, placed tangent to the head outline. Thicken the band to ~10–12 px. Shorten the tarsi by ~25% and darken the feet and claws (0.35/0.1) so the owl's bright bbox shrinks by ~20 px."
+  },
+  {
+   "severity": "medium",
+   "at": "36.92–37.08 front view: head, cups and wings, frame x 500–800, y 500–830",
+   "what": "The front-view cups are light grey (~100–120) and too far out and low: render left cup x 557–592, y 590–665 against the source's dark (~40) x 572–603, y 590–652, and the right cup likewise. The lower-left wing tip is drawn as a separate white wedge (~x 520–590, y 765–800) detached from the raised wing, where the source wing is one continuous shape down to its tip (~504–554, 780–810). The body is a narrow pear (~150 px across the belly) against the source's rounder ball (~190 px). The fill is flat grey with little feather texture (interior std 20–27 vs 27–32; side-view high-pass 4.5 vs 7.4). The feet are pale grey blobs where the source's are dark scaly talons with black claws.",
+   "fix": "In s14/owl.js: set the edgeCup plate/shell to 0.15–0.2 with a lit outer rim, and move the cups ~12 px toward the head and ~10 px up. Merge the tail wedge into the left wing's primaries so the wing runs to (~530,805). Widen the body outline ~20% at the belly. Add chest/belly feather flicks (regionFlicks density up about 2×) and darken the toes to ~0.4 with black claws."
+  },
+  {
+   "severity": "medium",
+   "at": "40.00–40.32 speaker, frame x≈60–480, y≈280–700 (cone centre ≈(215,480) at 40.00)",
+   "what": "The woofer cone is drawn as a spiral vortex, like a swirling eye. The source cone has concentric ring contours, soft radial shading and a dust cap with a highlight. The speaker box and the box in front of its base are flatter and lighter than the source. The source's lit, slanted box top in front of the speaker (x≈35–480, y≈600–800 at 40.00) is missing: the render shows a plain dark surface there.",
+   "fix": "Replace the spiral hatch with 4–5 concentric ellipse contours and radial value shading (darker toward the rim), plus a dust cap with an upper-left highlight. Add the slanted box in front of the speaker base (top face ~140–170 luma, dark front)."
+  },
+  {
+   "severity": "medium",
+   "at": "All dolly frames 40.00–40.68, whole frame",
+   "what": "The tone is too grey and low in contrast, and the texture is mechanical. At 40.32 the render's p10/p25 are 12/29 against the source's 6/19, and its p75/p90 are 120/180 against 135/192. At 40.00, p90 is 135 vs 154 and p95 176 vs 200. The fraction of near-black pixels (<8) is 0.07–0.09 against 0.12–0.15 on every dolly frame. High-frequency energy is 25–35% below the source (11–12.7 vs 14–17.7). Every surface uses the same vertical or anisotropic streak tile, so it reads as brushed metal, where the source uses hand cross-hatching and stipple (e.g. the checker/halftone cardboard on the right box stacks). Also missing: the bookshelf with the robot toy left of the corridor (≈x 860–1035, y 130–570 at 40.00).",
+   "fix": "In gl3.js, add a contrast curve after the per-face gains: black point about +6 luma, highlights ×1.07–1.1 above the midtones. On faces below 0.35 value, swap the streak tile for two-direction cross-hatch. Give the right-hand cardboard stacks a stipple/checker wash. Add the bookshelf (vertical book spines and the robot silhouette) as a face group on the left-wall layer."
+  },
+  {
+   "severity": "low",
+   "at": "36.92–39.84 lit gap",
+   "what": "Inside the gap the room is cleaner than the source. Its darks are lifted (p5 9–13 vs 4–5) and it has 20–43% less fine detail (hp 6.3–7.4 vs 9.2–11.1). The lit gap's top edge is 13–31 px too high: lit rows start at y=316 vs 329 at 37.52, 291 vs 305 at 38.92, 216 vs 247 at 39.72. Its bottom edge is 6 px low at 36.9–38.5. Horizontal extents match within ~10–20 px, and mean and p50 match.",
+   "fix": "In the GAP rows for 36.9–38.5, set cy ≈406 and ry ≈213, down from 398/234 (room units, about 13 px top and 6 px bottom in frame). Shift the 39.2–39.72 rows down ≈15–20 room px. Raise the gap curve's toe so the darks inside the gap reach ~4 luma, and add fine hatch detail to the gap view."
+  },
+  {
+   "severity": "low",
+   "at": "Cut at 40.72 into s15 (s15 owner)",
+   "what": "In the source 40.64/40.68 → 40.72 is one continuous push: the same room and the same drawing, with the keyboard growing. The render cuts from s14's room to s15's different flat-box room. Its keyboard jumps (left edge ≈315 px at 40.76 against the source's ≈225), and the whole drawing style changes in one frame. s14's own keyboard is already 22 px right of the source at 40.64 (template match).",
+   "fix": "s15 should continue with drawRoomDolly(ctx, d, dv, 40.64) from src/shots/s14.js, or match the s14 room's geometry and texture for its first frames. On the s14 side, pull the left-wall/keyboard layer 22 px left at 40.60–40.68 (a per-frame EOFF x correction for that layer)."
+  },
+  {
+   "severity": "low",
+   "at": "Shared grade (not s14-owned), whole segment",
+   "what": "The render's blacks sit at 1.2–1.5 luma against the source's 0.4–0.5, and carry a faint periodic lattice, visible at ×12 gain and also present in s13's render, so it comes from post.js. The source has a ~1.5-luma warm cast (R>B, e.g. BGR 80.9/81.9/82.5 at 40.32) that the neutral render lacks.",
+   "fix": "For the post.js owner: lower the black lift by ~1 luma, break the grain lattice's periodicity, and optionally add a +1.5 R / −0.5 B warm cast in the B&W section."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "s14 rates APPROX, and I agree with the builder's log. The first 3.1 s match the source very closely at the level of light and layout; the last 0.7 s (the dolly) and the owl's likeness are clearly simplified.\n\n**Evidence.** All renders are in snapshots/s14-rev1-a, -motion, -motion2, -dolly and -det; crops are in snapshots/s14-rev1-crops.\n- snapshots/s14-rev1-a: 17 pairs every 0.25 s.\n- snapshots/s14-rev1-motion: 10 fps across the segment.\n- snapshots/s14-rev1-motion2: 47 exact source frames at 0.08 s.\n- snapshots/s14-rev1-dolly: every frame from 40.00 to 40.68, plus the boundary frames.\n\n**Timing and camera match the source.** On exact frames:\n- Every beat lands on the source frame: front view 36.96–37.08, eyes-shut turn 37.12/37.16, side view 37.20–38.48, flight from behind from 38.52, the gap opening 39.84–40.00 including the held 39.88/39.92 pair, the dolly 40.00–40.64 and the 40.68 hold.\n- The owl's bbox matches within ±2 px on every flight frame.\n- The gap's horizontal extents match within about 10–20 px.\n- Blurred (σ8) error is 1.5–4.4 luma from 36.96 to 39.76, 7.2 at 39.84 and 9.5 at 39.92.\n\n**The dolly (40.00–40.68) is where it falls down.** Blurred error is 12.6 at 40.00, rising to 24.9 at 40.64, which reproduces the log's own numbers. The worst problems, in order of visibility:\n1. The right-side shelving and groovebox are replaced by diagonal rafters. That region is 14–17 luma too dark on every frame.\n2. The ceiling is sparse white dashes that read as rain.\n3. The floor is radial speed lines.\n4. In the last three frames the whole right third is smeared, where the source shows crisp box stacks and blurs only the plank.\n5. The speaker cone is a spiral.\n6. The tone is grey and low in contrast throughout: shadows are lifted and highlights compressed, with about 30% less fine detail than the source.\n\n**Owl.** The owl is a recognisable but flattened likeness:\n- In the side and turn views the headphone band is a thin hook that ends in mid-air above the crown instead of an arch over the head.\n- The front-view cups are light grey and too far out.\n- There is a detached tail wedge at lower left.\n- Seen from behind it is a flat white cut-out with faint headphones and legs 13–33 px too long.\n\n**Boundaries.**\n- The s13→s14 cut is correct: 36.88 matches, and the source cut is frame 923 = 36.92.\n- At 40.72 the render cuts to s15's different room, although the source is one continuous push. That fix is mostly on the s15 side.\n\n**Tool artifacts, not defects.** The snapshot tool renders just before the requested frame time. So at exactly 36.92 it shows s13 and at 40.72 it shows s14. At half-frame times (38.62, 40.22 and so on) the render lands one frame behind the reference, which inflates the errors there, so I only scored exact frames.\n\n**Determinism.** Two separate runs at 37.52, 39.52, 39.92, 40.24 and 40.64 are bit-identical (maximum pixel difference 0). There were no console errors, no red error bars and no placeholder text in the 128 frames checked.\n\n**Housekeeping.** I deleted nothing. I did write scratchpad/crop.py at the top level of the shared session scratchpad before moving to scratchpad/s14rev1. If another agent had a file of that name, I overwrote it. No project source files were touched."
+}

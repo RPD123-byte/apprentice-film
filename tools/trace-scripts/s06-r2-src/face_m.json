@@ -1,1 +1,0 @@
-{"src": "neutral_pre.npy", "mask_src": "neutral.npy", "dbgbox": [730, 80, 1370, 830], "dbgzoom": 1, "layers": [{"name": "wash", "kind": "wash", "box": [730, 80, 1370, 830], "lit": {"blur": 3, "thr": 110, "erode": 0}, "levels": [0.9, 0.8, 0.7, 0.6, 0.5, 0.4], "bgr": 9, "blur": 3, "eps": 1.5, "minarea": 120}]}

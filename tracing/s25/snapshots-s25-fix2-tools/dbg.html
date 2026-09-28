@@ -1,0 +1,15 @@
+<!doctype html><html><body style="margin:0;background:#000"><canvas id="c" width="2206" height="946"></canvas>
+<script type="module">
+import { DRAW } from "../../src/shots/s25/v2/drawings.js";
+import { paintDrawing, blitLayer } from "../../src/shots/s25/v2/draw.js";
+window.DRAW = DRAW;
+window.show = async (key, opts = {}) => {
+  const mod = opts.mod ? await import(opts.mod + "?v=" + Math.random()) : null;
+  const c = document.getElementById("c"), g = c.getContext("2d");
+  g.setTransform(1,0,0,1,0,0); g.fillStyle = opts.bg || "#000"; g.fillRect(0,0,2206,946);
+  const L = mod && mod.paintChaosDrawing ? mod.paintChaosDrawing(key) : paintDrawing(DRAW[key]);
+  blitLayer(g, L, null, 1);
+  return c.toDataURL("image/png");
+};
+window.ready = true;
+</script></body></html>

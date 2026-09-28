@@ -1,0 +1,16 @@
+<!doctype html><html><body style="margin:0;background:#000"><canvas id="c" width="2206" height="946"></canvas>
+<script type="module">
+import { Plate } from '/src/lib/engrave.js';
+import { createPost } from '/src/lib/post.js';
+const P = new Plate(2206, 946, 1);
+for (let i = 0; i <= 10; i++) for (let s = 0; s < 3; s++) {
+  const v = i / 10, x = 100 + i * 180, y = 250 + s * 180;
+  P.fill((g) => g.rect(x, y, 150, 150), v, s === 2 ? 0.3 : Math.PI / 2, { spacing: s === 1 ? 0.45 : 0.3, style: s === 2 ? 2 : 0 });
+}
+const cut = P.engrave({ spacing: 6.2, seed: 5, contrast: 1.05 });
+const paint = document.createElement('canvas'); paint.width = 2206; paint.height = 946;
+const g = paint.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, 2206, 946); g.drawImage(cut, 0, 0);
+const c = document.getElementById('c'); const grade = createPost(c);
+window.__render = (t) => { grade(paint, 64.6, { fade: 1 }); return { url: c.toDataURL('image/png'), ms: 0 }; };
+window.__ready = true;
+</script></body></html>

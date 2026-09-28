@@ -1,0 +1,104 @@
+{
+ "fidelity": "approx",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "92.64–95.56 (k 2316–2389), flare 94.88–95.12 (k 2372–2378); src/shots/s23/aura.js auraCanvas step 1, fx23.js drawFlare, bird.js P.power/P.reach/P.two",
+   "what": "The aura reads as a soft, blurred white fog. It is an oval glow with a flat straight bottom edge at y≈606 and short flame tips only along the top, and isolated dark-grey 'gap' petals float in it. The owl is a faint grey outline on the fog: its face and the open yelling beak are hardly readable. In the source the aura is crisp, hand-inked flame tongues on every side, including the lower sides down to the speaker top (y≈600–640), with dark gaps cut into the mass edge. The source owl is clearly inked: blank white eyes and an open beak. The flare in the render is a white slab with vertical sides (x≈436/921) and a flat base. The source flare is a bonfire mass, widest at y≈420–520, rounded at the bottom, with long tongues past the frame top. Blurred MAE is 11–12 here, the worst non-zip stretch.",
+   "fix": "In aura.js, drop the blur(10px) ellipse body. If a core is kept, limit it to alpha ≤0.35 inside the owl silhouette. Make the TONGUES about 2× longer (L 110–200 px) and add 12–16 side and bottom tongues over x 430–960, y 360–640 so the mass wraps the owl down to y≈620. Attach the GAPS to the mass edge and give the tongues tapered ink edges (1.5–2.5 px, gv≈0.35). Boil every frame with about 6 variants instead of 3 on twos. For the owl in power/reach/two, raise the ink alpha to ≥0.6 and draw the eyes, brows and beak dark (gv ≤0.25) so the beak open 0.75 reads. Rebuild drawFlare stages a/b/c as a bonfire silhouette, not a rectangle."
+  },
+  {
+   "severity": "high",
+   "at": "84.12–92.60 and 95.64–97.04 (carry, walk, press, hop, wipe, crouch, two pairs, zip); src/shots/s23/bird.js CARRY/CARRY_FEET/TALL/crouch/power feet, band/fan wings",
+   "what": "The owl reads as a 'snowman'. A small head sits on a separate white egg-ball with a waist, the wings are stiff comb-like feather fans, and thin stick legs with dark claws hang apart below the body. The body has no feather modelling. The source owl is chubby and pear-shaped, with the head merged into the body, soft layered wings, chunky feet planted on the lip or speaker, and engraved grey feather texture. The crouch (91.84–92.56) also has no clenched fists: the render shows small stubs at y≈520, where the source has big feather fists at about (615,520)/(780,520) with elbows out. This is the most visible difference over about 11 s.",
+   "fix": "CARRY: set body a 88→~108, y −17→~−40, egg 0.12→0, and head.y −183→~−165 so the head overlaps the body by ≥40 units with no waist. For all FT/TALL/crouch/power feet, set leg 10–18 → 0–4, size 30→~38 and y 96–112 → ~86–92, so the feet tuck under the body. Wings: use fewer, broader feathers (fanF n 11→7, fw 0.34→0.5) with rounded tips and 2–3 covert rows. Hatch the body and head with knit ticks or fine hatch at gv 0.75–0.85 so they are not flat white discs. Crouch: turn armW into a fist (len 40→60, clenched finger mode) at the measured fist positions."
+  },
+  {
+   "severity": "medium",
+   "at": "88.40–91.60 (k 2210–2289), whole frame; src/shots/s23.js render()/roomSides/glowGain",
+   "what": "The 'glows' after the slap is missing. From the slap to 2289 the source lifts the whole frame by about 5 levels (≈9%), then drops it again at 2290–2295. Sampled means, render vs source: banner 58 vs 64, top margin 54 vs 58, room left 47 vs 52, side margins 25 vs 29. The render only fades the banner edge.",
+   "fix": "Add a global lift of about ×1.09 for k 2210–2289, ramped to 1.0 over 2289→2295 (a multiply/'screen' pass after roomSides, e.g. a screen fill of gv≈0.05). For the same frames raise the roomSides factor 0.88→~0.97. Also check the top glow while the banner is carried (2164–2209): the top band is still ~7% dark with glowGain 1.18 (top 150 vs 160 at 2203)."
+  },
+  {
+   "severity": "medium",
+   "at": "91.76–97.08 (after the pale edge fades), banner top edge y≈180–186 and left edge x≈190; src/shots/s23.js withBanner()",
+   "what": "The torn lip of the hole stays visible as a white wavy line along the top and left of the pasted banner. The median of the max over y 176–190 along the width is 169 in the render and 35–38 in the source. The bottom lip matches (~140 in both). It is a clear white hairline over the banner for the last ~5 s.",
+   "fix": "In withBanner(), cover the torn edge on the top and sides before drawing the banner. Either fill page rects (HEADER.x−10, HEADER.y−12, HEADER.w+20, 14) and 10 px side strips with the nav background, or draw the banner 4 page px taller at the top and 3 px wider on each side. Keep the lower lip."
+  },
+  {
+   "severity": "medium",
+   "at": "93.84–94.84 (k 2346–2371); src/shots/s23.js fxFront scissors formula",
+   "what": "The returning scissors follow a made-up path, are too small and never reach the owl. The render reaches only x≈310 at 2371, at a steep angle. Measured source pivots (frame px): 2355 (104,402), 2358 (200,418), 2361 (264,442), 2363 (352,426), 2365 (360,426), 2367 (416,474), 2368 (464,474), 2369 (448,474), 2370 (496,506), 2371 (512,506). At 2370–71 the source scissors lie horizontal along the reaching wing, so the catch is missing. The source scissors are ≈190 px long; the render uses L=110.",
+   "fix": "Replace x=−20+330u^0.8 / y=450−20sin(3u) with interpolation through the measured pivots. Set L 110→~170, spin about 1 rev per 8 frames, and settle to ang≈0 (blades pointing left) on the wing at 2370–2371."
+  },
+  {
+   "severity": "medium",
+   "at": "92.64–93.72 (k 2316–2343) bottom band y≈760–946; src/shots/s23.js RING_ON/bigRing",
+   "what": "The big shockwave ring is drawn on only 13 frames, as one fixed ellipse. The source shows a ring or arc on nearly every frame. Partial arcs at the right edge (x≈1700–2206, y≈780–900) appear on 2317, 2320–21, 2324–26, 2329–30, 2333–35 and 2342–43. 2341 has a full ellipse, which the render omits. 2337 is higher (top arc y≈755) and wider, and 2339 enters from the far left. The result is a visible on/off flicker mismatch.",
+   "fix": "Add 2341 to RING_ON. Add a right-edge partial-arc drawing (centre ≈(1300,830), rx≈1000, ry≈120, clipped to x>1600) on the listed frames and a left arc on 2339/2342. Measure 3–4 ring shapes (cx, cy, rx, ry) per frame instead of one."
+  },
+  {
+   "severity": "medium",
+   "at": "84.12–85.96 and 86.52–88.36, screen top edge y=128 across the strip/banner; src/shots/s23.js render() + sites.js drawFramedPage border",
+   "what": "The screen's border stroke (drawn after `over`) cuts across the carried strip and banner. It shows as a 1-px dark line (row 128: 130 vs 158/137 at 2115 x1150; 151 vs 174/169 at 2125 x1500; 112 vs 139/123 at 2197). There is also a brightness step where the strip crosses the screen edge. The source is smooth there.",
+   "fix": "Call drawFramedPage with border:false and stroke the border yourself before painting the strip, banner and owl. Or repaint the carried layers once, unclipped, after drawFramedPage and before addScreenGlow."
+  },
+  {
+   "severity": "medium",
+   "at": "91.72–91.80 (k 2293–2295); src/shots/s23.js owlAt",
+   "what": "The wipe ends 3 frames early. The render switches to wipeDown (wing lowered) at 2293–2295. The source keeps the wing on the brow, eyes shut, through 2295 (2290–2293 is a redraw, not a lowering), and the crouch starts at 2296.",
+   "fix": "Use 'wipe' for k≤2295 and remove the wipeDown beat. Optionally switch to a slightly lighter wipe variant at 2290–2295."
+  },
+  {
+   "severity": "low",
+   "at": "shake frames 92.64–93.60 and 94.88–95.20 (34 frames), frame edges; src/shots/s23.js shot.draw",
+   "what": "The shake blits the buffer with an offset onto black, which leaves pure-black bars 1–5 px wide at the frame edges. Examples: 2321 top rows 0–2 vs source 37; 2325 left cols 1 vs 30; 2375 right cols 0 vs 12. The source has no black border.",
+   "fix": "Over-scale the shaken blit: ctx.drawImage(buf, dx−6, dy−6, W+12, H+12), or scale 1.006 about the centre."
+  },
+  {
+   "severity": "low",
+   "at": "95.96–97.04 shard cut lines; src/shots/s23/tracks.js SHARDS first-frame values",
+   "what": "Many shard segments appear before the source shows them. An automated check found 32 of 112 segments ≥3 frames off. Examples: [1746,224,1830,129] is dated 96.12 but first seen at 96.64 (13 frames early, verified visually). [573,375,614,622] and [586,498,667,593] are dated 96.12 but appear at 96.32/96.36 (verified: the line crosses the speaker at 2403 in the render only). [461,230,500,128], [352,180,441,200], [493,210,520,128], [374,130,459,130] and [351,182,378,128] belong at 96.32. [1389,750,1457,710], [1389,735,1441,711] and [671,728,796,728] belong at 96.64. [1514,684,1604,622] and the two siblings belong at 96.76. [1888,429,1915,540] belongs at 96.92.",
+   "fix": "Re-date each segment from its onset on source frames 2399–2426. Test: median on-line brightness minus the max of the ±6 px off-line samples ≥25 for 3 consecutive frames. Ignore detections at 95.96, which are existing page edges."
+  },
+  {
+   "severity": "low",
+   "at": "96.32–97.04 zip smears (k 2408, 2411, 2416, 2419, 2424–2426); src/shots/s23.js STREAK/drawStreak",
+   "what": "The smears are short round soft blobs. The source's are long directional textured streaks of the owl drawing. At 2411 the source streak runs diagonally from ≈(1310,470) to (1690,870), about 550 px; the render draws a ~150 px blob at ≈(1440,570). At 2419 the source streak is horizontal from x≈1300 to 2050 at y≈330–420; the render has a short blob near x≈1640. At 2425–26 the top owl sits at y≈80 with its head cut off by the frame top; the source owl centre is ≈(1263,120), scissors leading at (1048,100). 97.00–97.04 are the worst frames (MAE 15.5).",
+   "fix": "Build each smear from 12–20 copies of the owl layer along the measured endpoints, with alpha falling off toward the tail, plus a directional stretch (draw a thin strip of the layer scaled along the path). Move the STREAK 2425/2426 top head [1250,80] to ≈[1150,120]."
+  },
+  {
+   "severity": "low",
+   "at": "95.96–96.04 (k 2399–2401)",
+   "what": "When the owl zips away, the source leaves the speed ring (≈x 340–1060, y≈510–560) and a spark burst at ≈(680–850, 360–480) where the owl stood. The render shows neither.",
+   "fix": "Draw ring() at 2399–2401 with alpha 0.9→0.3, and a radial burst of 12–16 short tapered white strokes centred at ≈(780,420)."
+  },
+  {
+   "severity": "low",
+   "at": "88.12–88.32 (k 2203–2208) end of banner walk; src/shots/s23.js owlAt carryF x 705",
+   "what": "The owl is ≈20 px left of and ≈15 px lower than the source: render centre x≈700 vs source ≈720, head top y≈195 vs ≈180, feet 365 vs 350. The walk before this, 2169–2201, is within about 10 px.",
+   "fix": "Hold carryF at (725, WALK_Y−15) for 2204–2208 and re-check BAN_WALK for 2200–2203."
+  },
+  {
+   "severity": "low",
+   "at": "97.00–97.04 confetti, and the cut to s24 at 97.08; src/shots/s23/fx23.js drawConfetti call",
+   "what": "The source has about 35 white rectangles, 10–20 px, spread over the frame and top margin, dense on the right half. The render shows only a few small pieces. s24's first frame then shows larger confetti, so the style jumps at the cut.",
+   "fix": "Set n 26→~40, t0 96.95→96.96 with ts spread 0–0.08, sizes 10–20 × 6–12, and positions weighted to x 900–2206, y 0–700. Match s24's confetti drawing."
+  },
+  {
+   "severity": "low",
+   "at": "84.04–84.08 (k 2101–2102) hug",
+   "what": "The hugging owl is small, with a tiny wing tuft. The source's head is larger, lying on the card's end, and its wing wraps down over the card's left end almost to the lip. The card is flat with no paper grain. It is only 2 frames.",
+   "fix": "Scale the hug layer ≈1.2× and extend HUG_WING down to about y≈470. Add a faint paper-grain hatch to the card (style 2 flat tone plus a knit tick overlay)."
+  },
+  {
+   "severity": "low",
+   "at": "whole segment, below the header band (not s23-owned: src/lib/sites.js F1 page, src/lib/hippie.js F2 banner)",
+   "what": "About 75% of the error is F1's page (mean blurred error there 11–15). Its room differs from the source: the render has a keyboard and synth stack on the left where the source has a tall box stack and the speaker the owl stands on at 90–92.6 s. The man stares at the camera instead of looking down, and the room-left region is 4–5 levels darker. As a result the owl hovers in front of an object instead of standing on the speaker. The banner is also slightly less saturated than the source.",
+   "fix": "Report to the F1 and F2 owners. In s23, the only mitigation is the exposure lift above."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "Rating: approx. The staging, framing and beat timing of s23 match the source. Most beats land within ±1 frame at both cuts: first frame k2101 = 84.04, last frame k2426 = 97.04, and s22→s23 continuity is clean. The slap, hop, crouch, power-up, flare, sprout and zip all land on the source frames. The owl track, strip track and banner track sit within about 10–20 px.\n\nThe drawing is clearly simplified, though, and in places plainly wrong:\n- **Aura (92.6–95.6 s):** it reads as a blurred fog block with a flat bottom, not the inked flames, and the owl is a faint outline on it.\n- **Owl:** it is a 'snowman' (head on an egg-ball, comb wings, dangling stick legs) through the carrying, walking and crouch beats, and the crouch has no fists.\n- **Exposure after the slap:** the source lifts the whole frame about 9% from 88.4 to 91.6 s; the render does not.\n- **Banner edge:** after 91.76 s the hole's torn lip stays visible as a white line on the banner's top edge.\n- **Scissors:** they fly a made-up, too-small path and never reach the wing.\n- **Big ring:** it is drawn on only 13 of about 28 frames.\n- **Smaller issues:** a dark border line crosses the carried strip and banner, the wipe ends 3 frames early, the shake leaves black edge bars, and some shard lines appear up to 13 frames early.\n\n**Numbers:**\n- Blurred MAE (σ8) on exact source frames, every 2nd frame (164 frames), is 9.24, which confirms the log's 9.2. By stretch: power-up 9.3–12.1, zip up to 15.5.\n- By region: the screen interior below the header averages 11–15 abs error (mostly F1's page, not s23's). The header band runs 3–6 levels dark from 86.5 to 91.6 s.\n- Static regions do not boil: frame-to-frame difference outside the owl is grain only (mean 2.4–2.8, p99 ≤10).\n\n**Determinism:** 85.0, 88.5, 93.0005 (a shake frame), 95.0 (shake plus flare) and 96.8 were rendered in two separate runs in opposite order. They are bit-identical, and 93.0005 is also identical to the exact-frame run at k2325.\n\n**No placeholder text, red error bars or failed renders were seen.**\n\n**Tool caveat for other reviewers:** the snapshot tool floors seek times to 1/30 s, while --against pulls the first source frame at or after t. Pairs from tools/compare.sh at times off the frame grid are therefore 1–2 frames apart, with the render earlier. For example, compare at 84.06 renders s22's 84.033 frame, and at 97.06 it compares against s24's 97.08 frame. I used exact frames: render at ceil(k·1.2)/30+0.0005, with source frames decoded by index.\n\n**Boundaries:** s24's first frame, k2427, renders content that matches source k2428 (s24's issue, MAE 32.7), and the confetti style jumps at that cut.\n\n**Outputs:**\n- Dense compare pairs: /Users/computer/rootline/apprentice-film/snapshots/s23-rev1-dense (vertical pairs in v/).\n- Exact-frame renders: /Users/computer/rootline/apprentice-film/snapshots/s23-rev1-exact.\n- Motion sheets: /Users/computer/rootline/apprentice-film/snapshots/s23-rev1-motionA and s23-rev1-motionB.\n- Determinism runs: /Users/computer/rootline/apprentice-film/snapshots/s23-rev1-detA and s23-rev1-detB.\n- Crops, source extracts and scripts: /private/tmp/claude-501/-Users-computer-rootline/6f944872-83e8-49ee-aa42-9b1aaf1ef7e8/scratchpad/s23-rev1-own/.\n\n**Files:** no source files were edited and nothing was deleted. snapshots/s23-rev1-m1.log, s23-rev1-m2.log and s23-rev1-x.log were already there from Sep 25 and were left untouched. I wrote scratchpad/vpair.py at the root of the shared scratchpad before moving to my own subfolder; if another agent had a file of that name there, it was overwritten."
+}

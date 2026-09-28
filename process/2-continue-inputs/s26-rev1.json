@@ -1,0 +1,92 @@
+{
+ "fidelity": "approx",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "110.52-113.68 (beats A, C, D), owl at frame centre; for example 111.00 crop x780-1360 y250-946 and 112.00 x600-1650",
+   "what": "The B&W owl is a flat vector cartoon and reads as a person, not the source's inked owl. The head is a tall egg with almond human eyes, lashes and visible whites. In C/D the beak is a tiny triangle (beakS 1.15) and the smooth black cap reads as a bowl haircut. The body and wings are smooth grey-gradient fills with no hatching (the source has fine ink feather texture). The A body has a scalloped skirt hem. The A right headphone cup sits 35 px too far out and is 25 px too wide (render x1155-1240, source x1144-1204), and the band arcs high above the skull. The 112.64-112.68 shut eyes are calm arcs, but the source's are scrunched under furrowed brows.",
+   "fix": "Rebuild the B&W owl in the engraving style: engrave the body and wings through a Plate, with stroke direction following the feathers, and draw thin dark contours on P.o. Face: a shorter, broader skull (about 240 px wide, crown to chin about 200 px at 111.00), angry slanted eye slits under heavy brows, no lashes or whites, and a hooked beak about 2x the C/D size (beakS about 2.0). Shape the dark crown as feathered tufts under the band, not a smooth dome. Pull the cups in to hug the skull at eye level (A: cups at x134-184 / 369-424 of the 111.00 crop). Give the shut eyes squeezed lids with brows at 112.64-112.68."
+  },
+  {
+   "severity": "high",
+   "at": "110.48 -> 110.52 (s25/s26 cut), compare snapshots/s26-rev1r-exact/boundary_in.jpg",
+   "what": "The owl pops to a different design at the cut. In the source, 110.48 and 110.52 show the identical hatched owl and the frame only un-squashes. The render goes from s25's hatched standing owl (its last frame scores dE 6.0) to s26's cartoon owl with a different head shape, eyes, headphones, body and feet (dE 7.7).",
+   "fix": "Both sides of the cut must show the same drawing. Either have s26 beat A draw s25's frame-2762 standing owl, un-squashed by 1/0.9836 vertically, or move s25's standing phase onto the same painter. If s25's owl is traced data (fidelity/s26.md says it is), the painter must be used on both sides, and s25's owner has to be told."
+  },
+  {
+   "severity": "high",
+   "at": "111.60-112.68 beat C shard field; e.g. 112.00 x60-760 y250-760 (snapshots/s26-rev1r-exact/cfield_left.jpg)",
+   "what": "The field reads as a glitch collage, not shattered glass. Cells have jagged stair-step pixel-mask edges and most have no white edge. White crack segments float over unbroken colour page. A large recognisable B&W designer face from the sōko page sits in cell 3 (FIELD_LOOK[3] = [3,1.0956,0.2553,-921.9,-0.2553,1.0956,374.6]) at frame about x270-365 y480-600 for the whole 1.1 s beat; the source shows engraved boxes there. The lower half is far too colourful: 12-13% saturated pixels against 6.0-7.5% in the source, which is mostly dark engraved B&W shards.",
+   "fix": "Delete FIELD_LOOK[3] and exclude the sōko hero face region (and the colour page's designer face) from the fieldlook.py candidate pool. For cells whose centre is below y 473, restrict tone-matching to the B&W page, to bring saturated pixels down to about 7%. Simplify each cell polygon to straight edges (Douglas-Peucker epsilon 4-6 px). Stroke every cell boundary with the 2.4 px rgb(232,232,230) edge plus the 4.2 px halo, not just FIELD_C.segs."
+  },
+  {
+   "severity": "high",
+   "at": "112.72-113.68 beat D ring; e.g. 113.12 left x0-700 y150-900 and right x1500-2206 y100-800 (dring_left.jpg / dring_right.jpg)",
+   "what": "The ring is ragged blobs, not glass shards. The left third is 40% pure black (V<12), against 28-30% in the source (18% at 113.68). That black comes from the #020202 backing, whose WINDOW_D edge (108 vertices) is stair-stepped. The right third has stair-stepped pink/yellow blobs, a bundle of stray white hatch lines over a pink piece (about x1880-2020 y350-550), and corrugated vertical-stripe smears. The right third is also too colourful (13.4-14.2% saturated pixels against 9.1-9.5%). The source ring is clean, white-outlined polygon shards, each holding engraved B&W equipment or a colour piece.",
+   "fix": "Fill the untraced ring area with B&W page pieces instead of flat black: bwPlain under the similarity of the nearest traced cell, cut into straight-edged polygons. Simplify WINDOW_D to a smooth polygon of 20-30 vertices. Outline every ring shard (ring edges are currently RING_SEGS only). Drop the hatched-line overlay. Swap the colour-looked cells on the right for B&W pieces until saturation is about 9%."
+  },
+  {
+   "severity": "medium",
+   "at": "111.64-111.76 (F2791-2794), snapshots/s26-rev1r-exact2/wings.jpg",
+   "what": "The owl's viewer-left wing is missing for 4 frames: only a small spike shows behind the head and only the right wing is spread. The source throws both wings open symmetrically from 111.64; at 111.68 the left tip is at about (725,390) and the right tip at about (1600,190) in frame px. From 111.80 both wings are present.",
+   "fix": "Repair the POSES_C left-wing keys for F2791-2794: they are degenerate or collapsed. Start by mirroring the right wing's S/Wr/T about the body axis, then place the tip near (720-740, 380-480)."
+  },
+  {
+   "severity": "medium",
+   "at": "112.00-113.68 dangling feet (C: FEET_C size 34; D: size 42)",
+   "what": "The feet are tiny stubs. At 112.00 the source talons hang to y about 810 at x about 1260-1330, but the render's feet end at y about 720. At 113.25 the source feet span (1073-1176, 648-751); the render's span (1095-1162, 662-706), about half the size.",
+   "fix": "Set size to about 85 in C and about 80 in D. Move the ankles 40-60 px lower and draw long curved talons with feathered shanks."
+  },
+  {
+   "severity": "medium",
+   "at": "113.68-114.12 beat E lens shard (Eexact.jpg)",
+   "what": "Outline and position match (the shard's horizontal extent is within ~50 px on most rows), but the interior is flat. Tone std inside is 5-10 against 15-23 in the source, where the leading half is lighter (about RGB 80,83,80) and the trailing half darker (about 44,46,44). The render has hard black notches, no soft bright rim on the leading edge, and neutral grey where the source has a slight green cast. The source also keeps dark white-outlined ring shards on the right edge (x about 1950-2206) until 114.00. The render has already flung them off by about 113.80, because ringAt() multiplies the scale by 1.05, 1.06, ... per frame after F2842 and ignores the measured RING_D rows 2843-2851 (s 1.37-1.46).",
+   "fix": "Give the slab a two-zone gradient (lighter leading side toward the lower left, darker trailing side), blur the vD notches so they carry no hard edges, add a 20-30 px soft light rim along the leading edge, and tint it G +3. Drive the right-half ring cells from the measured RING_D rows 2843-2851 (or a gentler growth such as x1.02 per frame) so they stay in frame to 114.00."
+  },
+  {
+   "severity": "medium",
+   "at": "110.52-111.52 beat A cracks and impact stars (Ascissors.jpg)",
+   "what": "The cracks are short, disconnected straight dashes scattered like pick-up sticks. The source is a connected web radiating from the two stars, with long bright spokes. Within 220 px of the stars the render has 12.5% / 14.7% bright-line pixels against 15.2% / 17.4% in the source. The stars are too small, with a thin black ring; the source bursts are about 1.3x larger with heavy jagged black borders.",
+   "fix": "Chain CRACKS_A segments into polylines that meet. Add about 15 long radial spokes per star (150-400 px) that taper from 3 px to 1.5 px. In drawStarsA use path(1.3, 0) for the white burst and path(1.7, 0.25) for the black ring."
+  },
+  {
+   "severity": "medium",
+   "at": "114.08-117.52 colour owl (perch.jpg, mdust.jpg in snapshots/s26-rev1r-motion)",
+   "what": "The colour owl is simplified. Wings are stiff slat-like feathers with brown outlines where the source has soft grey feathers with white tips. The headphone band is a thin wire floating well above the crown; the source's is a thick padded band hugging it. The cups are about 25% too large and too saturated a yellow. The eyes have heavy dark rings. The legs are tan tubes. At the perch the feet are two tiny stubs; the source has 3-4 orange toes hooked over the box lid at about y 232, x 1975-2060. The head is flat grey with no ear tufts. The fine white glitter trail that follows the owl at 115.40-115.80 is missing.",
+   "fix": "Bring the band down onto the crown at 2-3x its current thickness. Scale the cups by 0.8 and shift them toward orange-brown (about #c9832f). Replace the dark eye rings with thin grey ones. Draw soft-edged feathers with lighter tips. Draw perched toes (3 per foot) curling over the lid edge at y about 232. Add a seeded trail of 1-2 px white specks below and behind the owl, fading over about 0.4 s, for 115.40-115.80."
+  },
+  {
+   "severity": "low",
+   "at": "whole segment, strongest in A (110.52-111.52)",
+   "what": "The render is systematically darker than the source: mean Y 72 vs 77 (A), 77 vs 81 (D), 58-65 vs 66-73 (E), 85-87 vs 87-90 (F). In A the B&W page interior is neutral RGB 58 where the source is about 64,69,65, slightly green; p95 is 231 vs 241, so the lines and the owl are also dimmer.",
+   "fix": "In A, lift the framed page by about +8 levels with a slight green bias (R -2, G +3), for example a light pass in paintA's over(). Brighten crack cores to rgb(240,240,238). Re-check D and F after the ring and page fixes."
+  },
+  {
+   "severity": "low",
+   "at": "111.60-113.68 flung scissors and effects",
+   "what": "The scissors are drawn as open cartoon scissors with thick cream rings. The source's are closed chrome scissors with a pivot screw, dark ring interiors and curved grey smoke trails (top corners, 112.72-113.50). The dark translucent owl-wing motion ghost in the source's upper right (about x1500-1800, y200-500, 113.08-113.90) is missing.",
+   "fix": "Set ring thickness t to about 0.05 and rx/ry to about 0.13/0.2, and fill the rings dark. Add seeded curved smoke strokes (alpha 0.15-0.25) trailing each pair. Add a 0.3-alpha blurred dark copy of the owl's wing at the measured ghost position."
+  },
+  {
+   "severity": "low",
+   "at": "114.60, 116.48 eye states",
+   "what": "At 114.60 the render shows a happy ^ arc plus a shut line; the source squeezes both eyes shut in an angry blink. At 116.48 the render already shows happy-closed eyes while the source's are still open (they close from 116.52), 1 frame early.",
+   "fix": "eyesF: F2865 -> both eyes shut with brow 1 (not 'closed'). F2912 -> open; start 'closed' at F2913."
+  },
+  {
+   "severity": "low",
+   "at": "code/data: s26/fieldC.js, ringD.js, fx.js SPEED, slabE.js, cracksA.js; s26/poseA.js on disk",
+   "what": "Compliance risk. Much of the shot is automated vectorisation of source frames: 439 traced field cells, 21 of them flat source-sampled colours; 11 flat-colour ring cells; 502 speed-line wedges traced per frame; per-frame traced lit-part outlines in the slab. This is the kind of data F2 ruled a form of embedding for the owl. The traced poseA.js is still on disk, although it is no longer imported.",
+   "fix": "The orchestrator or F2 should rule whether traced shard, speed-line and slab outlines are allowed. At minimum, replace the flat sampled-colour cells with page pieces. The owner should delete poseA.js."
+  },
+  {
+   "severity": "low",
+   "at": "first frame in each render worker",
+   "what": "Building the caches is expensive: 66 s for the first frame at 110.52 in a fresh page, and 32 s when a worker starts at 112.00. The target is 300 ms per frame.",
+   "fix": "Build the page-with-banner, bwPlain and colour-page canvases once, shared with s25 and s27 through the libs' own caches. Avoid the extra full-frame framed-page renders (stageA glow and jolt variants, bwPlain) by drawing the page on demand."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "Staging, timing and framing are right. The drawing is well below the source in beats A, C and D, so \"approx\" is generous for those 3.2 s, and F is the only beat that comes close. Cuts land on the exact source frames: frame-difference peaks at F2763, 2789, 2790, 2818 and 2938 (110.52, 111.56, 111.60, 112.72, 117.52) match the render's beat switches. The lens shard runs 113.68-114.12 and the colour owl first appears at 114.08, as in the source. Page registration in A, B and F is sub-pixel (phase correlation under 1 px). Blurred dE8 per frame: A 7.5, B 6.7, C 11.2-14.0, D 12.4-14.3, E 10.0-14.3, F 8.3-10.2.\n\nThe most visible problems:\n- **The B&W owl** reads as a person. It is a flat cartoon with a human-like face and no ink hatching, centre frame for 3.2 s. It also changes design at the 110.52 cut from s25's hatched owl, where the source shows the same drawing on both sides.\n- **The C shard field and D ring** look like a glitch collage rather than glass: stair-stepped blob edges, missing shard outlines, a big black hole on the left of D, and a large sōko designer face in field cell 3 throughout C. C's lower half is about twice as colourful as the source.\n- **The C owl** is missing its viewer-left wing for 111.64-111.76, and its feet are about half size.\n- **The lens shard's** outline matches but its interior is flat grey, and the ring's right-side shards are flung off early.\n- **Overall tone** is 2.5-7 luma darker than the source.\n\nThe colour page in F matches well and the colour owl's path and flaps track the source. That owl is still simplified: slat feathers, a floating headphone band, stub feet at the perch, and no glitter trail.\n\nDeterminism passes. Six timestamps rendered in two separate compare runs are pixel-identical (max diff 0), and frames rendered out of order in one page are identical to in-order renders. There were no error bars or placeholder text. The s26→s27 boundary is clean on s26's side.\n\nEvidence (JPGs) is in snapshots/s26-rev1r-dense (v*.jpg, pair-*.jpg), snapshots/s26-rev1r-exact (frame-exact pairs v<F>.jpg, boundary_in.jpg, boundary_out.jpg, cfield_left.jpg, dring_left.jpg, dring_right.jpg, Eexact.jpg, eyes.jpg, perch.jpg, face.jpg, Ascissors.jpg, cowl.jpg), snapshots/s26-rev1r-exact2/wings.jpg and snapshots/s26-rev1r-motion (sheet.jpg, sidebyside.mp4, mE/mF1/mF2/mdust.jpg). To save disk I deleted the 272 full-size PNG frames this run created and kept the JPGs, sheets, mp4 and logs. Nothing else was deleted."
+}

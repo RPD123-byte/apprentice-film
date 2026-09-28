@@ -1,0 +1,11 @@
+import { POSES23 as P, birdLayer, drawLayer } from "./src/shots/s23/bird.js";
+import { mergePose } from "./src/lib/owlInk.js";
+export const SPEC = [];
+const L = (pose, x, y, s) => (g) => drawLayer(g, birdLayer(pose, { x, y, s }));
+SPEC[0] = L(P.carry1, 1398, 312, 0.42);
+SPEC[1] = L(P.hopUp, 700, 255, 0.40);
+SPEC[2] = L(P.press, 721, 320, 0.425);
+SPEC[3] = L(mergePose(P.press, { headphones: { slim: false, cupStyle: null, w: 15, r: 40, open: 0.5 } }), 721, 320, 0.425);
+SPEC[4] = L(mergePose(P.press, { headphones: { slim: true, cupStyle: null, w: 12, r: 42, open: 0.5 } }), 721, 320, 0.425);
+SPEC[5] = L(P.crouch, 692, 530, 0.43);
+SPEC[6] = L(P.power, 690, 528, 0.475);

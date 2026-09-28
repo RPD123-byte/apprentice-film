@@ -1,0 +1,7 @@
+#!/bin/sh
+# Run a Python tool with the project's interpreter: $PYTHON if set, else .venv/bin/python (made by scripts/setup.sh),
+# else python3 from PATH. Used by the npm scripts, e.g. `scripts/py tools/sound/score.py`.
+D=$(cd "$(dirname "$0")/.." && pwd)
+if [ -n "${PYTHON:-}" ]; then exec "$PYTHON" "$@"; fi
+if [ -x "$D/.venv/bin/python" ]; then exec "$D/.venv/bin/python" "$@"; fi
+exec python3 "$@"

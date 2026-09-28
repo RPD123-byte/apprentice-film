@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=2206, height=946">
+<title>s13 timing lab</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>html,body{margin:0;width:2206px;height:946px;overflow:hidden;background:#000}#root{position:relative;width:100%;height:100%}#c{position:absolute;inset:0;width:100%;height:100%;display:block}</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="4" data-fps="25" data-width="2206" data-height="946">
+<canvas id="c" width="2206" height="946"></canvas>
+</div>
+<script type="module">
+import { shot } from "./src/shots/s13.js";
+const c = document.getElementById("c"), g = c.getContext("2d");
+const work = document.createElement("canvas"); work.width = 2206; work.height = 946; const w = work.getContext("2d");
+const lines = [];
+function run() {
+  const T = [];
+  for (let f = 884; f <= 922; f++) {
+    const t = (f + 0.5) / 25; w.setTransform(1, 0, 0, 1, 0, 0); w.fillStyle = "#000"; w.fillRect(0, 0, 2206, 946);
+    const t0 = performance.now(); shot.draw(w, t - 35.36, t); T.push([f, performance.now() - t0]);
+  }
+  return T;
+}
+const cold = run(), warm = run();
+shot.release && shot.release();
+// out-of-order cold start at a D frame and an E frame
+const t1 = performance.now(); shot.draw(w, 36.1 - 35.36, 36.1); const dCold = performance.now() - t1;
+const t2 = performance.now(); shot.draw(w, 36.49 - 35.36, 36.49); const eAfter = performance.now() - t2;
+g.fillStyle = "#000"; g.fillRect(0, 0, 2206, 946); g.fillStyle = "#fff"; g.font = "22px monospace";
+const fmt = (T) => T.map(([f, ms]) => `${f}:${ms.toFixed(0)}`).join(" ");
+const txt = ["cold pass (first build in order): " , fmt(cold.slice(0, 20)), fmt(cold.slice(20)), "warm pass:", fmt(warm.slice(0, 20)), fmt(warm.slice(20)),
+  `max warm ${Math.max(...warm.map((x) => x[1])).toFixed(1)} ms, mean warm ${(warm.reduce((a, x) => a + x[1], 0) / warm.length).toFixed(1)} ms, max cold ${Math.max(...cold.map((x) => x[1])).toFixed(0)} ms`,
+  `after release: cold D frame ${dCold.toFixed(0)} ms, then E frame ${eAfter.toFixed(0)} ms`];
+txt.forEach((s, i) => g.fillText(s, 20, 50 + i * 40));
+const tl = gsap.timeline({ paused: true }); tl.to({}, { duration: 4 });
+window.__timelines = window.__timelines || {}; window.__timelines["main"] = tl;
+</script>
+</body>
+</html>

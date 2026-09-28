@@ -1,0 +1,4 @@
+{ "pose": "LAND", "frames": [73.04, 73.08, 73.12, 73.16], "rounds": 8, "sigma": 1.2,
+  "base": {"sx": 1.1, "sy": 1.2, "off": [4, -12], "bump": 20, "eyeEl": -0.3, "eyeAz": 0.05, "beakShrink": 0.6},
+  "windows": [ {"anchor": "cup", "win": [18, 22], "off": [-4, 4], "weight": 1} ],
+  "params": [ {"path": "cupAz", "step": 0.1, "init": 0}, {"path": "cupEl", "step": 0.1, "init": 0} ] }

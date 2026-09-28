@@ -2,7 +2,8 @@
 # Save a SOURCE frame with a labelled 100 px coordinate grid (labels are true frame pixels), for measuring layouts.
 # Usage: tools/grid.py T out.jpg [x0 y0 x1 y1]  (optional crop; the grid labels stay in frame pixels)
 import cv2, sys, os
-V=os.environ.get('REF','/Users/computer/rapport-videos/videogen/clips/01-13-FINISHED-v3-share.mp4')
+V=os.environ.get('REF') or os.environ.get('APPRENTICE_SOURCE')
+if not V or not os.path.isfile(V): sys.exit('set APPRENTICE_SOURCE=/path/to/your/copy/of/the/original.mp4 (2206x946, 25 fps, 140.8 s)')
 t=float(sys.argv[1]); out=sys.argv[2]
 c=cv2.VideoCapture(V); c.set(cv2.CAP_PROP_POS_FRAMES,int(round(t*c.get(5)))); ok,f=c.read()
 H,W=f.shape[:2]

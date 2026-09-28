@@ -1,0 +1,31 @@
+// Key drawings of s28 (generated list; see snapshots/s28-tools/buildkeys.py).
+import fig12932 from "./fig12932.js";
+import fig12952 from "./fig12952.js";
+import fig12972 from "./fig12972.js";
+import fig12992 from "./fig12992.js";
+import fig13012 from "./fig13012.js";
+import fig13032 from "./fig13032.js";
+import fig13052 from "./fig13052.js";
+import fig13072 from "./fig13072.js";
+import fig13092 from "./fig13092.js";
+import fig13112 from "./fig13112.js";
+import lock13144 from "./lock13144.js";
+import lock13260 from "./lock13260.js";
+import lock13324 from "./lock13324.js";
+import lock13388 from "./lock13388.js";
+import lock13504 from "./lock13504.js";
+import lock13552 from "./lock13552.js";
+import room12932 from "./room12932.js";
+import room12952 from "./room12952.js";
+import room12972 from "./room12972.js";
+import room12992 from "./room12992.js";
+import room13012 from "./room13012.js";
+import room13032 from "./room13032.js";
+import room13052 from "./room13052.js";
+import room13072 from "./room13072.js";
+import room13092 from "./room13092.js";
+import room13112 from "./room13112.js";
+import room13160 from "./room13160.js";
+// figure keys: [drawing, depth-grid name]; the locked keys share the 131.44 grid (same camera)
+export const FIG = [[fig12932, "fig12932"], [fig12952, "fig12952"], [fig12972, "fig12972"], [fig12992, "fig12992"], [fig13012, "fig13012"], [fig13032, "fig13032"], [fig13052, "fig13052"], [fig13072, "fig13072"], [fig13092, "fig13092"], [fig13112, "fig13112"], [lock13144, "fig13144"], [lock13260, "fig13144"], [lock13324, "fig13144"], [lock13388, "fig13144"], [lock13504, "fig13144"], [lock13552, "fig13144"]];
+export const ROOM = [room12932, room12952, room12972, room12992, room13012, room13032, room13052, room13072, room13092, room13112, room13160];

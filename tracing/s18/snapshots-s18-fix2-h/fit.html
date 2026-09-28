@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>LOADING</title></head>
+<body><canvas id="film" width="2206" height="946"></canvas>
+<script>window.gsap={timeline:()=>({fromTo(){return this;}})};</script>
+<script type="module">
+try {
+  const m = await import("./src/main.js");
+  const A = await import("./src/shots/s18/shotA.js");
+  const F2 = await import("./src/shots/s18/feet2.js");
+  const I = await import("./src/shots/s18/inkdraw.js");
+  const SO = await import("./src/shots/s18/soft.js");
+  const film = document.getElementById("film");
+  const P = {}; for (const r of A.PATH_A) P[r[0]] = [r[1], r[2]];
+  const PAD = 40;
+  let S = null;   // current frame state
+  const full = (layers, noFeet) => { A.DBG.layers = layers; A.DBG.noFeet = noFeet; const c = I.cpuCanvas(2206, 946), g = c.getContext("2d"); if (layers !== "over") { g.fillStyle = "#000"; g.fillRect(0, 0, 2206, 946); } A.drawA(g, S.f); A.DBG.layers = "all"; A.DBG.noFeet = false; return c; };
+  function gauss(src, w, h, s) {
+    const r = Math.ceil(3 * s), k = new Float32Array(2 * r + 1); let sum = 0;
+    for (let i = -r; i <= r; i++) { k[i + r] = Math.exp(-0.5 * i * i / (s * s)); sum += k[i + r]; } for (let i = 0; i < k.length; i++) k[i] /= sum;
+    const t = new Float32Array(w * h), o = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let a = 0; for (let q = -r; q <= r; q++) { const xx = Math.min(w - 1, Math.max(0, x + q)); a += src[y * w + xx] * k[q + r]; } t[y * w + x] = a; }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let a = 0; for (let q = -r; q <= r; q++) { const yy = Math.min(h - 1, Math.max(0, y + q)); a += t[yy * w + x] * k[q + r]; } o[y * w + x] = a; }
+    return o;
+  }
+  const gray = (c, x, y, w, h) => { const d = c.getContext("2d", { willReadFrequently: true }).getImageData(x, y, w, h).data, o = new Float32Array(w * h); for (let i = 0; i < w * h; i++) o[i] = d[4 * i]; return o; };
+  // prep(f, box [x0,y0,x1,y1] registered, srcB64 gray crop of the padded box in frame coords)
+  window.prep = (f, box, srcB64, w, h) => {
+    S = { f }; A.DBG.feet = { [f]: [] };
+    const [dx, dy] = P[f]; S.o = [dx, dy];
+    S.X0 = box[0] + dx - PAD; S.Y0 = box[1] + dy - PAD; S.W = w; S.H = h;
+    const bin = atob(srcB64); const src = new Float32Array(w * h); for (let i = 0; i < w * h; i++) src[i] = bin.charCodeAt(i);
+    S.s6 = gauss(src, w, h, 6); S.s2 = gauss(src, w, h, 2);
+    S.under = full("under", true); S.over = full("over", true);
+    // the grade as a LUT on this box: pre-grade (no feet) against the film's graded render (no feet)
+    const pre = gray(full("all", true), S.X0, S.Y0, w, h);
+    A.DBG.noFeet = true; m.renderAt(f / 25); A.DBG.noFeet = false;
+    const gc = I.cpuCanvas(w, h), gg = gc.getContext("2d", { willReadFrequently: true }); gg.drawImage(film, S.X0, S.Y0, w, h, 0, 0, w, h);
+    const post = gray(gc, 0, 0, w, h);
+    const sum = new Float64Array(256), n = new Float64Array(256);
+    for (let i = 0; i < w * h; i++) { const v = Math.round(pre[i]); sum[v] += post[i]; n[v]++; }
+    const lut = new Float32Array(256); let last = -1;
+    const known = []; for (let v = 0; v < 256; v++) if (n[v] >= 3) known.push([v, sum[v] / n[v]]);
+    for (let v = 0; v < 256; v++) { let lo = null, hi = null; for (const k of known) { if (k[0] <= v) lo = k; if (k[0] >= v && !hi) hi = k; } lut[v] = lo && hi ? (hi[0] === lo[0] ? lo[1] : lo[1] + (hi[1] - lo[1]) * (v - lo[0]) / (hi[0] - lo[0])) : (lo ? lo[1] + (v - lo[0]) : hi[1] - (hi[0] - v)); }
+    for (let v = 1; v < 256; v++) lut[v] = Math.max(lut[v], lut[v - 1]);
+    S.lut = lut; S.comp = I.cpuCanvas(w, h); A.DBG.feet = null;
+    return { known: known.length, lut: [lut[20], lut[80], lut[150], lut[230]] };
+  };
+  const inner = (x, y) => { const X = x + S.X0 - S.o[0], Y = y + S.Y0 - S.o[1]; return X >= S.box[0] && X < S.box[2] && Y >= S.box[1] && Y < S.box[3]; };
+  window.compose = (feet) => {
+    const g = S.comp.getContext("2d", { willReadFrequently: true });
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
+    g.drawImage(S.under, S.X0, S.Y0, S.W, S.H, 0, 0, S.W, S.H);
+    for (const F of feet) if (F._hx != null) F.h = [F._hx, A.bellyY({ h: [F._hx, 0] }) + F._hdy];
+    const sm = A.SMEAR[S.f];
+    if (sm > 0.05) {
+      if (!S.fc) S.fc = I.cpuCanvas(S.W, S.H);
+      const q = S.fc.getContext("2d"); q.setTransform(1, 0, 0, 1, 0, 0); q.clearRect(0, 0, S.W, S.H);
+      q.translate(S.o[0] - S.X0, S.o[1] - S.Y0); for (const F of feet) F2.drawFoot2(q, F, I.softHalf); q.setTransform(1, 0, 0, 1, 0, 0);
+      SO.softCanvas(S.fc, sm, 0); g.drawImage(S.fc, 0, 0);
+    } else { g.save(); g.translate(S.o[0] - S.X0, S.o[1] - S.Y0); for (const F of feet) F2.drawFoot2(g, F, I.softHalf); g.restore(); }
+    g.drawImage(S.over, S.X0, S.Y0, S.W, S.H, 0, 0, S.W, S.H);
+    g.save(); g.translate(S.o[0] - S.X0, S.o[1] - S.Y0); for (const F of feet) F2.drawShankTop(g, F, A.bellyY(F), I.softHalf); g.restore();
+    const r = gray(S.comp, 0, 0, S.W, S.H); for (let i = 0; i < r.length; i++) r[i] = S.lut[Math.round(r[i])];
+    return r;
+  };
+  window.err = (feet, box) => {
+    S.box = box || S.box;
+    const r = compose(feet), r6 = gauss(r, S.W, S.H, 6), r2 = gauss(r, S.W, S.H, 2);
+    let e6 = 0, e2 = 0, n = 0;
+    for (let y = PAD; y < S.H - PAD; y++) for (let x = PAD; x < S.W - PAD; x++) { const i = y * S.W + x; e6 += Math.abs(r6[i] - S.s6[i]); e2 += Math.abs(r2[i] - S.s2[i]); n++; }
+    return [e6 / n, e2 / n];
+  };
+  // pattern search over the listed parameters of each foot. params: [[footIndex, path, step, lo, hi], ...]
+  const get = (F, p) => p.length === 1 ? F[p[0]] : F[p[0]][p[1]];
+  const set = (F, p, v) => { if (p.length === 1) F[p[0]] = v; else F[p[0]][p[1]] = v; };
+  window.fit = (feet0, params, box, w2 = 0.5, minStep = 0.12, maxEval = 1400) => {
+    S.box = box; const feet = JSON.parse(JSON.stringify(feet0));
+    const obj = () => { const [e6, e2] = err(feet); return e6 + w2 * e2; };
+    let best = obj(), nev = 1; const st = params.map((q) => q[2]);
+    const start = best;
+    while (nev < maxEval) {
+      let improved = false;
+      for (let i = 0; i < params.length && nev < maxEval; i++) {
+        const [fi, p, , lo, hi] = params[i]; if (st[i] < params[i][2] * minStep) continue;
+        const F = feet[fi], v0 = get(F, p);
+        for (const sgn of [1, -1]) {
+          const v = Math.max(lo, Math.min(hi, v0 + sgn * st[i])); if (v === v0) continue;
+          set(F, p, v); const e = obj(); nev++;
+          if (e < best - 1e-4) { best = e; improved = true; break; } else set(F, p, v0);
+        }
+      }
+      if (!improved) { let any = false; for (let i = 0; i < st.length; i++) { st[i] *= 0.5; if (st[i] >= params[i][2] * minStep) any = true; } if (!any) break; }
+    }
+    const [e6, e2] = err(feet);
+    return { feet, start, best, e6, e2, nev };
+  };
+  window.renderFrame = (feetOverride) => { if (feetOverride) A.DBG.feet = feetOverride; const t0 = performance.now(); m.renderAt(S.f / 25); A.DBG.feet = null; return { url: film.toDataURL("image/png"), ms: performance.now() - t0 }; };
+  document.title = "READY";
+} catch (e) { console.error(String(e && e.stack || e)); document.title = "FAIL"; }
+</script></body></html>

@@ -1,0 +1,20 @@
+import sys; sys.path.insert(0,'/Users/computer/rootline/apprentice-film/src/shots/s18/trace'); sys.path.insert(0,'.')
+import numpy as np, cv2, json
+src=open('/Users/computer/rootline/apprentice-film/src/shots/s18/trace/trace_owlB.py').read()
+pre=src.split('for n in range(1382, 1433):')[0].replace("SP = sys.argv[1]; out = sys.argv[2]","SP='.'; out=None")
+pre=pre.replace("res['body'][S] = pack(ST['body_' + S], m, LEV, 0.4, 0, RY0)","pass").replace("'tail': pack(tail, tsil, LEV, 0.4)","'tail': None")
+exec(pre)
+tiles=[]
+for n in [int(v) for v in sys.argv[1].split(',')]:
+    P = Z[f'P{n}']; E = Z[f'E{n}'].copy()
+    b, s = place_body(n); E = np.where(s > 0, b, E)
+    d = np.abs(cv2.GaussianBlur(P, (0, 0), 1.5) - cv2.GaussianBlur(E, (0, 0), 1.5))
+    r = ((d > 0.1) * 255).astype(np.uint8)
+    r = cv2.morphologyEx(r, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)))
+    r = cv2.morphologyEx(r, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11)))
+    r = comps(fillholes(r), minA=250)
+    v=cv2.cvtColor((np.clip(P,0,1)*200).astype(np.uint8),cv2.COLOR_GRAY2BGR)
+    v[...,2]=np.maximum(v[...,2],r)
+    cs,_=cv2.findContours(s,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE); cv2.drawContours(v,cs,-1,(255,255,0),2)
+    tiles.append(cv2.resize(v,None,fx=0.4,fy=0.4))
+cv2.imwrite('resview3.jpg',np.vstack(tiles))

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=2206, height=946">
+    <title>s28 harness</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 2206px; height: 946px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 100%; height: 100%; background: #000; }
+      #film { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-s28d1" id="root" data-composition-id="main" data-start="0" data-duration="140.8" data-fps="25" data-width="2206" data-height="946">
+      <canvas data-hf-id="hf-s28d2" id="film" width="2206" height="946"></canvas>
+    </div>
+    <script type="module">
+      // s28 scratch harness (not part of the film): the dev s28 shot alone, through the film's grade.
+      // t in [129.3, 136.96): s28 draw(t - 129.3, t). ?raw=1 in window.__s28raw skips the grade.
+      import { createPost } from "./src/lib/post.js";
+      const M = await import("./src/shots/s28/drawn/shot.js?v=" + Date.now());
+      const shot = M.shot;
+      const FK = await import("./src/shots/s28/drawn/figK.js?v=" + Date.now());
+      const out = document.getElementById("film");
+      const paint = document.createElement("canvas"); paint.width = 2206; paint.height = 946;
+      const ctx = paint.getContext("2d");
+      const grade = createPost(out);
+      function renderAt(t) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 2206, 946);
+        if (t >= 2 && t < 4) {   // debug: a key drawing alone on grey
+          ctx.fillStyle = "#808080"; ctx.fillRect(0, 0, 2206, 946);
+          ctx.drawImage(FK.paintKey(t < 3 ? "A" : "B"), 0, 0);
+          grade(paint, 131.6, { fade: 1 }); return;
+        }
+        const tt = t < 1 ? 131.6 : t;
+        if (tt >= 129.3 && tt < 136.96) {
+          ctx.save();
+          try { shot.draw(ctx, tt - 129.3, tt); } catch (e) { console.error(e); ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle = "#f00"; ctx.fillRect(0, 0, 2206, 60); ctx.fillStyle = "#fff"; ctx.font = "30px sans-serif"; ctx.fillText(String(e && e.stack || e).slice(0, 180), 20, 40); }
+          ctx.restore();
+        }
+        if (t < 1) { const g = out.getContext ? null : null; }
+        grade(paint, tt, { fade: 1, ...(shot.grade ? shot.grade(tt - 129.3, tt) : {}) });
+      }
+      window.__film = { renderAt };
+      const clock = { _t: 0, get t() { return this._t; }, set t(v) { this._t = v; renderAt(v); } };
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo(clock, { t: 0 }, { t: 140.8, duration: 140.8, ease: "none" }, 0);
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

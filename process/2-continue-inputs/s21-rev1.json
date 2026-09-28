@@ -1,0 +1,104 @@
+{
+ "fidelity": "approx",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "69.44–74.52 whole frame, most visible 72.00–72.45 (behind the climb) — F1-owned (src/lib/sites.js / sokoIll.js)",
+   "what": "The sōko page is a different drawing from the source's.\n- Left third: a keyboard synth and a knob-grid module at x 160–420, y 380–560, where the source has stacked boxes, a tall guitar case (x 150–240, y 330–620) and a rack.\n- Designer: flatter. Headphones round the neck and a dim face, where the source has a strongly lit face and hands on the laptop.\n- Right side: sparser.\n- Floor: brighter diagonal plank strokes. At y 866–878 it is ~36 against 17.\n- Page highlights: p95 is 201 against the source's 217.\n- During the climb the owl flies over a busy bright keyboard instead of a dark guitar case, so it reads worse. The owl-mask IoU drops to 0.35–0.45 there.",
+   "fix": "F1: redraw the page's left cluster to the source layout, with the guitar case at x 150–240, y 330–620, and dark boxes behind it. Lift the designer's face and hands to the source's key light (page p95 ≈ 217). Darken the floor planks at y 860–880 by about 50 %. s21 cannot fix this."
+  },
+  {
+   "severity": "high",
+   "at": "70.96–71.64 look-up hold (e.g. 71.36, head window x 335–405, y 745–810)",
+   "what": "Wrong expression: the look-up does not read.\n- The source tilts the head back. The crown flattens and the muzzle/beak juts forward-up (x 381–390, y 775–782). The eye is a big round white (~12 px) with the pupil at its top and only a thin grey brow.\n- Ours keeps the walking head silhouette: a round dome, a narrow almond eye with a heavy black crescent brow and the iris to one side. It reads as a sideways scowl or wink.\n- The band is a grey column. The source's is a thick dark loop standing off the head with a dark hole (x 335–354, y 750–775).",
+   "fix": "In the LOOK pose (poses.js):\n- Tilt the head back: nod about +0.35, crown ~5 px lower at the back, face ~4 px higher.\n- Eye: open 1.0, slit ≈ 1.0, ry ≈ 12 px round, look [0.1, −0.9] (pupil up), brow weight ~0.35 (thin grey, not black). Drop the heavy brow wedge.\n- Beak: grow it to the source's bulbous muzzle (w/l ×1.4) at its measured root/tip.\n- Band: draw it as a dark loop with a visible hole. Use bandTone ~0.15 with an inner cut-out, apex ~10 px above the crown."
+  },
+  {
+   "severity": "high",
+   "at": "69.9–72.5 (clearest 71.0–71.9 and 72.2–72.4); e.g. 71.36 at x 355–369, y 765–771; 71.88 near (396, 786)",
+   "what": "The owl's plaster (an identity trait) is effectively invisible. The source draws it clearly on the crown: a strip with a triangular pad, outlined in mid-grey, with local dark-line depth ~58–64 levels. At the same place ours is plain white. paintPlaster fills it at gv(0.94) with a 0.55-alpha 0.5-grey edge, which vanishes after softening and gain.",
+   "fix": "In owl.js paintPlaster (LOOK/WALK/CROUCH/FLY bandage):\n- Stroke alpha 0.55 → 1.0 and line tone 0.5 → 0.4, i.e. an outline of ~grey 110–140 on the ~210 head.\n- Line width ≥ 1.1 frame px after the σ0.6 soften.\n- Add the small triangular pad under the strip, about 7 × 5 px.\n- Place it at LOOK (355–369, 765–771) frame px, and track it in WALK/FLY.\n- Target: local depth |blur3 − I| ≈ 55 levels on the plaster lines."
+  },
+  {
+   "severity": "high",
+   "at": "72.16–72.90 flight/climb/hover head (e.g. 72.40 x 245–315, y 345–410; 72.60 x 190–260, y 120–185)",
+   "what": "The flight head reads wrong.\n- Its two white pointed tufts (FLY.tufts sizes 26 and 20) make cat ears on the silhouette, most visible 72.44–72.76. The source's climbing head has no such ears. It shows a dark band/nape swath across the crown.\n- Our head is too bright and open-faced. The back-half windows at 72.24–72.56 have a mean of 164–167 against the source's 144–151 (+15…+22), p25 97–104 against 85–90.\n- Ours draws a big white face with a black crescent brow. The source shows a small light eye in a dark socket.",
+   "fix": "Head: drop FLY.tufts, or cut them to size ≤ 8 and grey. Darken the back of the head and nape in FLY by ~15–20 levels: headShade ≈ 0.85 on the rear half, and a band ~30 units wide at bandTone 0 laid across the crown.\n\nEye (72.16–72.60): the round white shrinks to ~6 × 4 px inside a socket of socketA 0.8, and the black crescent brow is removed."
+  },
+  {
+   "severity": "medium",
+   "at": "72.72–72.96 hover over the logo (x 140–300, y 90–200)",
+   "what": "The hover silhouette is off.\n- **Body.** A smooth, featureless round ball, with no visible legs at 72.80–72.88. The logo's circle shows through at the lower left (x 170–195, y 135–160). In the source the near leg reaches down and its talons grip the logo mark at 72.80 (≈ (190, 150)). At 72.88–72.96 both legs dangle with toes, and spiky tail feathers stick out to the lower left.\n- **Wings.** Smaller and narrower than the source's. At 72.88 the far wing tip is at y ≈ 22, where the source's reaches the frame top (y ≈ 0). The source's near wing is broader with long separated primaries.",
+   "fix": "**Legs.** In the flight branch of owlState, 72.76–72.92: set the near leg's dangle foot to frame (190, 150) with curl 1 (toes over the logo). Set the far leg to ~(215, 165). Use toe 40 and thigh 50 so the legs clear the belly.\n\n**Body and tail.** FLY.body b ×0.9 and a ×0.95 in this window. Give the tail n=3 spiky feathers, tip ≈ (−240, 330) units.\n\n**Wings.** W_UP far wing: T up ~25 px (≈ −80 units in y), len ×1.15. Near wing: chord ×1.15 at 72.84–72.96."
+  },
+  {
+   "severity": "medium",
+   "at": "73.04–73.28 landing / scissors swing-down (x 270–370, y 70–150)",
+   "what": "The scissors float: nothing grips them. From 73.08 the source's primaries go through both rings. A white feather fills the lower-left half of the upper ring's hole at 73.24 (≈ x 300–320, y 108–125), and feathers wrap the lower ring at 73.12. Ours shows empty rings over the chest with the wing below them. drawFinger only fades in from 73.24 (finger = smooth((t−73.24)/0.12)). The face at 73.24 is a smooth dome with a tiny outlined cone beak. The source shows a hooked beak against the rings. At 73.04 the source also smears the scissors with motion blur; ours is crisp.",
+   "fix": "**Finger and grip.**\n- In owlState's top branch, start the finger at 73.02: finger = smooth((t−73.02)/0.06).\n- Aim the grip wing into the lower ring hole during the swing: gripAim 1 until 73.24, off ≈ [0, 0] units into the ring centre.\n\n**Beak.** Draw the side beak at ~1.3× through 73.04–73.3, tip on the upper ring.\n\n**Optional motion blur at 73.04.** Composite the scissors 2–3 times along the swing direction at 25 % alpha."
+  },
+  {
+   "severity": "medium",
+   "at": "73.30–74.48 top-edge grip wing (e.g. 74.00, x 300–400, y 100–175)",
+   "what": "The grip wing is drawn as a regular fan of 9 near-identical long white feathers with evenly spaced dark divider lines (TOP.grip type 'fan', n 9). It reads as a mechanical comb. It also covers the left 2/3 of the lower ring. At 74.00 the source's lower ring outline (x 358–395, y 142–170) and its shank are drawn in front of the feathers, and its feathers are fewer and irregular.",
+   "fix": "TOP.grip: n 9 → 5–6, with lengths jittered ±20 % and angles ±8° (seeded). Divider line alpha down to ~0.3. Draw the lower ring and its shank after the fan (front layer) so the whole ring outline shows at x 358–395, y 142–170 at 74.00."
+  },
+  {
+   "severity": "medium",
+   "at": "73.80–74.48 top edge head (e.g. 74.00, face front x 370–385, y 70–120)",
+   "what": "The head sits ~5 px too far right. The overlay shows a consistent ~5 px render-only crescent along the face front from brow to beak, and a source-only sliver along the upper-left back of the head.\n\nThe face features are undersized:\n- **Eye:** a tiny black V-brow glyph. The source's is a ~12 × 9 px open white with a grey iris under a heavy, wrinkled brow.\n- **Beak:** a small pale stub. The source's is a prominent hooked beak running into the upper ring ((349, 110) → (356, 127)).",
+   "fix": "**Head position.** TOP.head.bump 32 → ~22, or shift head.off by [−14, 0] units (−5 px), and re-add the eye offset so the eye stays on the source's.\n\n**Eye.** rx/ry ≈ 20/15 units, iris 0.9, and a 2–3-line brow wrinkle.\n\n**Beak.** Restore the hooked side beak at w 34, l 44 units, tip at (356, 127), drawn over the wing."
+  },
+  {
+   "severity": "medium",
+   "at": "69.44–74.52 room margins: top x 1500–1950, y 0–110; right x 2090–2200, y 150–400",
+   "what": "The upper-right room is crushed to pure black. The source has a grainy dark grey.\n- Top margin x 1500–1950: render median 0, with 60–91 % of pixels exactly 0. The source is 8–9.5, with a single-frame mean of 8.3 and std 3.5.\n- Right margin: y 200–300 is 1.5 against 6, and y 300–400 is 3 against 9.\n- Rendering with DBG.gain=0 gives the same 0. The ROOM_G knots there (0.74–0.89, ≤ 1) cannot lift it, so this is missing light, not over-gain.\n- The round-3 log's claim of margins within ±0.5 does not hold for this region.",
+   "fix": "In s21.draw, after the roomGain multiply, add a soft additive room lift outside the screen: 'lighter', a blurred field through the same glowRect mask. Size it to reach about +9 post-grade at (1750, 50), fading to 0 by x 1350, and about +6 at (2150, 300), fading by y 450. Refit so the medians match the source (x 1500–1950 → 8–9.5; right margin y 200–400 → 6–9). Keep ROOM_G for the other knots."
+  },
+  {
+   "severity": "low",
+   "at": "71.64–71.76 head drop into the crouch",
+   "what": "The source snaps from the look-up face to the lowered, frontal scowl between 71.64 and 71.68, and its blades start rising at 71.68. Ours is still ~90 % look-up at 71.68 (lookUp = 1 − smooth((t−71.66)/0.1)) and about half way at 71.72. That is 1–2 frames late.",
+   "fix": "End the look-up on one frame: lookUp *= 1 − smooth((t−71.645)/0.04). Start crouch = smooth((t−71.645)/0.12). Move the SC_WALK key [71.76, … 0.72] to ~71.72."
+  },
+  {
+   "severity": "low",
+   "at": "70.9–71.9 hold/look/crouch legs and body (e.g. 71.20, x 300–430, y 820–900)",
+   "what": "The belly ends too high and the legs are too long and bare. At 71.20 the render's belly edge is at y ≈ 853 against the source's ≈ 866. The visible tarsus is ~32 px against ~23. The source's belly feathers hang over the upper legs, which are thicker.",
+   "fix": "LOOK/CROUCH body: y +40 units, or b ×1.08. Legs: thigh 42 → 34 with w 13 → 16 for the standing poses."
+  },
+  {
+   "severity": "low",
+   "at": "69.44–74.52 owl plumage/tone (all phases)",
+   "what": "The owl is flatter than the source's.\n- Fine detail (|I − σ2 blur| inside the owl) is 0.76× the source's in the hold/crouch: 15.5 against 20.4. It is 0.85× in flight and walk.\n- In the hold/look the darkest 10 % inside the owl is 18 levels too light (p10 85 against 67). The deep grey modelling under the head, on the belly and in the wing folds is missing.\n- The outline is a smooth vector egg. The source's edge is ragged and feathery.",
+   "fix": "Raise the plumage stroke density and mottle in WALK/LOOK/CROUCH: mottle 0.13 → 0.18, and scallops 26 → ~45 strokes. Add a ~0.6-value shade band under the head and along the lower belly and wing fold. Add a small seeded fringe jitter (±1.5 px) on the body outline."
+  },
+  {
+   "severity": "low",
+   "at": "73.56–74.48 dashed cut line (x 192–545, y 183–188)",
+   "what": "Our dashes sit 1 px high and have hard edges. Render rows are 183–187 at 200–209. The source's are rows 184–188 at 197–222, with soft edges (92 above, 146 below). Positions, spacing (20.7 px), length and the count timing all match within a frame.",
+   "fix": "In drawDashes: y 183.0 → 184.0, fill ≈ #f2f2ec, and a 0.5 px blur or shadowBlur. Keep the spacing and DASH_N."
+  },
+  {
+   "severity": "low",
+   "at": "73.60–74.44 blade tips on the top edge",
+   "what": "The upper blade's tip stops 4–8 px short of the source's in the snip overlays (73.60, 73.72, 74.08, 74.20, 74.44). The screw and angles match.",
+   "fix": "SC_TOP L 89 → ~94 for the upper blade only, or extend its tip taper by ~5 px."
+  },
+  {
+   "severity": "low",
+   "at": "69.44–74.52 whole frame — post.js-owned (global grade)",
+   "what": "The grain does not match the source's.\n- Size: ours is 1 px (lag-1 autocorrelation 0.39) where the source's clumps are ~2 px (0.78).\n- Banding: ours has horizontal rows. The row-mean std in a flat margin is 1.32 against 0.30, visible as fine scanlines in the dark margins.\n- Colour: the source has a faint green cast (G ≈ +3 over R and B everywhere). The render is neutral.",
+   "fix": "post.js owner: generate the grain at half resolution and upsample (≈ 2 px clumps). Remove the per-row component. Add a slight green tint to the grade (G ×1.06 in the shadows and mids). s21 must not re-grade."
+  },
+  {
+   "severity": "low",
+   "at": "screen edges (static)",
+   "what": "Our top border hairline sits ~1 px high: y 127–128 against the source's 128–129. Just inside the left edge (x 146–150) the render is 8–11 against 3–5, which is F1's glow. The bottom margin at x 600–1600, y 900–946 is 2–5 against 6–9. At y 866–878 the page floor is too bright: 36 against 17 at y 872.",
+   "fix": "drawBorder: move the top line to S.y0 + 1. Take the inner-edge glow and the floor strip to F1. Include the bottom margin in the ROOM_G / additive-lift fit, about +3 there."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "Staging, beat timing and the locked camera match the source closely. Camtrack gives s=1.0000 over 69.48–74.48. Red/green overlays of all 127 frames line up within a few px through the walk, hold, climb and cutting walk. Every beat lands within 0–2 frames: the cut in at 69.44, stop 70.84, look-up ~70.96, crouch, take-off 72.00, hover, landing 73.00, the swing down, and dashes from 73.56 with snips closed at 73.56–73.64 and 74.08–74.16. The drawing is where it falls short.\n\n**The page (F1's, not s21's).** It is a different composition: a keyboard and knob module where the source has a guitar case and boxes, and a flatter designer. It is the biggest full-frame difference.\n\n**The owl (s21's).** It reads as a cleaner, flatter mascot than the source's bird:\n- The look-up expression is wrong.\n- The plaster is effectively invisible.\n- The flight head has pointed cat-ear tufts and is too bright.\n- In the hover the body is a smooth ball with no dangling legs.\n- In the landing the scissors float with no feathers through the rings.\n- The top-edge wing is a regular 9-feather comb that hides the lower ring.\n- The face features are tiny.\n\n**Room light.** The top-right margin is crushed to pure black where the source is about 8.\n\n**Other checks.**\n- No placeholder text, red bars or console errors.\n- About 170–220 ms per frame on a machine with load average ~275.\n- Determinism: 29 timestamps rendered in 4 independent runs are bit-identical: two separate compare.sh batches (one in reversed order), the sidebyside batch and the builder's harness (max diff 0, 0 px).\n\n\"approx\" is honest. It is not \"close\".\n\n**Artifacts.** As instructed, I deleted every artifact this run created: snapshots/s21-rev1c-cmp, -det, -h, -motion, -src and -tools. The pre-existing snapshots/s21-rev1-n-motion.log was left untouched."
+}

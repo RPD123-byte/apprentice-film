@@ -11,20 +11,22 @@ The timed cue list is in `audio/CUES.md`. It is generated from the cue table on 
 ## Regenerate
 
 ```sh
-cd /Users/computer/rootline/apprentice-film
-python3 tools/sound/score.py                  # writes audio/score.wav + audio/CUES.md (about 25 s)
+# from the repository root
+python3 tools/sound/score.py                  # writes audio/score.wav + audio/CUES.md (about 25 s); npm run score
 python3 tools/sound/score.py --out X.wav --stems DIR   # render elsewhere and also write bed/drones/events/music stems
 ```
 
 Requirements: Python 3.11 with numpy, scipy, soundfile and numba (librosa and matplotlib are needed only for the
-analysis and verification tools). The render is deterministic: every noise source is seeded, and two renders are
-bit-identical (same md5).
+analysis and verification tools); `tools/requirements.txt` pins the versions used. The render is deterministic: every
+noise source is seeded, and two renders are bit-identical (same md5); with the pinned versions it reproduces the
+committed `audio/score.wav` exactly.
 
 ### Verify against the source (analysis only)
 
 ```sh
-ffmpeg -i /Users/computer/rapport-videos/videogen/clips/01-13-FINISHED-v3-share.mp4 -vn -acodec pcm_f32le -ar 48000 \
-       snapshots/audio-work/src.wav                                    # once
+export APPRENTICE_SOURCE=/path/to/original.mp4   # your copy of the source film (not in this repository)
+# verify.py / calibrate.py extract its audio once to snapshots/audio-work/src.wav:
+#   ffmpeg -i "$APPRENTICE_SOURCE" -vn -acodec pcm_f32le -ar 48000 snapshots/audio-work/src.wav
 python3 tools/sound/verify.py                 # -> snapshots/audio-work/verify/{report.txt, env.png, overview.png, spec_<shot>.png}
 python3 tools/sound/calibrate.py X.wav        # optional: re-measure the mix and update the *_cal.json trims (run 2-3x)
 ```

@@ -1,0 +1,4 @@
+{ "pose": "LOOK", "frames": [71.12, 71.36, 71.60], "windows": [{"anchor": "head", "win": [32, 25], "off": [8, -11]}], "rounds": 6, "sigma": 1.2, "maeW": 0.5,
+  "params": [ {"path": "phones.loop.c.0", "step": 6}, {"path": "phones.loop.c.1", "step": 6}, {"path": "phones.cupOff.0", "step": 6}, {"path": "phones.cupOff.1", "step": 6},
+              {"path": "eye.rdx", "step": 3}, {"path": "eye.rdy", "step": 3}, {"path": "beak.mOff.0", "step": 4}, {"path": "beak.mOff.1", "step": 4},
+              {"path": "head.jowl", "step": 0.1}, {"path": "head.bump", "step": 6}, {"path": "bandage.off.0", "step": 4}, {"path": "bandage.off.1", "step": 4} ] }

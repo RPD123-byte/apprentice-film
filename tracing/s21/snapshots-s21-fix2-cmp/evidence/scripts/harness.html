@@ -1,0 +1,62 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: "Archivo"; src: url("../../assets/fonts/Archivo-Var.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+@font-face { font-family: "Geist"; src: url("../../assets/fonts/Geist-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Geist Mono"; src: url("../../assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+html,body{margin:0;background:#000}
+</style></head><body>
+<canvas id="film" width="2206" height="946"></canvas>
+<script type="module">
+import { createPost } from "../../src/lib/post.js";
+const mod = await import(window.location.hash.slice(1) || "../../src/shots/s21.js");
+const shot = mod.shot;
+const W = 2206, H = 946;
+const out = document.getElementById("film");
+const paint = document.createElement("canvas"); paint.width = W; paint.height = H;
+const ctx = paint.getContext("2d");
+const grade = createPost(out);
+await Promise.all(["900 100px Archivo", "400 20px Geist", "600 20px Geist", "500 20px 'Geist Mono'"].map((f) => document.fonts.load(f)));
+await document.fonts.ready;
+window.__mod = mod; window.__poses = await import("../../src/shots/s21/poses.js");
+window.render = (t, graded = true, encode = true) => {
+  const t0 = performance.now();
+  ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=1; ctx.globalCompositeOperation="source-over"; ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H);
+  shot.draw(ctx, t - 69.44, t, shot); ctx.restore();
+  const dt = performance.now() - t0;
+  if (graded) { grade(paint, t, { fade: 1 }); return encode ? { url: out.toDataURL("image/png"), dt } : { dt }; }
+  return { url: paint.toDataURL("image/png"), dt };
+};
+
+// ---- scoring against source frames (measurement only)
+const SRCC = {};
+const tmp = document.createElement("canvas"); tmp.width = W; tmp.height = H; const tg = tmp.getContext("2d", { willReadFrequently: true });
+async function srcGrey(f) {
+  if (SRCC[f]) return SRCC[f];
+  const im = new Image(); im.src = `../s21-r3-src/f${String(f).padStart(4, "0")}.png`; await im.decode();
+  tg.drawImage(im, 0, 0); const d = tg.getImageData(0, 0, W, H).data, gr = new Float32Array(W * H);
+  for (let i = 0, j = 0; j < gr.length; i += 4, j++) gr[j] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+  return (SRCC[f] = gr);
+}
+function blurWin(a, w, h, s) {
+  const r = Math.ceil(s * 3), k = []; let ks = 0; for (let i = -r; i <= r; i++) { const v = Math.exp(-0.5 * i * i / (s * s)); k.push(v); ks += v; }
+  const o = new Float32Array(w * h), o2 = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let acc = 0; for (let i = -r; i <= r; i++) acc += a[y * w + Math.min(w - 1, Math.max(0, x + i))] * k[i + r]; o[y * w + x] = acc / ks; }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let acc = 0; for (let i = -r; i <= r; i++) acc += o[Math.min(h - 1, Math.max(0, y + i)) * w + x] * k[i + r]; o2[y * w + x] = acc / ks; }
+  return o2;
+}
+// score(t, dbg, [x0,y0,x1,y1], sigma) -> { ncc, mae } of the graded render vs the source frame in the window
+window.score = async (t, dbg, win, sigma = 1.2) => {
+  const f = Math.round(t * 25), S = await srcGrey(f);
+  window.__mod.DBG.pose = dbg.pose || null; for (const k of Object.keys(dbg)) if (k !== "pose") window.__mod.DBG[k] = dbg[k];
+  window.render(t, true, false);
+  tg.drawImage(out, 0, 0);
+  const [x0, y0, x1, y1] = win, w = x1 - x0, h = y1 - y0;
+  const d = tg.getImageData(x0, y0, w, h).data, a = new Float32Array(w * h), b = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; a[y * w + x] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; b[y * w + x] = S[(y + y0) * W + x + x0]; }
+  const A = blurWin(a, w, h, sigma), B = blurWin(b, w, h, sigma);
+  let ma = 0, mb = 0; for (let i = 0; i < A.length; i++) { ma += A[i]; mb += B[i]; } ma /= A.length; mb /= B.length;
+  let sab = 0, saa = 0, sbb = 0, mae = 0; for (let i = 0; i < A.length; i++) { const u = A[i] - ma, v = B[i] - mb; sab += u * v; saa += u * u; sbb += v * v; mae += Math.abs(A[i] - B[i]); }
+  return { ncc: sab / Math.sqrt(saa * sbb + 1e-9), mae: mae / A.length };
+};
+window.ready = true;
+</script></body></html>

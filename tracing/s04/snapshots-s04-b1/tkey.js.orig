@@ -1,0 +1,236 @@
+// Rotoscoped keys for s04: every source frame of the segment is covered by a key drawing made from measurements of
+// one source frame (snapshots/s04-k2/tr: trace_key.py, flow_key.py, tojs_d.py). A key stores
+//   tone   : a value study of 14 values (simplified outlines of the regions darker than each level, measured on the
+//            source with its lines removed, in paint values — the film's grade inverted), softened; extra-softened
+//            where the source itself is soft (ds: its measured line energy is low, the motion-blurred room)
+//   inkd / inkb : the solid inks — filled blacks (hair masses, pupils, lash lines) and white-ink highlights, each set
+//            one measured value
+//   dark / bright : the ink lines — centre lines (Hessian ridges, skeletonised, re-joined) with a width per point and
+//            one ink value per line, redrawn with tapered strokes (dark lines on lit ground, pale lines on dark)
+//   flows  : the measured motion (DIS optical flow, smoothed, on a 24 px grid) that carries the drawing to the
+//            neighbouring source frames the key covers.
+// No pixels are stored: outlines and lines are delta-coded point lists, flows are node displacements.
+import { W, H } from "../../config.js";
+import { hash } from "../../lib/rng.js";
+
+const ALPHA = []; for (let c = 35; c < 127; c++) if (c !== 92) ALPHA.push(String.fromCharCode(c));
+const IDX = new Int16Array(128).fill(-1); ALPHA.forEach((ch, i) => { IDX[ch.charCodeAt(0)] = i; });
+const d1 = (s, i) => IDX[s.charCodeAt(i)];
+const d2 = (s, i) => d1(s, i) * 91 + d1(s, i + 1);
+const d3 = (s, i) => (d1(s, i) * 91 + d1(s, i + 1)) * 91 + d1(s, i + 2);
+
+// outlines: 4 chars start point, then one char per step within +-4 px (9x9 codes), or an escape and two chars (+-45)
+export function decodeRings(s) {
+  const out = [];
+  for (const part of s.split(" ")) {
+    if (part.length < 4) continue;
+    const pts = [];
+    let x = d2(part, 0) - 1000, y = d2(part, 2) - 1000;
+    pts.push(x, y);
+    for (let i = 4; i < part.length;) {
+      const c = d1(part, i);
+      if (c < 81) { x += Math.floor(c / 9) - 4; y += (c % 9) - 4; i += 1; }
+      else { x += d1(part, i + 1) - 45; y += d1(part, i + 2) - 45; i += 3; }
+      pts.push(x, y);
+    }
+    out.push(Float32Array.from(pts));
+  }
+  return out;
+}
+// ink lines: 1 char value (/3), 3+3 chars start (half px, offset 2000), 1 char width (0.1 px); then per point
+// dx, dy (half px, +-45) and width
+export function decodeStrokes(s) {
+  const out = [];
+  if (!s) return out;
+  for (const part of s.split(" ")) {
+    if (part.length < 8) continue;
+    const v = d1(part, 0) * 3;
+    let x = d3(part, 1) - 2000, y = d3(part, 4) - 2000;
+    const pts = [[x / 2, y / 2]], w = [d1(part, 7) / 10];
+    for (let i = 8; i + 2 < part.length; i += 3) {
+      x += d1(part, i) - 45; y += d1(part, i + 1) - 45;
+      pts.push([x / 2, y / 2]); w.push(d1(part, i + 2) / 10);
+    }
+    out.push({ v, pts, w });
+  }
+  return out;
+}
+// flows: x plane then y plane, row-major deltas in 1/4 px (one char for -40..40, else escape + 2 chars absolute)
+const FLOW_CACHE = new WeakMap();
+function decodeFlow(K, off, n) {
+  let per = FLOW_CACHE.get(K); if (!per) { per = {}; FLOW_CACHE.set(K, per); }
+  if (per[off] !== undefined) return per[off];
+  const s = K.flows && K.flows[String(off)];
+  if (!s) return (per[off] = null);
+  const f = new Float32Array(2 * n);
+  let i = 0;
+  for (let plane = 0; plane < 2; plane++) {
+    let v = 0;
+    for (let k = 0; k < n; k++) {
+      const c = d1(s, i);
+      if (c < 81) { v += c - 40; i += 1; } else { v = d2(s, i + 1) - 4000; i += 3; }
+      f[2 * k + plane] = v / 4;
+    }
+  }
+  return (per[off] = f);
+}
+function ringsPath(g, rings) {
+  g.beginPath();
+  for (const r of rings) {
+    g.moveTo(r[0], r[1]);
+    for (let k = 2; k < r.length; k += 2) g.lineTo(r[k], r[k + 1]);
+    g.closePath();
+  }
+}
+const grey = (v) => { const c = Math.max(0, Math.min(255, Math.round(v))); return `rgb(${c},${c},${c})`; };
+
+// one tapered ink line: resampled every 2 px, widths interpolated, both ends tapered over 3 px
+function inkLine(g, st, gain, endLen = 3) {
+  const P = st.pts, n = P.length;
+  if (n < 2) return;
+  const S = [0];
+  for (let i = 1; i < n; i++) S.push(S[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+  const L = S[n - 1];
+  if (L < 0.5) return;
+  const m = Math.max(2, Math.floor(L / 2) + 1);
+  const xs = new Float32Array(m), ys = new Float32Array(m), ws = new Float32Array(m);
+  let j = 0;
+  for (let k = 0; k < m; k++) {
+    const s = (L * k) / (m - 1);
+    while (j < n - 2 && S[j + 1] < s) j++;
+    const u = Math.max(0, Math.min(1, (s - S[j]) / Math.max(1e-6, S[j + 1] - S[j])));
+    xs[k] = P[j][0] + (P[j + 1][0] - P[j][0]) * u; ys[k] = P[j][1] + (P[j + 1][1] - P[j][1]) * u;
+    const e = Math.min(1, s / endLen, (L - s) / endLen);
+    ws[k] = (st.w[j] + (st.w[j + 1] - st.w[j]) * u) * (0.35 + 0.65 * Math.sqrt(Math.max(0, e)));
+  }
+  g.beginPath();
+  const side = (sgn) => {
+    const idx = sgn > 0 ? [...Array(m).keys()] : [...Array(m).keys()].reverse();
+    for (const k of idx) {
+      const a = Math.max(0, k - 1), b = Math.min(m - 1, k + 1);
+      let dx = xs[b] - xs[a], dy = ys[b] - ys[a]; const d = Math.hypot(dx, dy) || 1; dx /= d; dy /= d;
+      const hw = (ws[k] / 2) * sgn;
+      const px = xs[k] - dy * hw, py = ys[k] + dx * hw;
+      if (sgn > 0 && k === 0) g.moveTo(px, py); else g.lineTo(px, py);
+    }
+  };
+  side(1); side(-1);
+  g.closePath(); g.fillStyle = grey(st.v * gain); g.fill();
+}
+
+// a tile of fine grain, stretched along the swing's motion it reads as the source's motion streaks (the lit texture
+// of the boxes and shelves smeared by the move); built once, seeded
+let STREAK = null;
+function streakTile() {
+  if (STREAK) return STREAK;
+  const n = 256, c = document.createElement("canvas"); c.width = n; c.height = n;
+  const g = c.getContext("2d"), d = g.createImageData(n, n);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const v = 128 + 56 * (hash(x, y, 404) - 0.5) + 20 * (hash(x >> 2, y, 405) - 0.5);
+    const k = 4 * (y * n + x); d.data[k] = d.data[k + 1] = d.data[k + 2] = v; d.data[k + 3] = 255;
+  }
+  g.putImageData(d, 0, 0);
+  return (STREAK = c);
+}
+// the key drawn on a canvas W+2M x H+2M (frame px of the key time, offset by M)
+export function paintKey(K, M, opts = {}) {
+  const { toneBlur = 1.2, gain = 1 } = opts;
+  const cw = W + 2 * M, ch = H + 2 * M;
+  const mk = () => { const c = document.createElement("canvas"); c.width = cw; c.height = ch; return c; };
+  const out = mk(), g = out.getContext("2d");
+  // the value study, softened
+  const tc = mk(), tg = tc.getContext("2d");
+  tg.fillStyle = "#000"; tg.fillRect(0, 0, cw, ch);
+  tg.translate(M + 0.5, M + 0.5);   // traced coordinates are pixel indices: pixel centres sit at +0.5
+  for (const [v, s] of K.tone) { ringsPath(tg, decodeRings(s)); tg.fillStyle = grey(v * gain); tg.fill("evenodd"); }
+  tg.setTransform(1, 0, 0, 1, 0, 0);
+  const edges = (c, cg) => {   // carry the frame's border rows/columns out into the margin (the flow pulls from there)
+    cg.drawImage(c, M, M, 2, H, 0, M, M, H); cg.drawImage(c, M + W - 2, M, 2, H, M + W, M, M, H);
+    cg.drawImage(c, 0, M, cw, 2, 0, 0, cw, M); cg.drawImage(c, 0, M + H - 2, cw, 2, 0, M + H, cw, M);
+  };
+  if (K.full) edges(tc, tg);
+  const vc = mk(), vg = vc.getContext("2d");
+  vg.filter = `blur(${toneBlur}px)`; vg.drawImage(tc, 0, 0); vg.filter = "none";
+  g.drawImage(vc, 0, 0);
+  // where the source itself is soft (the motion-blurred room during the swing: its measured line energy is low) the
+  // value study is softened further, so its bands do not read as hard posterised shapes
+  // soft-region weight at a frame point (0..1)
+  const soft = (x, y) => {
+    if (!K.ds || !K.dgrid) return 0;
+    const [nx, ny, st] = K.dgrid, i = Math.max(0, Math.min(nx - 1, Math.round(x / st))), j = Math.max(0, Math.min(ny - 1, Math.round(y / st)));
+    return Math.min(1, d1(K.ds, j * nx + i) / 90);
+  };
+  if (K.ds && K.dgrid && (opts.softMix ?? 1) > 0) {
+    const [nx, ny, st] = K.dgrid;
+    const wc = document.createElement("canvas"); wc.width = nx; wc.height = ny;
+    const wg = wc.getContext("2d"), wd = wg.createImageData(nx, ny);
+    for (let k = 0; k < nx * ny; k++) { wd.data[4 * k] = wd.data[4 * k + 1] = wd.data[4 * k + 2] = 255; wd.data[4 * k + 3] = Math.round(Math.min(1, d1(K.ds, k) / 90) * 255); }
+    wg.putImageData(wd, 0, 0);
+    const b = mk(), bg = b.getContext("2d");
+    const mv = K.mv || [0, 0], L = Math.hypot(mv[0], mv[1]) * (opts.shutter ?? 0.35);
+    if (L > 6) {
+      // a motion smear along the room's measured image motion (a 16-tap box by repeated halving), then a light blur:
+      // the source's motion-blurred room is smeared along the swing, not blurred round
+      const ux = mv[0] / Math.hypot(mv[0], mv[1]), uy = mv[1] / Math.hypot(mv[0], mv[1]);
+      bg.drawImage(tc, 0, 0);
+      for (let d = L / 16; d < L; d *= 2) { bg.globalAlpha = 0.5; bg.drawImage(b, ux * d, uy * d); }
+      bg.globalAlpha = 1;
+      bg.translate(-ux * L / 2, -uy * L / 2); bg.filter = "blur(2px)"; bg.drawImage(b, 0, 0); bg.filter = "none"; bg.setTransform(1, 0, 0, 1, 0, 0);
+      if ((opts.streaks ?? 1) > 0) {
+        const pat = bg.createPattern(streakTile(), "repeat");
+        pat.setTransform(new DOMMatrix().rotate((Math.atan2(uy, ux) * 180) / Math.PI).scale(Math.max(6, L * 0.8), 1.3));
+        bg.globalCompositeOperation = "overlay"; bg.globalAlpha = opts.streaks ?? 1; bg.fillStyle = pat; bg.fillRect(0, 0, cw, ch);
+        bg.globalAlpha = 1; bg.globalCompositeOperation = "source-over";
+      }
+    } else { bg.filter = `blur(${opts.softBlur ?? 8}px)`; bg.drawImage(tc, 0, 0); bg.filter = "none"; }
+    bg.globalCompositeOperation = "destination-in"; bg.imageSmoothingEnabled = true;
+    bg.drawImage(wc, M - st / 2, M - st / 2, nx * st, ny * st);
+    bg.globalCompositeOperation = "source-over";
+    g.globalAlpha = opts.softMix ?? 1; g.drawImage(b, 0, 0); g.globalAlpha = 1;
+  }
+  // the solid inks (filled blacks, white-ink highlights), then the ink lines
+  g.save(); g.translate(M + 0.5, M + 0.5); g.lineJoin = "round";
+  // small fragments are dropped: in the soft (motion-blurred) room the tracer's specks along region edges, and
+  // everywhere the shortest traced strokes (they read as dashes and crosses rather than lines)
+  const minLen = opts.minLen ?? 6, minLenSoft = opts.minLenSoft ?? 12, minArea = opts.minAreaSoft ?? 150;
+  const keepRing = (r) => {
+    if (soft(r[0], r[1]) < 0.5) return true;
+    let a = 0; for (let k = 0; k < r.length; k += 2) { const j = (k + 2) % r.length; a += r[k] * r[j + 1] - r[j] * r[k + 1]; }
+    return Math.abs(a) / 2 >= minArea;
+  };
+  const strokeLen = (st) => { let L = 0; for (let i = 1; i < st.pts.length; i++) L += Math.hypot(st.pts[i][0] - st.pts[i - 1][0], st.pts[i][1] - st.pts[i - 1][1]); return L; };
+  const keepStroke = (st) => {
+    const L = strokeLen(st), p = st.pts[Math.floor(st.pts.length / 2)];
+    return L >= minLen && (L >= minLenSoft || soft(p[0], p[1]) < 0.5);
+  };
+  for (const [v, s] of (K.inkd || [])) { ringsPath(g, decodeRings(s).filter(keepRing)); g.fillStyle = grey(v * gain); g.fill("evenodd"); }
+  for (const [v, s] of (K.inkb || [])) { ringsPath(g, decodeRings(s).filter(keepRing)); g.fillStyle = grey(v * gain); g.fill("evenodd"); }
+  for (const st of decodeStrokes(K.dark)) if (keepStroke(st)) inkLine(g, st, gain);
+  for (const st of decodeStrokes(K.bright)) if (keepStroke(st)) inkLine(g, st, gain);
+  // the laptop screen is not part of the drawing (s04 maps the page onto it): cut it out
+  if (K.cut && K.cut.length) {
+    g.globalCompositeOperation = "destination-out"; g.fillStyle = "#fff";
+    g.beginPath(); for (const P of K.cut) { g.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) g.lineTo(P[i][0], P[i][1]); g.closePath(); }
+    g.fill(); g.globalCompositeOperation = "source-over";
+  }
+  g.restore();
+  return out;
+}
+
+// the mesh that shows a key at one of its covered frames: output vertices on the flow grid (frame px), uv = where
+// that frame pixel sits in the key (p + flow(p)), for Warper.draw. off 0 = the key frame itself.
+export function keyMesh(K, off, M) {
+  const cw = W + 2 * M, ch = H + 2 * M;
+  const [nx, ny, step] = K.fgrid || [Math.floor(W / 24) + 2, Math.floor(H / 24) + 2, 24];
+  const cols = nx - 1, rows = ny - 1;
+  const pos = new Float32Array(nx * ny * 2), uv = new Float32Array(nx * ny * 2);
+  const F = off ? decodeFlow(K, off, nx * ny) : null;
+  for (let j = 0, k = 0; j < ny; j++) for (let i = 0; i < nx; i++, k++) {
+    const x = i * step, y = j * step;
+    let fx = 0, fy = 0;
+    if (F) { fx = F[2 * k]; fy = F[2 * k + 1]; }
+    pos[2 * k] = x; pos[2 * k + 1] = y;
+    uv[2 * k] = (x + fx + M) / cw; uv[2 * k + 1] = (y + fy + M) / ch;
+  }
+  return { cols, rows, pos, uv };
+}

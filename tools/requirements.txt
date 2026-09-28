@@ -1,0 +1,9 @@
+# Python 3.11 packages for tools/ (score generator, measuring and verification tools).
+# Pinned to the versions that produced audio/score.wav; with them `npm run score` reproduces it bit for bit.
+numpy==1.26.4
+scipy==1.17.1
+numba==0.64.0
+soundfile==0.12.1
+opencv-python-headless==4.11.0.86
+librosa==0.11.0
+matplotlib==3.10.3

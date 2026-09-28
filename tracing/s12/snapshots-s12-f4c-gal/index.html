@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=2206, height=946">
+<title>owl gallery scratch</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+@font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+html,body{margin:0;width:2206px;height:946px;overflow:hidden;background:#000}
+#root{position:relative;width:100%;height:100%}
+#c{position:absolute;inset:0;width:100%;height:100%;display:block}
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="20" data-fps="25" data-width="2206" data-height="946">
+<canvas id="c" width="2206" height="946"></canvas>
+</div>
+<script type="module">
+import { paintGallery, owlLayer, owlPose, FIT_PLACE, POSES } from "./src/lib/owlInk.js";
+const c = document.getElementById("c"), g = c.getContext("2d");
+await document.fonts.load("500 18px 'Geist Mono'");
+let last = -1;
+function timing() {
+  g.fillStyle = "#000"; g.fillRect(0, 0, c.width, c.height); g.fillStyle = "#ddd"; g.font = "500 20px 'Geist Mono'";
+  let y = 40;
+  const runs = [...Object.keys(FIT_PLACE).map((k) => [k, { ...owlPose(k), ...FIT_PLACE[k] }]), ["fly s0.8", { ...owlPose("fly"), x: 900, y: 500, s: 0.8 }], ["flyFront s0.4", { ...owlPose("flyFront"), x: 900, y: 500, s: 0.4 }], ["perch s0.3", { ...owlPose("perch"), x: 900, y: 500, s: 0.3 }], ["perch s0.3 tone:false", { ...owlPose("perch"), x: 900, y: 500, s: 0.3, tone: false }]];
+  for (const [k, pose] of runs) {
+    owlLayer(pose); const t0 = performance.now(); for (let i = 0; i < 3; i++) owlLayer(pose); const ms = (performance.now() - t0) / 3;
+    g.fillText(`${k.padEnd(24)} ${ms.toFixed(1)} ms`, 40, y); y += 30;
+  }
+}
+function show(t) { const p = Math.floor(t); if (p === last) return; last = p; if (p === 9) return timing(); paintGallery(g, p, c.width, c.height); }
+const clock = { _t: 0, get t() { return this._t; }, set t(v) { this._t = v; show(v); } };
+const tl = gsap.timeline({ paused: true });
+tl.fromTo(clock, { t: 0 }, { t: 20, duration: 20, ease: "none" }, 0);
+window.__timelines = window.__timelines || {}; window.__timelines["main"] = tl;
+window.addEventListener("hf-seek", (e) => show(e.detail.time));
+show(0);
+</script>
+</body>
+</html>

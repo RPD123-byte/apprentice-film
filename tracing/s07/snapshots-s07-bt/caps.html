@@ -1,0 +1,7 @@
+<!doctype html><html><body><script type="module">
+const { capsOf } = await import("/src/shots/s07/keys.js");
+const PL = await import("/src/shots/s07/data/plate.js");
+const caps = capsOf(PL.SHAPES);
+window.__info = JSON.stringify(caps.map((c) => ({ Q: c.Q.map((p) => p.map((v) => +v.toFixed(1))), good: c.good, cx: +c.cx.toFixed(1), cy: +c.cy.toFixed(1), a: Math.round(c.a) })));
+window.__done = true;
+</script><canvas id="c" width="10" height="10"></canvas></body></html>

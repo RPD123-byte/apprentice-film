@@ -1,0 +1,10 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>LOADING</title></head><body>
+<script>window.gsap={timeline:()=>({fromTo(){return this;}})};</script>
+<script type="module">
+try {
+  const S = await import("./src/shots/s18.js");
+  const c = document.createElement("canvas"); c.width = 2206; c.height = 946; const g = c.getContext("2d");
+  window.tm = (fr) => fr.map((n) => { const t0 = performance.now(); S.shot.draw(g, n / 25 - 53.24, n / 25); g.getImageData(0, 0, 1, 1); return [n, Math.round(performance.now() - t0)]; });
+  document.title = "READY";
+} catch (e) { console.error(String(e && e.stack || e)); document.title = "FAIL"; }
+</script></body></html>

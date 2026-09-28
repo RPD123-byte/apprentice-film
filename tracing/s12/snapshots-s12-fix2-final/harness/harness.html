@@ -1,0 +1,22 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>s12 harness</title></head>
+<body style="margin:0;background:#000">
+<canvas id="film" width="2206" height="946"></canvas>
+<script type="module">
+import { shot } from "../../../src/shots/s12.js";
+import { createPost } from "../../../src/lib/post.js";
+const W = 2206, H = 946;
+const out = document.getElementById("film");
+const grade = createPost(out);
+const paint = document.createElement("canvas"); paint.width = W; paint.height = H;
+const ctx = paint.getContext("2d");
+window.renderAt = (t, raw) => {
+  const t0 = performance.now();
+  ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle = "#000"; ctx.fillRect(0,0,W,H);
+  shot.draw(ctx, t - 33.6, t);
+  const t1 = performance.now();
+  if (raw) return { url: paint.toDataURL("image/png"), ms: t1 - t0 };
+  grade(paint, t, { fade: 1, ...shot.grade(t - 33.6, t) });
+  return { url: out.toDataURL("image/png"), ms: t1 - t0 };
+};
+window.ready = true;
+</script></body></html>

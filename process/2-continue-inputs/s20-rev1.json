@@ -1,0 +1,86 @@
+{
+ "fidelity": "approx",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "67.40–67.72 (fr 1685–1693), whirl",
+   "what": "The render blurs the whole owl into a soft grey blob. It then stamps 8 pre-blurred scissor sprites along the swept angle, which leaves a comb or sunburst of thin radial streaks. At 67.64 the streaks fan down-left from about (950,440) to (700,800); at 67.60 a vertical comb crosses the owl. In the source the owl's body stays readable and turns: side view facing right with a scowl at 67.40, rear view with the cup at about (1040,350) at 67.52–67.60, side view facing right at 67.68, front at 67.72. Only the wing and scissors are blurred, into one smooth wide fan that rises above the head (x 860–1160, y 20–330 at 67.56–67.64). The render's blur goes sideways or down-left instead.",
+   "fix": "Keep the owl body sharp (blur ≤ 2 px) and draw an orientation per frame: side-right at 1685–1687 and 1692, rear at 1688–1690, 3/4 at 1691, front at 1693. Replace the 8 discrete stamps with a continuous swept fan. Either stamp the wing+scissors silhouette 24–32 times at alpha about 0.05 over the measured angle range, or fill a wedge polygon from the hand pivot with a radial gradient. The fan should sweep upward over the head to y ≈ 20."
+  },
+  {
+   "severity": "high",
+   "at": "all owl beats, most visible in hold 67.80–69.40 and beating 64.44–65.52",
+   "what": "Owl likeness is simplified. (a) The wing holding the scissors and the wing on the hip are thin tube 'noodle arms' with finger-like tips. The source has broad feathered wings: the held wing wraps the shank at about (876–954, 483–572) with feather fingers, and the hip wing sits elbow-out at about (1250–1290, 520–600) with fanned primaries. (b) The beating and run wing is a flat, mechanically stacked fan of rounded petals; the source has long pointed primaries. (c) The feet are small white rectangles like strips of tape, and the legs are about 20–35 px too short. The source has visible legs and three-toed feet with talons. (d) The rear-view tail (63.12–63.68) is a detached grey quill spike at (1055–1140, 710–745); the source has a fluffy fan tail. (e) There are no ear tufts or spiky crest; the source has spikes at about (1290–1330, 510–570) at 66.0, and tufts in the hold at (990,340) and (1170,340). (f) The body is flat white: high-pass detail 2–5 vs 4.4–7.9 in the source, p10 238 vs 220 in the hold. The soft grey feather hatching is missing.",
+   "fix": "Draw the held and hip wings as broad feathered wing shapes with 4–5 pointed primaries instead of limbs. Replace the petal fan with tapered pointed primaries. Draw three-toed taloned feet with about 40 px of visible leg. Replace the quill spike with a 5–7 feather fan tail. Add ear tufts and the back-of-head crest in the stare, B and hold poses. Add low-contrast grey feather ticks and shading on the flanks and belly: value about 0.8–0.88, lower-left side."
+  },
+  {
+   "severity": "high",
+   "at": "headphones in the rear 63.12–63.68, flap 64.36–65.52, stare 65.64–67.16 and hold 67.80–69.40",
+   "what": "The cups are drawn light grey with a grille disc and a black slot, so they read as a speaker or robot eye; the source's cups are glossy black with a thin lit rim. In side views the band is a thin hook rising from the cup and ending in a point or knob (about (1270,390) at 66.0; a mic-boom look at 65.0). In the source the band is a thick dark arch over the crown to the far cup. The front-view cups (63.76–64.28) have vertical corrugation stripes.",
+   "fix": "Fill the cups near-black (#151515) with a 2–3 px rim highlight at about 60% white and a small specular spot, and remove the grille and slot. Draw the band as a thick dark arch, 10–12 px, following the head outline from cup to cup, passing behind the head in side views."
+  },
+  {
+   "severity": "medium",
+   "at": "stare 65.64–67.16 (A and B1), beating 64.44–65.52, hold 67.80–69.40",
+   "what": "The owl is misplaced. In the stare the head is about 55–60 px too far right (at 66.0: beak tip x 1060 vs 999, cup centre 1208 vs 1149), the body is more bulbous, and the cup overlaps the card's left edge. In the beating the head is about 50 px right (cup 1040–1080 vs 955–1010 at 65.0); the render stands upright while the source leans forward toward the scissors. In the hold the feet are about 50–60 px left and 20–35 px high (render (1005,772)/(1117,772) vs source (1060,783)/(1177,794)), and the body spans x 928–1239 vs 988–1277. The front pose at 64.0 matches within about 5 px.",
+   "fix": "STARE root x 1200 → ~1145, and shift the BACK track so it ends there; slim the rear of the body. FLAP root x 1040 → ~990 with a forward lean of about 0.15 rad. HOLD: move the body and legs +50 px in x and lengthen the legs so the feet land at y ≈ 785–795."
+  },
+  {
+   "severity": "medium",
+   "at": "scissors, lean 63.12–67.24 and hold 67.80–69.40",
+   "what": "Hold: the blades are too narrow (about 15 px) and nearly closed (tips (1165,125) and (1215,140)); the source's blades are about 35–40 px wide and open, tips about (1154,117) and (1277,106). The loops are perfect separate circles (r ≈ 45); the source's are elongated overlapping ovals about 90×150 (768–888 × 480–640 and 843–965 × 540–705). Lean: the blades are about 25 px wide vs about 45 px. The grime is a few dots on light-grey blades, so the grimy → clean change at 65.48–65.68 barely reads; the source's blades are dark mottled grey until 65.60. The cobwebs are random straight strings; the source has a clear radial orb web between the blade and the speaker at about (740–960, 600–860).",
+   "fix": "Widen the blades to about 40 px with a bevel highlight and open the hold tips to the source positions. Make the loops ovals about 90×150, rotated, with the second loop overlapping the first. Set the grimy blade value to about 0.35–0.45 with mottling, ramping to clean over 1637–1642. Draw an orb web centred about (850,760), r ≈ 90, with 8–10 radials and a spiral, plus 2–3 strands at the loops."
+  },
+  {
+   "severity": "medium",
+   "at": "67.96–68.96 glint",
+   "what": "The glint is too small and weak. At 68.40 the horizontal ray band (y 145–160, x 1000–1340) averages 62 vs 109 in the source, and the vertical ray above (x 1160–1180, y 20–120) averages 15 vs 68. The source has a soft halo of radius about 55–90 px centred about (1178,155), horizontal rays of about ±150 px (x 1040–1330), and a vertical ray up to y ≈ 30. The core brightness and the timing match.",
+   "fix": "In drawGlint: core radius 46k → ~80k; add an outer halo (radial gradient r 130k, alpha 0.35k); horizontal rays 110k → 160k long, width 3.5 → 5; up ray 100k → 125k, width 3 → 5; down ray 55k → 60k. Centre about (1176,155)."
+  },
+  {
+   "severity": "medium",
+   "at": "B2 67.44–69.40, speaker side panel x 590–700",
+   "what": "At the 67.44 camera step the source relights the speaker's side panel: the mean over 600–690 × 100–650 goes from 136 to 169. The render keeps the A drawing at about 105, 45–65 levels too dark. This is the largest room tone error in the second half (a dark vertical band in the signed diff).",
+   "fix": "For fr ≥ 1686, add a light pass over the side-panel quad (value +0.25–0.3, keeping the grain lines) or blend in a relit panel. Also apply the ~13 px shift noted in the fidelity log."
+  },
+  {
+   "severity": "medium",
+   "at": "room plate, whole segment",
+   "what": "Specific objects differ visibly, although mean tones per region are well calibrated.\n- Cable coil on the crate (0–360, 430–570): flat parallel ribbon stripes, 16 levels too bright (56 vs 40). The source has a dark coiled heap and a thick braided cable about 40 px wide hanging at x 190–260.\n- Plant (620–800, 0–230): tiny teardrop leaves on a thin vine, no pot. The source has a pot at (590–680, 30–120) and 40–60 px heart-shaped leaves.\n- Box stack behind the owl: thin white-striped boxes from x 1150, top y 110. In the source the stack starts at x ≈ 1190, top at 140–170, darker and engraved.\n- Big box stack: uniform white verticals out to x ≈ 1780, seam at y 375. In the source the boxes end at 1740–1760 with a lit left face and the seam at y 400–415.\n- Bench (1790–2206, 120–450): thin lines and a hatched grille block at (1985–2090, 175–240). The source has thick lit planks at y 290–330 and 400–440 and a plank top at y 120–170.\n- Floor under the synth: a dark stand shape. The source has two bright coiled cable loops at (1330–1800, 850–946).\n- Synth panel: a flat grey band with 2×26 ovals, 8–14 levels too bright. The source's panel is dark, with small rectangular buttons and a pitch module at about (2000,700).\n- Woofer: 17 levels too dark (52 vs 69), with a concentric-ring 'vinyl' look. The lower port has bright rings where the source has a dark hole with one rim.",
+   "fix": "Redraw the coil as 5–6 overlapping dark ellipse loops with bright rims, and make the hanging cable 40 px wide and braided. Add the pot and scale the leaves ×2.5. Move the back-stack left edge to 1190 and its top to 150, value −0.15. End the big stack at x 1750 and put the seam at 405. Add the two bench planks and remove the grille block. Replace the floor stand with two cable ellipses (centres about (1450,905) and (1600,915), rx about 110). Darken the synth panel by 0.08 and use rectangular buttons. Brighten the woofer surround and cone by 0.08 and replace the port rings with a single rim."
+  },
+  {
+   "severity": "low",
+   "at": "63.68–63.84 turn, 64.32–64.44 run, 65.56–65.64 back-off, 67.28–67.36 grab",
+   "what": "Timing is within ±2 frames, but several poses are early or wrong.\n- Turn: the render reaches full front at 63.76 (fr 1594) and drops the wing at 63.72. The source is still 3/4 with the wing on the card at 63.76–63.80 and faces front at 63.84.\n- Back-off: the render switches to the stare pose at 65.56 (fr 1639). The source still beats with eyes shut at 65.56, steps back at 65.60 and stands at 65.64.\n- Run: at 64.32 the render is a symmetric T-pose with eyes closed and at 64.36–64.44 a horizontal forward fan wing. The source has eyes open and determined at 64.32, then a hop with the wings up and back and motion blur.\n- Grab: at 67.28 the render already stands upright with the scissors vertical. The source crouches leaning left with the scissors still at the lean angle, then lifts them vertical with blur at 67.32–67.36.",
+   "fix": "Shift the TURN keys +2 frames (front at 1596) and keep the wing on the card through 1594. Start BACK at 1640 with a transitional frame and the stare at 1641. Add run poses for 1608–1610 with raised wings, a 10–15 px hop and blur. For 1682–1683 use a crouched, leaning grab with the scissors rotated about −0.35 rad, upright only from 1684."
+  },
+  {
+   "severity": "low",
+   "at": "64.50–66.84 dust",
+   "what": "The puffs are near-spherical balls 40–60 px across with dark dots, bunched low (x 540–760, y 560–760). The source has larger cauliflower clouds (80–100 px), a smooth haze cone from the blades down-left, and sparkle burst lines at 64.75–65.5. The source's haze column also rises to y ≈ 300 at 65.6–66.0.",
+   "fix": "Build each puff from 5–8 overlapping lobes, 80–100 px overall. Add a soft haze cone (gradient, alpha ≈ 0.25) from about (760,560) to (650,800), plus 6–10 short radial burst lines at each strike. Lift the column to y 300 over 65.5–66.0."
+  },
+  {
+   "severity": "low",
+   "at": "69.40 light leak (last frame)",
+   "what": "The leak is about 25–35% weaker than the source. Top rows: +42–58 vs +53–77. Right band at x 2050: +56 vs +78. Left band at x 100: +46 vs +57.",
+   "fix": "Scale all drawLeak band alphas by about 1.35 (top peak 0.33 → 0.45, right peak 0.29 → 0.40, left peak 0.27 → 0.36)."
+  },
+  {
+   "severity": "low",
+   "at": "cuts at 63.12 and 69.44 (global, main.js, not s20)",
+   "what": "Both cuts land one frame late in the harness. At t = 63.12 (source frame 1578, already s20) the render shows s19; t = 63.121 renders identically. At t = 69.44 (source 1736, s21) the render still shows s20's leak frame. The seek time arrives just below the frame time, and shotAt uses a strict t >= s.start. s20's own ceil(t·25 − 0.05) frame mapping is robust.",
+   "fix": "The main.js owner should snap the time to the frame grid before shotAt: t = Math.round(time*FPS)/FPS, or compare with t + 1e-6 >= s.start."
+  },
+  {
+   "severity": "low",
+   "at": "whole segment (global grain)",
+   "what": "On static regions, frame-to-frame |diff| is 2.4–2.9 in the render vs 1.0–1.9 in the source (dark wall 1.53 vs 0.39). This is post grain, not line boil: the low-pass diff matches the source. On some consecutive frames the grain repeats (63.72 → 63.76, diff 0.02).",
+   "fix": "Optionally export grade: () => ({ grain: 3/255 }) from s20. The grain repeat belongs to the post.js owner."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "approx. It is the same shot and staging, with accurate camera and timing; the drawings are visibly simplified and the whirl is wrong.\n\n**What matches**\n- **Camera.** The render's B1 affine (a 0.9848, d 0.9694) and B2 move match ORB fits on the source within about 1 px.\n- **Timing.** Every beat lands within ±2 frames: the push, turn, run, beating, back-off, cut to B at 66.84, lunge at 67.20, grab at 67.28, whirl 67.40–67.72, hold from 67.80, glint 67.96–68.96 and the leak at 69.40.\n- **Tone.** Region means are well calibrated in setup A: speaker front 40 vs 40, box stack 101 vs 104, keys 128 vs 126.\n- **Card.** Placement and colour are close.\n\n**Blurred MAE** (σ 6, graded, 26 frames every 0.25 s):\n- setup A: 18–22.5\n- setup B: 22.6–24.8\n- mean: 21.3\n\nThis agrees with the builder's 21.4.\n\n**Where it falls short**\n- **Whirl (67.40–67.72).** The owl is blurred into a blob and the stacked scissor stamps leave streak artifacts. The source keeps the rotating owl readable, with one smooth fan rising above the head.\n- **Owl drawing.** It is the clean kit bird: noodle-arm wings, tape-strip feet, a quill tail, grey grille headphone cups and a hook-shaped band. It has no tufts and flat white feathers.\n- **Owl placement.** The stare and beating poses are about 50–60 px right of the source. The hold's feet are about 55 px left and 20–35 px high.\n- **Scissors.** The blades are too narrow and closed, the loops are circles, the grime is weak and the cobweb is not a recognizable web.\n- **Glint.** Only about half of the source's flare.\n- **Speaker side panel.** In B2 it is about 50 levels too dark.\n- **Room.** Several objects are simplified: the cable coil, plant, bench, floor cables and synth panel.\n\n**Checks**\n- **Determinism.** The same times rendered in two separate compare runs (64.44, 65.48, 67.60, 68.40) are bit-identical (max diff 0).\n- **Errors.** No placeholder text, red error bars or console errors appeared.\n- **Boundary continuity.** Both hard cuts land one frame late because of how `main.js` picks the shot at a cut; this is not s20's code.\n\n**Files**\n- Evidence: /Users/computer/rootline/apprentice-film/snapshots/s20-rev1b3-dense (pairs every 0.25 s), -fine (frame-exact beats and boundaries), -motion (8 fps sheet.jpg and mp4), -det (determinism), -crops (full-res crops, edge overlays, signed tone-diff maps, strips).\n- Cleanup: the bulky frame/ref PNGs this review created were deleted after analysis. Nothing else was removed or edited."
+}

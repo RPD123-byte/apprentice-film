@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+@font-face { font-family: "Archivo"; src: url("/assets/fonts/Archivo-Var.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+@font-face { font-family: "Geist"; src: url("/assets/fonts/Geist-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Geist Mono"; src: url("/assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Fraunces"; src: url("/assets/fonts/Fraunces-Variable.ttf") format("truetype"); font-weight: 100 900; }
+@font-face { font-family: "Shrikhand"; src: url("/assets/fonts/Shrikhand.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "Fraunces Soft"; src: url("/assets/fonts/FrauncesSoft-Black.ttf") format("truetype"); font-weight: 900; }
+@font-face { font-family: "Satoshi"; src: url("/assets/fonts/Satoshi-Variable.woff2") format("woff2"); font-weight: 300 900; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-500.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-600.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "Poppins"; src: url("/assets/fonts/Poppins-700.woff2") format("woff2"); font-weight: 700; }
+html,body{margin:0;background:#000}
+</style></head><body>
+<canvas id="film" width="2206" height="946"></canvas>
+<script type="module">
+// end-s27-rev1 scratch harness (review only, not part of the film): s26 / s27 / s28 chosen by film time exactly as
+// src/main.js does (PLAN times), painted and graded through the film's own post.js.
+import { createPost } from "/src/lib/post.js";
+const q = new URLSearchParams(location.search);
+const ids = (q.get("shots") || "s26,s27,s28").split(",");
+const PLAN = { s26: [110.52, 117.52], s27: [117.52, 129.3], s28: [129.3, 136.0] };
+const SH = [];
+for (const id of ids) { const m = await import(`/src/shots/${id}.js`); const s = m.shot; s.id = id; s.start = PLAN[id][0]; s.end = PLAN[id][1]; SH.push(s); }
+const W = 2206, H = 946;
+const out = document.getElementById("film");
+const paint = document.createElement("canvas"); paint.width = W; paint.height = H;
+const ctx = paint.getContext("2d");
+const layer = document.createElement("canvas"); layer.width = W; layer.height = H;
+const lctx = layer.getContext("2d");
+const grade = createPost(out);
+await Promise.all([
+  "900 100px Archivo", "400 20px Geist", "600 20px Geist", "500 20px 'Geist Mono'", "400 20px Fraunces", "700 20px Fraunces",
+  "900 100px 'Fraunces Soft'", "800 40px Satoshi", "400 40px Shrikhand", "500 20px Poppins", "600 20px Poppins", "700 20px Poppins",
+].map((f) => document.fonts.load(f)));
+await document.fonts.ready;
+function shotAt(t) { for (const s of SH) if (t >= s.start && t < s.end) return s; return SH[SH.length - 1]; }
+function paintShot(g, s, t) {
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
+  g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+  s.draw(g, t - s.start, t, s);
+  g.restore();
+}
+window.renderAt = (t, raw = false) => {
+  const s = shotAt(t), i = SH.indexOf(s), local = t - s.start;
+  const t0 = performance.now();
+  if (s.xfade && local < s.xfade && i > 0) {
+    paintShot(ctx, SH[i - 1], t); paintShot(lctx, s, t);
+    const u = local / s.xfade; ctx.globalAlpha = u * u * (3 - 2 * u); ctx.drawImage(layer, 0, 0); ctx.globalAlpha = 1;
+  } else paintShot(ctx, s, t);
+  const ms = performance.now() - t0;
+  if (!raw) grade(paint, t, { fade: Math.min(1, Math.max(0, (140.77 - t) / 0.57)), ...(s.grade ? s.grade(t - s.start, t) : {}) });
+  return ms;
+};
+window.grab = (raw = false) => (raw ? paint : out).toDataURL("image/png");
+window.ready = true;
+</script></body></html>

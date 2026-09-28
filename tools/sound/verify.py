@@ -5,8 +5,8 @@
     -> outdir/env_*.png (loudness envelopes, source vs score, 20 s per row)
        outdir/spec_<section>.png (spectrograms, source above / score below)
        outdir/report.txt (per-0.5 s level error, per-section error, onset timing match)
-Defaults: audio/score.wav, snapshots/audio-work/verify. The source audio is read from snapshots/audio-work/src.wav
-(extract it with: ffmpeg -i <film.mp4> -vn -acodec pcm_f32le -ar 48000 snapshots/audio-work/src.wav)."""
+Defaults: audio/score.wav, snapshots/audio-work/verify. The source audio is read from snapshots/audio-work/src.wav,
+which is extracted from $APPRENTICE_SOURCE on first use (ffmpeg -i <film.mp4> -vn -acodec pcm_f32le -ar 48000 ...)."""
 import os, sys
 import numpy as np, soundfile as sf, scipy.signal as ss
 import matplotlib
@@ -21,7 +21,8 @@ import cues
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
 SCORE = args[0] if args else os.path.join(ROOT, "audio", "score.wav")
 OUT = args[1] if len(args) > 1 else os.path.join(ROOT, "snapshots", "audio-work", "verify")
-SRC = os.path.join(ROOT, "snapshots", "audio-work", "src.wav")
+from srcaudio import source_wav
+SRC = source_wav(ROOT)  # snapshots/audio-work/src.wav, extracted from $APPRENTICE_SOURCE if missing
 os.makedirs(OUT, exist_ok=True)
 QUICK = "--quick" in sys.argv
 

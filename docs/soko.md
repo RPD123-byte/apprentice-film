@@ -1,7 +1,8 @@
 # sōko — the designer's own site ("MIXING DOWN, LATE AT NIGHT.")
 
 Owner: foundation F1. Files: `src/lib/sites.js` (UI, page layers, framed screen), `src/lib/sokoIll.js` (the hero
-illustration), `tools/soko-test.html` (scratch harness). Everything is drawn in code: paths, strokes, per-pixel carved
+illustration), `tracing/soko/tools-dev-pages/soko-test.html` (scratch harness; it imports `../src/…`, so copy it into
+a top-level folder such as `tools/` to use it). Everything is drawn in code: paths, strokes, per-pixel carved
 lines, painted value studies and exact JS gaussian blurs. No image is loaded and no source pixel is used.
 
 > **Pass 3 (this revision).**
@@ -329,7 +330,8 @@ The shot opens ~1.95× in on the page and pulls back to 1:1. s17's own ORB track
 
 ## Testing
 
-`tools/soko-test.html?mode=ill|page|boxes|s17|framed|small`. The parameters are listed in the file.
+`tools/soko-test.html?mode=ill|page|boxes|s17|framed|small` (the page is kept in `tracing/soko/tools-dev-pages/`; copy it back
+to `tools/` first). The parameters are listed in the file.
 
 It uses ES modules, so serve the project root, or bundle it: F1's headless runs bundled it with esbuild into an IIFE
 or ES module and opened it on file:// in the Playwright chromium-headless-shell with `--allow-file-access-from-files`.

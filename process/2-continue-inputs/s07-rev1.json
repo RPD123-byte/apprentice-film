@@ -1,0 +1,74 @@
+{
+ "fidelity": "close",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "whole shot outside the laptop page: src/shots/s07/data/plate.js, data/hands.js, tracekit.js, handswarp.js",
+   "what": "Gating rules issue, not a visual defect. The room, the designer, the owl and the hands are a dense automatic vector trace of the source, not a drawing. plate.js holds 831 tone zones (20,856 polygon vertices) with fitted quadratic tone fields and a per-zone correction, 35k broad-stroke values, 77k ink-shape values and 128k fine-stroke values. hands.js holds one traced source frame plus the source's own backward optical flow for all 38 frames (301,644 int8 values on an 81x49 grid). That is why it reproduces the source so closely: blurred MAE about 2/255 on the whole frame and about 1.3 outside the screen. In effect the source frames are transcoded into vectors. That conflicts with STYLE's 'No frame, crop or pixel of the source may appear in the render' and the brief's 'everything drawn by code'. The builder flags it as unresolved in fidelity/s07.md.",
+   "fix": "Do not sign s07 off until the user rules explicitly on trace-derived data. If it is not allowed: rebuild the plate with engrave.js Plates from hand-authored, measured geometry, with a few hundred shapes per object (the s07/v1 modules are the starting point, MAE about 17). Drive the fingers from measured keyframes (727, 731/732, 738, 746, 751, 763) instead of per-frame source flow. The page (s07/page.js) is hand-authored and can stay."
+  },
+  {
+   "severity": "medium",
+   "at": "beanie cuff, frame x≈1646–1896, y≈130–294, every frame",
+   "what": "The knit on the cuff is an axis-aligned grid of pale rounded tiles on black, like a mosaic or LED wall. The columns are perfectly vertical and ignore the cuff's curvature. In the source the cuff is a dark ink mesh of lines over grey cells: the rows curve with the cuff's top and bottom edges and the columns fan around the cylinder. Visible at 1x as a sequined texture right next to the owl's head. Tone statistics match (mean 28.6 vs 28.4) but the structure does not.",
+   "fix": "In s07/faces.js, build the knit lattice in cuff coordinates. Rows should run parallel to the cuff's top and bottom edges (measure them with tools/grid.py 29.6 out.jpg 1560 80 1900 300). Columns should compress about 40% toward the right edge (x≈1890). Draw dark 1–1.5 px ink lines (value ≈0.05) between cells of value 0.25–0.45 instead of bright cell centres. Remove the per-cell bright core and lift the upper-left third about 15% to match the source's lit side."
+  },
+  {
+   "severity": "medium",
+   "at": "hands, left x≈620–880 y≈560–770, right x≈880–1130 y≈540–700, all frames (clearest in 727, 731, 738, 746)",
+   "what": "The warped traced hands look smeared and chalky. Finger contours are broken or doubled, knuckle folds are grey smudge blobs, and there is a white fringe along the finger edges from the warp. In the source every finger has a crisp, continuous dark outline with fine hatch shading. Keystroke timing is exact: motion-energy correlation with the source is 0.976, and every movement lands on the same frame. Amplitude is damped, though: finger motion energy is 0.82 of the source's, so the typing reads softer.",
+   "fix": "In s07/handswarp.js, redraw the outlines after the warp as continuous taper() strokes (1.6–2.4 px, value ≈0.08) along the warped hand-mask boundary. Erode the hand fill 1 px under the outline to remove the white halo. Replace the grey fold blobs with 3–5 thin hatch strokes per knuckle. Reduce the flow regularisation, or add traced poses at key frames 731, 738, 746 and 751, to restore the missing ~18% of finger travel."
+  },
+  {
+   "severity": "medium",
+   "at": "keyboard deck top rim / hinge, along the line ≈(407,680)→(940,543), plus the screen's bottom lip (409,648)→(898,519)",
+   "what": "The strip between the screen's bottom lip and the top row of keys is a ragged, torn band of white scratch fragments and dark specks, worst at x≈850–1000, y≈540–580 where it looks like torn paper. The top function-row keys partly merge into it. In the source this is a clean, continuous bright rim line (≈3 px, value ≈200) over a smooth grey deck strip, below a solid dark hinge band.",
+   "fix": "Mask the traced plate in that band and repaint it flat. The bezel/hinge should be value ≈0.06. The deck rim should be one clean 2.5–3 px line at ≈0.8 following (407,680)→(940,543). Keep the traced keys below the rim. In screen.js, draw the bottom glass lip as a single continuous 1.5–2 px line with no spikes."
+  },
+  {
+   "severity": "medium",
+   "at": "laptop page, lower rainbow left end, frame polygon (330,380)(480,360)(500,470)(350,500)",
+   "what": "The left end of the lower rainbow is too bright and hard-edged. The source's bands blend softly there, as if airbrushed, and the top purple band dissolves into a dark indigo haze. The render keeps crisp, fully saturated bands with a wavy hard top edge. Mean V is 76.7 against 68.1 (+12%). Cells: (360,440) render RGB 118,53,67 vs source 87,54,59; (360,480) 113,65,49 vs 86,57,44. This is the largest error in the page after the robot.",
+   "fix": "In s07/page.js, over the left ~30% of the rainbow's length: blur the band boundaries by ≈2–3 frame px, darken about 12%, and turn the top purple band's upper edge into a soft dark-indigo gradient (≈RGB 60,55,110 fading to the page ground) instead of a keyline."
+  },
+  {
+   "severity": "low",
+   "at": "owl head and wing, frame x≈1480–1800, y≈190–720",
+   "what": "The owl reads slightly posterised: flat grey zone patches with hard boundaries on the head and wing feathers, and a heavier, doubled dark contour along the right side of the head and wing (x≈1700–1780). The source owl is softer and more evenly white, with a fine texture and thin single contours. Mean tone matches (162.4 vs 161.4), so this is structure, not exposure.",
+   "fix": "Inside the owl region, smooth the tone field (σ≈2 px) before the fine strokes go on, to dissolve the zone edges. Thin the right-side contour strokes by ~30% and drop parallel duplicate strokes closer than 3 px (PLATE_BRIDGE joins gaps but does not remove duplicates)."
+  },
+  {
+   "severity": "low",
+   "at": "laptop page: robot ≈(440–500,540–600); plume figure ≈(420–450,420–470); fan behind 'Pure' ≈(520–640,280–360); smiley ≈(505,300)",
+   "what": "Page illustrations are simplified. The robot is a squat white box with a separate round dark head and a red disc under it. The source's robot is taller and boxy, with a square-framed orange porthole, a darker right-side panel, curled black antennae and a pink/red dome behind it. The rocket figure under the smoke puff is a small blue stick figure; in the source it is a taller grey body. The fan behind 'Pure' sits between the u and the r, while the source's sheets spread left over the P's shoulder and right past the e. These are the top error cells in the frame (robot cell (440,560) error 21/255).",
+   "fix": "Redraw the robot about 1.3× taller: square porthole frame, dark right panel, curled antennae, a pink dome behind-right and no red disc. Make the plume figure a grey rocket body about 2× taller under the puff. Extend 2–3 fan sheets left to the P's top-right corner and one past the e."
+  },
+  {
+   "severity": "low",
+   "at": "ticket button typing, frame box (600–730, 480–560), 29.16–30.52",
+   "what": "Keystroke timing on the page lags by one frame. The first glyph appears at frame 730 (29.20) against the source's 729 (29.16). The keystrokes at source frames 731, 734, 741 and 751 land one frame late in the render. The last keystroke at 763 is missing: the text's right edge is 691 px against 697 px. All within ±2 frames except the missing final character. The glyphs are also lighter and crisply legible ('Seen this, really'), where the source shows heavier, blurred, blocky glyphs.",
+   "fix": "Shift the typing schedule 1 frame (0.04 s) earlier, with the first glyph at local 0.12 s, and add a final keystroke at frame 763 so the right edge reaches x≈697. Render the text heavier (weight 700–800, about 10% larger, 0.6 px blur) so it reads as dark smudged glyphs."
+  },
+  {
+   "severity": "low",
+   "at": "key caps, frame x≈450–1150, y≈560–720",
+   "what": "The key legends ('tab', 'caps lock', letters, 'command') are brighter and more legible than the source's faint legends. There are also a few white highlight streaks along the key-well edges.",
+   "fix": "In s07/keys.js, halve the legend alpha (target ≈40–60 levels above the cap instead of ≈100) and drop the highlight streaks on the key-well top edge."
+  },
+  {
+   "severity": "low",
+   "at": "dark static areas (left speaker 60–260/300–700, boxes, beanie cuff)",
+   "what": "Fine grain in the blacks is about 1.7× the source's: frame-to-frame raw difference 2.3–2.4 against 1.4. Low-frequency change matches (0.8 vs 0.8) and midtone grain matches (shirt 3.14 vs 3.36). The cause is the global post.js grain weighting, not s07.",
+   "fix": "Owner of post.js: weight grain by luminance so L≈0 gets ≈0.33× instead of 0.55×. A per-shot grade() override in s07 would also lower the midtone grain, which currently matches, so it is not recommended."
+  },
+  {
+   "severity": "low",
+   "at": "tools/compare.sh / tools/sidebyside.sh (tooling, not s07)",
+   "what": "The compare pairs are misaligned at cuts, and a reviewer can misread this as a late cut. In snapshot mode the runtime floors seeks to a 30 fps grid (renderSeek with canonicalFps 30, floor(30T)/30), while the reference is the first source frame with pts ≥ T. So the pairs at 29.04 and 29.06 show s06 in the render (29.0333), and the pair at 30.533/30.54 shows s08 in the reference (frame 764). The real film at exact 25 fps times (window.__film.renderAt) lands frames 726 and 764 correctly: cuts are exact.",
+   "fix": "For s07 comparisons use times that sit on both grids (multiples of 0.2 s) or an exact-time harness. Tools owner: set window.__HF_EXPORT_RENDER_SEEK_CONFIG={fps:25,fpsSource:'render-options'} before snapshotting, or snap the --at times to k/25 and extract the reference by frame index."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "**Visually close.** At normal viewing size s07 is almost indistinguishable from the source:\n- Blurred error (σ 8) is 1.96–2.10/255 on every frame; the cut frame 726 is 2.52.\n- Mean brightness is within +0.2 to +0.6 levels.\n- Tone statistics match in every region I checked.\n- The camera is locked in both (camtrack: s = 1.0000, 0.0 px).\n- Both cuts land exactly on frames 726 and 764 when rendered at exact 25 fps times.\n- Every finger movement lands on the same frame (motion-energy correlation 0.976), though with 0.82 of the source's amplitude.\n\n**Why it matches this well.** Outside the page, the plate and hands are a dense automatic trace of the source, including the source's own per-frame optical flow for the hands. That is the gating issue (defect 1): it needs an explicit user ruling. The visible defects are fine-scale:\n- a mechanical tile grid on the beanie cuff;\n- smeared, chalky hands with broken contours;\n- a ragged white hinge/deck rim;\n- a too-bright, hard-edged left end of the page's rainbow;\n- a slightly posterised owl;\n- simplified page illustrations (robot, plume, fan);\n- typing on the page 1 frame late, with the last keystroke missing.\n\n**Other checks.**\n- No placeholder text, red error bars or page errors.\n- Determinism: 29.0667 (the cut frame's field path), 29.6, 30.0 and 30.2 rendered in separate compare runs are byte-identical.\n- The first s07 frame costs about 1.06 s (plate build) and later frames 8–40 ms.\n- My puppeteer harness (Chrome 138) logged Chrome's 'canvas readback noise' warning. s07 relies on getImageData readbacks, but the pinned hyperframes pipeline produced identical frames.\n\n**Where the evidence is.**\n- `snapshots/s07-rev1-al/pair-*.jpg`: pairs on times that sit on both frame grids.\n- `snapshots/s07-rev1-motion/sheet.jpg`\n- `snapshots/s07-rev1-cmp` and `s07-rev1-a`: the 30 fps quantisation artefact.\n- `snapshots/s07-rev1-crops/*.jpg`: render-over-source crops at frame 745, plus `errheat.jpg`.\n- `snapshots/s07-rev1-h/film.mjs`: an exact-time harness that loads the real `index.html` router and grade.\n\n**Cleanup.** As the user asked, I deleted only my own full-resolution intermediates from this session (frame and ref PNGs, extracted source frames, .npy means). The pair and sheet JPGs are kept. I also deleted my first set of crop PNGs by mistake (my exclusion pattern didn't match); they were my own files, and I regenerated them as the JPGs above.\n\n**Possible overwrite.** `snapshots/s07-rev1-f25.log` and `s07-rev1-motion.log` date from Sep 24 and are not mine; I left them untouched. But `sidebyside.sh` runs `rm -rf` on its output directory, so an older `snapshots/s07-rev1-motion` from that earlier review would have been replaced if it still existed. I cannot tell whether it did."
+}

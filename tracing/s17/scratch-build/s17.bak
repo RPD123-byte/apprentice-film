@@ -1,0 +1,44 @@
+// s17 — 47.84–53.24: his site full-frame (MIXING DOWN, LATE AT NIGHT.), with the owl inside the illustration.
+// Camera: the shot opens 1.92x in on the page and pulls back to 1:1 by ~48.7 (ORB track of the source, fixed point
+// (866, 338) page px), then holds. The page is the sōko foundation's (sites.js / sokoIll.js).
+// The owl (s17/owl.js + s17/owlDraw.js): clinging to the desk edge by the mug, it spreads its wings and rises
+// upright (on twos, 49.1–52.5), then turns and dashes off to the left, flapping (on ones, 52.52–53.24).
+// The coffee steam curls (redrawn on twos), as in the source.
+import { sokoPageCanvas, releaseSoko, PAGE_W, PAGE_H } from "../lib/sites.js";
+import { owlFrame } from "./s17/owl.js";
+import { drawOwlS17 } from "./s17/owlDraw.js";
+import { drawSteam, STEAM_BOX } from "./s17/steam.js";
+
+// zoom relative to the settled page, one sample per source frame (ORB + RANSAC against 48.80, owl and steam masked;
+// fixed point (865, 341) page px). Local -0.04 = 47.80, the frame s16 borrows from this shot.
+const Z = [[-0.04, 2.1718], [0, 1.9529], [0.04, 1.7763], [0.08, 1.6346], [0.12, 1.5126], [0.16, 1.4111], [0.2, 1.3299], [0.24, 1.2619],
+  [0.28, 1.207], [0.32, 1.1592], [0.36, 1.122], [0.4, 1.0911], [0.44, 1.0673], [0.48, 1.0471], [0.52, 1.0319], [0.56, 1.0204],
+  [0.6, 1.0124], [0.64, 1.0066], [0.68, 1.0029], [0.72, 1.0]];
+const FX = 865, FY = 341;
+function zoomAt(t) {
+  if (t <= Z[0][0]) return Z[0][1];
+  for (let i = 1; i < Z.length; i++) if (t <= Z[i][0]) { const [a, va] = Z[i - 1], [b, vb] = Z[i]; return va + (vb - va) * ((t - a) / (b - a)); }
+  return 1;
+}
+
+export const shot = {
+  draw(ctx, local, t) {
+    const z = zoomAt(local);
+    const page = sokoPageCanvas({ gaze: "owl", scale: z > 1.5 ? 2 : z > 1.02 ? 1.5 : 1 });
+    ctx.save();
+    ctx.translate(FX, FY); ctx.scale(z, z); ctx.translate(-FX, -FY);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(page, 0, 0, PAGE_W, PAGE_H);
+    // the steam: cover the page's static wisps and draw the animated ones (page coordinates)
+    drawSteam(ctx, t);
+    ctx.restore();
+    // the owl, placed in page px, drawn at frame resolution under the same camera
+    const p = owlFrame(t);
+    if (p) {
+      const q = { ...p, x: FX + z * (p.x - FX), y: FY + z * (p.y - FY), s: p.s * z };
+      if (p.blur) q.blur = [p.blur[0] * z, p.blur[1] * z];
+      drawOwlS17(ctx, q);
+    }
+  },
+  release() { releaseSoko(); },
+};

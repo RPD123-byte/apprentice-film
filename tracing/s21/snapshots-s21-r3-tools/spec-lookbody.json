@@ -1,0 +1,4 @@
+{ "pose": "LOOK", "frames": [71.12, 71.28, 71.44, 71.60], "rounds": 8, "sigma": 1.5,
+  "windows": [ {"anchor": "head", "win": [60, 40], "off": [-20, 60], "weight": 1} ],
+  "params": [ {"path": "body.x", "step": 10}, {"path": "body.y", "step": 10}, {"path": "body.a", "step": 8}, {"path": "body.b", "step": 8},
+              {"path": "tail.tip.0", "step": 12}, {"path": "tail.tip.1", "step": 12} ] }

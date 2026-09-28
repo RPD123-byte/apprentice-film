@@ -1,0 +1,62 @@
+{
+ "fidelity": "close",
+ "defects": [
+  {
+   "severity": "low",
+   "at": "30.56–~31.9 s, top-left mark, F0 box x 140–500, y 0–180",
+   "what": "This is still the largest difference, and it is intentional: an original 'Wonder / Camp' script stands where the source has a third-party wordmark. Blurred (σ3) error in the box is 21.6 levels at frames 764–767, against ≤5.2 in every other region. The mass now matches (bright area above level 110: 8223 vs 8093 px; bounding box x 181–436 vs 173–437), but the strokes are still thicker: 6.2 vs 5.2 px (area over skeleton length) at 764, 6.3 vs 5.8 at 776. The ink is 3–4 levels brighter (p90 144 vs 140).",
+   "fix": "Keep the letterforms original. Reduce MARK.w by about 1 px, move line 1 about 8 px left (ink starting at x ≈173), and lower MARK_INK by about 4 levels (#d8dace → ~#d3d5c9)."
+  },
+  {
+   "severity": "medium",
+   "at": "Whole shot, card top-left corner: F0 x 1438–1490, y 184–225 (output ≈1105–1180, 125–185 at 32.56). Also the card's bottom-left corner, F0 y 800–828",
+   "what": "The card corner and the U's purple band where they meet are the wrong shape. (a) The top-left corner is too tight. Paper edge at level 150, frames 764–765: y186 1483.2 vs 1487.5; y190 1473.9 vs 1477.5; y196 1466.0 vs 1468.7; y205 1458.3 vs 1460.6. That fits a radius of ≈46 against ≈50.7 F0 px. (b) At F0 y 205–222 the source has a 3–4 px purple sliver (levels 74–109) between the orange/purple keyline at x ≈1443–1446 and the card outline at ≈1450. The render has bright orange (133–139) right up to x 1446 and a single dark line: its purple band ends ~15 px too high, and the orange/purple keyline kinks into the card. Local errors reach about ±60 levels. At the end of the push-in (×1.39) this shows as a dark V pocket plus an orange wedge; it is the only 128-px patch with a local offset over 1 px (−1.5, −1.1). (c) The bottom-left corner is too round. Paper edge is 1.4–2.4 px inward at y 810–825, a radius of ≈46.5 against ≈43. The top-right corner matches within 0.5 px.",
+   "fix": "In s08, after drawNoteCard, repaint F0 (1438–1480, 180–225): first the ground and bands, then the purple sliver as a polygon from (1446,200)/(1450,200) down to (1447,222)/(1449.5,222). Run its outer keyline straight from (1442,190) to (1446,222) and remove the orange wedge. Then draw the card body with per-corner radii [TL ≈50.8, TR 45, BR 45, BL ≈43.3] card units (TL ≈50.5 F0 px, BL ≈43). Re-check against the source's paper-edge rows listed above."
+  },
+  {
+   "severity": "low",
+   "at": "Whole shot, all traced page art. Worst on the lobes/fan (F0 y 440–600, where ornKey lifts the keylines) and the pastel tail (F0 x 1900–2206, y 200–340)",
+   "what": "Keylines are greyer than the source's. Median line-core minimum from about 150–400 profiles per region, selected symmetrically on luma: lower-left letters 25 vs 17 at 764 and 32 vs 23 at 814; lobes/fan 27 vs 16; U left arm 26 vs 21 (30 vs 28 at 814); U right arm and tail 16 vs 8 (17 vs 8 at 814). At the tail edge (x 2150–2204) the minima are 13–21 against 2–13. Widths at half depth match (6.5–9 px), and total line darkness is 1–9% short. The ORN_KEY_LIFT lift now overshoots: the fan and lobe keylines sit ~11 levels above the source's.",
+   "fix": "Set ORN_KEY_LIFT from '#1c241b' to about '#0d110c', or drop the lift. Raise RIB_KEY from 5.4 to ~6.2. In the ORN zone, raise the overpaint keyline width lw from 10 to ~10.8, or darken KEYLINE to ~#0a0503. Target: core minima within +3 levels of the source per region."
+  },
+  {
+   "severity": "low",
+   "at": "Whole shot, text-box corners (F0 ≈(1500.5–1871.4, 342–780.5))",
+   "what": "All four text-box corners are too tight: radius ≈15 against ≈18.5 F0 px. Measured as the distance along the diagonal from the corner point to the outline: 6.25 vs 7.5–7.75 px at 764, and 8.5–8.75 vs 10.5–10.75 output px at 814. The straight edges and the button row sit within 0.25 px. The divider sits 0.56 px left.",
+   "fix": "Add r: 18.5 to CARD_THEME.area (the AREA default is 15) and set divX 236 → 236.5."
+  },
+  {
+   "severity": "low",
+   "at": "Whole shot, dark ground and mid-tone bands (e.g. output x 300–560, y 120–300; the U arms); most visible late",
+   "what": "The scan striation is multiplicative everywhere, but in the source it barely touches the dark ground. On flat ground, amplitude at the stripe period is 0.55 / 0.78 / 1.21 levels in the render against 0.11 / 0.05 / 0.44 in the source (frames 765 / 790 / 814). Over mixed U band and ground it is 0.9–1.8 against 0.27–0.65. The period (2.10→2.89) and the amplitude on the card paper (2.2–2.6 vs 1.8–3.0) match. The result is faint mechanical horizontal lines on the ground that the source does not have; for example, the top rows at frames 776–780 alternate 41/43 and 50/53 where the source is flat.",
+   "fix": "Weight the striation by a luma mask of the static frame, built the way NOISE.gain is and carried by the camera: A_eff = STRIPE_A × smoothstep(60, 180, luma). Target ≤0.25 levels on the ground while keeping ~2.3 on the paper."
+  },
+  {
+   "severity": "low",
+   "at": "30.56–~31.1 s, page art (letters, date, lobes, rainbow, tail, cloud)",
+   "what": "The page art is still slightly too crisp early on. Median erf σ in output px over ~500 clean step edges per region, frame 764: 'ure' 1.15 vs 1.34; date 1.31 vs 1.51; rainbow 1.21 vs 1.37; U/tail 1.21 vs 1.37; cloud 1.17 vs 1.32; lobes 1.18 vs 1.36. The render/source ratio is 0.86–0.88 at 764, 0.89–0.95 at 790 and 0.93–1.01 at 814. The card (0.57 vs 0.58) and typed text match. The missing blur is ≈0.65 px and roughly constant in output space, so it cannot be fixed in F0 without over-softening the end.",
+   "fix": "Split the per-frame composite. Draw the page (STATIC minus the card) through the camera with an output-space ctx.filter blur of ~0.6 px, then draw the card, text and selection layer sharp on top. Do not raise SOFT.* further."
+  },
+  {
+   "severity": "low",
+   "at": "Whole shot, card labels and icons",
+   "what": "The button labels are misplaced. CANCEL and SAVE sit 0.8–1.05 F0 px left and ~0.3 px high (phase correlation at 764 and 790; SAVE's ink starts at x 1747 against 1749). CANCEL is 5–8% light. The typed text is 5% light from 30.56 to 31.2 (ink ratio 0.95) and 0.99 afterwards. The smiley's eyes are ~1 px off, showing as red/blue arcs in the difference image.",
+   "fix": "Shift the button labels +0.9 card units in x and +0.3 in y. Darken CARD_THEME.muted from #646460 to ~#5c5c58. Optionally cut TXT.erode 0.37 → 0.33 for the first 0.6 s only; this is optional, because the later frames match."
+  },
+  {
+   "severity": "low",
+   "at": "30.56–~31.3 s, cloud under the card's bottom-left, F0 (1740–1900, 835–865), and around the sparkle F0 (1690–1775, 875–946)",
+   "what": "The cloud's orange body is too red there. Render RGB (112,75,52) and (94,61,43) against the source's (99,69,55) and (82,56,46): +10–13 R and −3 B. Around the sparkle the net error is −2.5 levels (blurred error 5.2, the highest non-mark region).",
+   "fix": "Inside CLOUD_ZONE, add a multiply (≈0.90, 0.95, 1.05) centred on (1810, 850) with radius ~90, or retint those CLOUD pieces toward (100,69,55). Lift the body next to the sparkle by ~+6 levels."
+  },
+  {
+   "severity": "low",
+   "at": "Top crop strip (30.56–30.84 s) and the ground right of F0 x 1460",
+   "what": "(a) The black strip grades to 2–3 levels where the source is 0–1. The crop edge sits ~0.3 px high on frames 764–770: row 9 is 9 vs 2, row 10 is 32 vs 24 at x 600–1000. (b) The ground right of x 1460 is slightly dark and less green. Example: F0 (1600–1700, 110–135) is (21,26,19) against (22,29,22), −2.2 levels on every frame, because groundTone stops at x 1460.",
+   "fix": "(a) Keep STRIP_Y 10.1 (the builder's tradeoff for row 0) or try 10.25; the black floor comes from the grade. (b) Extend groundTone to x 2206, or add a gain of about (1.03, 1.10, 1.12) on dark pixels right of x 1460."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "**Fidelity: close.** s08 matches the source closely in framing, timing, camera, light and texture. The remaining differences are local shapes and line tone. The largest is still the required substitute mark. Next, the card's top-left corner is too tight and the purple band next to it ends too high; this is the only local shape error that stays in view at the end of the push-in.\n\n**How I measured.** I rendered every frame 762–817 through the real film path. My harness loads index.html and src/main.js, stubs the gsap CDN script, and calls window.__film.renderAt(k/25). These renders are bit-identical to tools/compare.sh at 30.6, 31.0 and 32.0. I also ran compare.sh at 12 times and sidebyside.sh at 10 fps.\n\n**Overall error.** Blurred (σ3) mean error over frames 764–814 is 3.28 levels. It is 3.68 at the first frame and 2.95 at the last, matching the builder's log.\n\n**What matches:**\n- **Cuts:** frame 763 is s07, 764 is s08 and 815 is s09, in both the render and the source. The frame change at the cut is 72.1 vs 72.2 and 83.9 vs 84.0.\n- **Camera:** an affine alignment of render against source leaves at most 0.36 px at the frame corners on every other frame. 128-px patches register within 0.6 px everywhere except the card's top-left corner.\n- **Typing and caret:** each letter's ink appears on the same frame in both (769, 772, 775, 778, 782, 789, 792, 796, 799), and the caret is gone from frame 802 in both.\n- **Selection line:** its position is within ±0.26 px on both runs. Its width is 11.7 vs 12.0, 13.7 vs 13.8 and 16.3 vs 16.5 px.\n- **Flicker:** frame-to-frame change on the card paper has std 1.21 vs 1.22, correlation 0.99.\n- **Capture noise:** temporal and spatial statistics are within ~10%.\n- **Flat colours:** within ±4 levels per channel.\n\n**Previous review items.**\n- **Fixed:** the pills (edge within 0.5 px), the right-edge seam (tail keylines within 1 px at x 2204), the date lines, the bottom edge under the r/e, and crop-strip row 0. The u counter and the r nub improved (region error 5.0 and 4.2, from ~6).\n- **Partly fixed:** softness. Early frames are still ~13% too sharp, while the end matches.\n- **Still open:** the mark's strokes are ~1 px too thick.\n\n**New findings:**\n- **Keylines:** 5–11 levels greyer at their cores. The lobe and fan lift now overshoots.\n- **Text-box corners:** radius 15 against ≈18.5.\n- **Scan striation:** 3–10× too strong on the dark ground, which adds faint horizontal lines the source does not have.\n- **Card labels:** CANCEL and SAVE sit ~1 px left.\n- **Cloud:** the orange under the card is too red.\n\n**Determinism.** Two separate compare.sh runs with different time orders were bit-identical at 30.8, 31.0, 31.6 and 32.2. Film-path renders in forward and reverse order were bit-identical at 764, 776, 790, 801 and 814. No console errors, placeholders or red bars. A frame takes about 0.25–0.3 s including PNG encoding; the first takes about 0.9 s.\n\n**Tool quirks, not shot defects.** compare.sh at 30.58 renders time 30.567, which is frame 765's picture with different grain. At 32.58 it pairs an s08 frame with source frame 815, which is already s09. When measuring, avoid cv2.imread with IMREAD_GRAYSCALE on the render PNGs: they carry an sRGB chunk, so it returns a skewed luma, for example 2.5 instead of 10.4 in dark coloured areas. Use cvtColor instead.\n\n**Files.** As you asked, I deleted only what this run created: nine entries under snapshots/s08-rev2q-* and the scratchpad folder s08rev2q. The older snapshots/s08-rev1-*, s08-rev2-*, s08-rev2n-* files are untouched, and no source files were edited."
+}

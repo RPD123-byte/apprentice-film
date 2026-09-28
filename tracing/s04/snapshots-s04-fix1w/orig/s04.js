@@ -1,0 +1,262 @@
+// s04 (19.12–23.12): the owl glides in and lands on his right shoulder; held front close-up (he watches it sideways,
+// pencil in his teeth); then the camera arcs round his left side, past his profile against the dark (~22.1–22.4), on
+// behind him to over his shoulder at the laptop (MIXING DOWN on the screen). One continuous move in the source.
+//
+// Built as a rotoscope: 44 key drawings, each made from measurements of one source frame (s04/tkey.js: a 14-value
+// study of simplified region outlines, the solid blacks and white-ink highlights, and the traced ink lines redrawn as
+// tapered strokes; tone calibrated per key against its frame), carried to the frames round it by the measured motion
+// (optical flow on a 24 px grid). Every source frame 19.12–23.08 is covered by exactly one key; keys switch on frame
+// boundaries. The laptop's page (22.44–23.12) is s05's own page drawing (src/shots/s05/screen.js), mapped through the
+// screen's measured homography per frame (s04/screen04.js). Scripts: snapshots/s04-k2/tr/.
+//
+// Measured beats (snapshots/s04-study, snapshots/s04-fix1-study, snapshots/s04-k2):
+//   19.12–19.56  the camera pans (content +157, −121 px, ease-out); the owl glides in, eyes shut, wings spread
+//   19.68        feet on his shoulder; 19.72 wings up; 19.76 eyes half open, 19.80 open; 19.84–20.20 wings fold
+//   20.20–20.80  held (frame-to-frame change = grain only; source frames 20.08, 21.08, 22.08 and 23.08 repeat the
+//                frame before them)
+//   20.84–23.12  the arc: ~115° round his left side; his eyes swing from the owl to the lens 21.28–21.48; profile
+//                ≈ 22.1–22.4 with the speaker entering left at 22.3; the laptop screen enters left at 22.44
+import { W, H } from "../config.js";
+import { Warper } from "./s04/morph.js";
+import { paintKey, keyMesh } from "./s04/tkey.js";
+import { drawScreen04, releaseScreen04, SCREEN_Q } from "./s04/screen04.js";
+import { OWL_MASK } from "./s04/owlmask.js";
+import { paintOwlFace } from "./s04/owlface.js";
+import { paintHisEyes } from "./s04/hiseyes.js";
+import { paintHisFace } from "./s04/hisface.js";
+import { EYETRACK } from "./s04/eyetrack.js";
+import { TCORR } from "./s04/tcorr.js";
+import { K1912 } from "./s04/tk/k1912.js";
+import { K1916 } from "./s04/tk/k1916.js";
+import { K1928 } from "./s04/tk/k1928.js";
+import { K1940 } from "./s04/tk/k1940.js";
+import { K1952 } from "./s04/tk/k1952.js";
+import { K1964 } from "./s04/tk/k1964.js";
+import { K1972 } from "./s04/tk/k1972.js";
+import { K1976 } from "./s04/tk/k1976.js";
+import { K1980 } from "./s04/tk/k1980.js";
+import { K1988 } from "./s04/tk/k1988.js";
+import { K2000 } from "./s04/tk/k2000.js";
+import { K2012 } from "./s04/tk/k2012.js";
+import { K2020 } from "./s04/tk/k2020.js";
+import { K2056 } from "./s04/tk/k2056.js";
+import { K2092 } from "./s04/tk/k2092.js";
+import { K2108 } from "./s04/tk/k2108.js";
+import { K2124 } from "./s04/tk/k2124.js";
+import { K2132 } from "./s04/tk/k2132.js";
+import { K2140 } from "./s04/tk/k2140.js";
+import { K2144 } from "./s04/tk/k2144.js";
+import { K2148 } from "./s04/tk/k2148.js";
+import { K2152 } from "./s04/tk/k2152.js";
+import { K2156 } from "./s04/tk/k2156.js";
+import { K2160 } from "./s04/tk/k2160.js";
+import { K2164 } from "./s04/tk/k2164.js";
+import { K2168 } from "./s04/tk/k2168.js";
+import { K2172 } from "./s04/tk/k2172.js";
+import { K2176 } from "./s04/tk/k2176.js";
+import { K2180 } from "./s04/tk/k2180.js";
+import { K2184 } from "./s04/tk/k2184.js";
+import { K2188 } from "./s04/tk/k2188.js";
+import { K2192 } from "./s04/tk/k2192.js";
+import { K2196 } from "./s04/tk/k2196.js";
+import { K2200 } from "./s04/tk/k2200.js";
+import { K2204 } from "./s04/tk/k2204.js";
+import { K2212 } from "./s04/tk/k2212.js";
+import { K2216 } from "./s04/tk/k2216.js";
+import { K2220 } from "./s04/tk/k2220.js";
+import { K2224 } from "./s04/tk/k2224.js";
+import { K2228 } from "./s04/tk/k2228.js";
+import { K2232 } from "./s04/tk/k2232.js";
+import { K2236 } from "./s04/tk/k2236.js";
+import { K2240 } from "./s04/tk/k2240.js";
+import { K2244 } from "./s04/tk/k2244.js";
+import { K2248 } from "./s04/tk/k2248.js";
+import { K2252 } from "./s04/tk/k2252.js";
+import { K2256 } from "./s04/tk/k2256.js";
+import { K2260 } from "./s04/tk/k2260.js";
+import { K2264 } from "./s04/tk/k2264.js";
+import { K2268 } from "./s04/tk/k2268.js";
+import { K2272 } from "./s04/tk/k2272.js";
+import { K2276 } from "./s04/tk/k2276.js";
+import { K2280 } from "./s04/tk/k2280.js";
+import { K2284 } from "./s04/tk/k2284.js";
+import { K2288 } from "./s04/tk/k2288.js";
+import { K2292 } from "./s04/tk/k2292.js";
+import { K2296 } from "./s04/tk/k2296.js";
+import { K2300 } from "./s04/tk/k2300.js";
+import { K2304 } from "./s04/tk/k2304.js";
+
+const EYE_ALPHA = { "21.52": 0.75, "21.56": 0.5, "21.60": 0.25, "21.64": 0 };
+const EYES_FULL = true;   // (false: only the iris is authored and the traced lids stay -- tried, reads worse)
+const M = 180;                       // key canvas margin (px): the flow may pull from outside the key frame
+// The joins run straight on: s02's last frames and s05's first frames follow the source closely enough that the change
+// of drawing at 19.12 and 23.12 is about the size of the source's own frame-to-frame motion (fidelity/s04.md).
+
+// [key frame (25 fps index), key, lo, hi]: the key alone covers frames f+lo .. f+hi (its measured flows carry it).
+// Frames between one entry's last pure frame and the next entry's first are a BLEND of the two keys, each warped to
+// that frame by its own measured flow, weighted by position (so a new trace fades in over the frames between keys
+// instead of switching on one frame). Keys: every 3rd frame through the glide; every frame over the owl's eyes
+// opening (19.72-19.80) and the wing still out (20.12, 20.20); one key for the hold (20.28-20.80); every 4th frame
+// into the swing; every frame 21.32-21.76, where the laptop lid sweeps 55-170 px per frame (a flow over two frames
+// tears there); every 2nd frame to 22.08; every frame from 22.12 (the pencil and the profile turn too fast).
+const TK = [
+  [478, K1912, 0, 0], [479, K1916, 0, 0], [482, K1928, 0, 0], [485, K1940, 0, 0], [488, K1952, 0, 0],
+  [491, K1964, 0, 0], [493, K1972, 0, 0], [494, K1976, 0, 0], [495, K1980, 0, 0], [497, K1988, 0, 0],
+  [500, K2000, 0, 0], [503, K2012, 0, 0], [505, K2020, 0, 0], [514, K2056, -7, 6], [523, K2092, 0, 0],
+  [527, K2108, 0, 0], [531, K2124, 0, 0], [533, K2132, 0, 0], [535, K2140, -1, 0], [536, K2144, 0, 0],
+  [537, K2148, 0, 0], [538, K2152, 0, 0], [539, K2156, 0, 0], [540, K2160, 0, 0], [541, K2164, 0, 0],
+  [542, K2168, 0, 0], [543, K2172, 0, 0], [544, K2176, 0, 0], [545, K2180, 0, 0], [546, K2184, 0, 0], [547, K2188, 0, 0], [548, K2192, 0, 0],
+  [549, K2196, 0, 0], [550, K2200, 0, 0], [551, K2204, 0, 0], [552, K2204, 0, 0] /* 22.08 repeats 22.04 in the source */, [553, K2212, 0, 0], [554, K2216, 0, 0], [555, K2220, 0, 0],
+  [556, K2224, 0, 0], [557, K2228, 0, 0], [558, K2232, 0, 0], [559, K2236, 0, 0], [560, K2240, 0, 0],
+  [561, K2244, 0, 0], [562, K2248, 0, 0], [563, K2252, 0, 0], [564, K2256, 0, 0], [565, K2260, 0, 0],
+  [566, K2264, 0, 0], [567, K2268, 0, 0], [568, K2272, 0, 0], [569, K2276, 0, 0], [570, K2280, 0, 0],
+  [571, K2284, 0, 0], [572, K2288, 0, 0], [573, K2292, 0, 0], [574, K2296, 0, 0], [575, K2300, 0, 0],
+  [576, K2304, 0, 2]];
+const F0 = TK[0][0], F1 = TK[TK.length - 1][0] + TK[TK.length - 1][3];
+// does key K carry a measured motion to offset off (0, a stored flow, or a frame measured as held)?
+const hasOff = (K, off) => off === 0 || !!(K.flows && K.flows[String(off)]) || !!(K.held && K.held.includes(String(off)));
+// the keys that draw frame fi: [{K, off, w}] (weights sum to 1)
+export function keysAt(fi) {
+  fi = Math.max(F0, Math.min(F1, fi));   // (outside the segment's frames -- previews: the nearest end, carried)
+  for (let i = 0; i < TK.length; i++) {
+    const [f, K, lo, hi] = TK[i];
+    if (fi >= f + lo && fi <= f + hi) return [{ K, off: fi - f, w: 1 }];
+    const nx = TK[i + 1];
+    if (nx && fi > f + hi && fi < nx[0] + nx[2]) {
+      const a0 = f + hi, b0 = nx[0] + nx[2], w = (fi - a0) / (b0 - a0);
+      const A = { K, off: fi - f, w: 1 - w }, B = { K: nx[1], off: fi - nx[0], w };
+      const okA = hasOff(A.K, A.off), okB = hasOff(B.K, B.off);
+      if (okA && okB) return [A, B];
+      if (okA || okB) return [{ ...(okA ? A : B), w: 1 }];
+      throw new Error(`s04: no measured flow for frame ${fi}`);
+    }
+  }
+  throw new Error(`s04: frame ${fi} not covered`);
+}
+
+// The landing (19.56-20.24): he and the room hold still while the owl lands, so re-tracing the whole frame every few
+// frames made his face boil. There the hold key (20.56) is the base, carried back by its measured flow, and the
+// per-frame keys are drawn only where the carried base fails to show the source frame (the owl and its wings:
+// OWL_MASK, measured outlines, feathered). The base fades in over 19.56-19.60 and is the hold key itself from 20.28.
+const BASE = { f: 514, from: 489, full: 491, to: 506 };
+const baseW = (fi) => (fi < BASE.from || fi > BASE.to ? 0 : Math.min(1, (fi - BASE.from + 1) / (BASE.full - BASE.from + 1)));
+
+let C = null;
+function build() {
+  if (!C) {
+    const mk = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
+    C = { warper: new Warper(W, H), cache: [], o: mk(W, H), t: mk(W, H), m: mk(W / 2, H / 2), m2: mk(W / 2, H / 2) };
+  }
+  return C;
+}
+// key canvases, built on first use; at most 5 kept (a cache only: a key's pixels never depend on it)
+function keyCanvas(K) {
+  const hit = C.cache.find((e) => e.K === K);
+  if (hit) return hit.c;
+  const c = paintKey(K, M, { tcorr: TCORR[K.t.toFixed(2)] });
+  // his eyes and brows as authored shapes (measured on 20.56, placed on each key by its measured eye track), and the
+  // sweat drops on the hold key
+  const et = EYETRACK[K.t.toFixed(2)];
+  // (past 21.48 the head turns further than one affine can follow: the authored eyes fade out over 21.52-21.60 and the
+  // traced eyes take over)
+  const ea = EYE_ALPHA[K.t.toFixed(2)] ?? 1;
+  if (et && ea > 0) {
+    const kg = c.getContext("2d");
+    if (ea >= 1) { paintHisEyes(kg, M, 0, K === K2056 ? null : et, EYES_FULL); paintHisFace(kg, M, 0, K === K2056 ? null : et, K === K2056); }
+    else {
+      const ec = document.createElement("canvas"); ec.width = c.width; ec.height = c.height; const eg = ec.getContext("2d");
+      paintHisEyes(eg, M, 0, et, EYES_FULL); paintHisFace(eg, M, 0, et, false);
+      kg.globalAlpha = ea; kg.drawImage(ec, 0, 0); kg.globalAlpha = 1;
+    }
+    kg.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  C.cache.push({ K, c });
+  while (C.cache.length > 5) { const old = C.cache.shift(); C.warper.forget(old.c); }
+  return c;
+}
+function drawKeys(ks) {
+  const Wp = C.warper;
+  Wp.clear();
+  for (const k of ks) Wp.draw(keyCanvas(k.K), keyMesh(k.K, k.off, M), k.w, ks.length > 1);
+  return Wp.c;
+}
+// the owl's outlines at frame fi, filled and feathered (half resolution)
+function owlMask(fi) {
+  const polys = OWL_MASK[String(fi)] || [];
+  const g = C.m2.getContext("2d");
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W / 2, H / 2);
+  g.setTransform(0.5, 0, 0, 0.5, 0, 0); g.fillStyle = "#fff"; g.beginPath();
+  for (const P of polys) { g.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) g.lineTo(P[i][0], P[i][1]); g.closePath(); }
+  g.fill();
+  const m = C.m.getContext("2d");
+  m.setTransform(1, 0, 0, 1, 0, 0); m.clearRect(0, 0, W / 2, H / 2);
+  m.filter = "blur(6px)"; m.drawImage(C.m2, 0, 0); m.filter = "none";
+  return C.m;
+}
+
+// The laptop page (22.44-23.12), as the source shows it: soft (a constant defocus), glowing, and smeared along the
+// screen's own motion while it swings in (22.44-22.64). The smear is the page quad's measured velocity (centroid,
+// px per frame, from the neighbouring measured quads) times the shutter; the same shutter as the room's smear.
+// (the source's page is smeared only while it moves fast: past ~25 px per frame; at 22.84, 36 px per frame, it is
+// nearly sharp)
+const SHUTTER = 0.4, SMEAR0 = 25, DEFOCUS = 1.6, BLOOM = 0.22;
+function screenVel(fi) {
+  const i = SCREEN_Q.findIndex((r) => Math.round(r[0] * 25) === fi);
+  if (i < 0) return [0, 0];
+  const a = SCREEN_Q[Math.max(0, i - 1)], b = SCREEN_Q[Math.min(SCREEN_Q.length - 1, i + 1)];
+  const n = Math.round((b[0] - a[0]) * 25) || 1;
+  let vx = 0, vy = 0; for (let k = 1; k < 9; k += 2) { vx += (b[k] - a[k]) / 4; vy += (b[k + 1] - a[k + 1]) / 4; }
+  return [vx / n, vy / n];
+}
+function screenLayer(ctx, t, fi) {
+  if (!C.sc) { C.sc = document.createElement("canvas"); C.sc.width = W; C.sc.height = H; C.sd = document.createElement("canvas"); C.sd.width = W; C.sd.height = H; }
+  const sg = C.sc.getContext("2d");
+  sg.setTransform(1, 0, 0, 1, 0, 0); sg.globalAlpha = 1; sg.globalCompositeOperation = "source-over"; sg.clearRect(0, 0, W, H);
+  if (!drawScreen04(sg, t, { soft: 0, blur: 0 })) return;
+  const [vx, vy] = screenVel(fi), L = Math.max(0, Math.hypot(vx, vy) - SMEAR0) * SHUTTER;
+  const dg = C.sd.getContext("2d");
+  dg.setTransform(1, 0, 0, 1, 0, 0); dg.globalAlpha = 1; dg.clearRect(0, 0, W, H);
+  dg.drawImage(C.sc, 0, 0);
+  if (L > 1.5) {   // smear: a 16-tap box along the motion (repeated halving), centred
+    const ux = vx / Math.hypot(vx, vy), uy = vy / Math.hypot(vx, vy);
+    for (let d = L / 16; d < L; d *= 2) { dg.globalAlpha = 0.5; dg.drawImage(C.sd, ux * d, uy * d); }
+    dg.globalAlpha = 1;
+    sg.clearRect(0, 0, W, H); sg.drawImage(C.sd, -ux * L / 2, -uy * L / 2);
+  } else { sg.clearRect(0, 0, W, H); sg.drawImage(C.sd, 0, 0); }
+  // defocus, then the glow of the lit page
+  ctx.save();
+  ctx.filter = `blur(${DEFOCUS}px)`; ctx.drawImage(C.sc, 0, 0);
+  ctx.filter = "blur(10px)"; ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = BLOOM; ctx.drawImage(C.sc, 0, 0);
+  ctx.restore();
+}
+
+export const shot = {
+  draw(ctx, local, t) {
+    build();
+    // hold each 25 fps source frame (a no-op in the film render, which samples frame times exactly; previews sample
+    // slightly early): every key lands on its own frames
+    t = Math.ceil(t * 25 - 1e-6) / 25;
+    const fi = Math.round(t * 25);
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+    if (fi >= 561) { try { build(); screenLayer(ctx, t, fi); } catch (e) { console.warn("[s04] screen:", e); } }
+    const ks = keysAt(fi), bw = baseW(fi);
+    if (!bw) ctx.drawImage(drawKeys(ks), 0, 0);
+    else landing(ctx, fi, ks);
+    // the owl's eyes, beak and plaster as authored shapes (19.80-21.64, where its face is towards us), over the keys
+    paintOwlFace(ctx, fi / 25, ks.reduce((s, k) => s + k.w * (k.K.ts || 0), 0));
+  },
+  release() { if (C) for (const e of C.cache) C.warper.forget(e.c); C = null; releaseScreen04(); },
+};
+// the landing: the carried hold key, with the per-frame keys inside the owl's outlines
+function landing(ctx, fi, ks) {
+  const bw = baseW(fi);
+  const og = C.o.getContext("2d");
+  og.clearRect(0, 0, W, H); og.drawImage(drawKeys(ks), 0, 0);
+  ctx.drawImage(drawKeys([{ K: K2056, off: fi - BASE.f, w: 1 }]), 0, 0);
+  const tg = C.t.getContext("2d");
+  tg.globalCompositeOperation = "source-over"; tg.clearRect(0, 0, W, H); tg.drawImage(C.o, 0, 0);
+  tg.globalCompositeOperation = "destination-in"; tg.imageSmoothingEnabled = true; tg.drawImage(owlMask(fi), 0, 0, W, H);
+  tg.globalCompositeOperation = "source-over";
+  ctx.drawImage(C.t, 0, 0);
+  if (bw < 1) { ctx.globalAlpha = 1 - bw; ctx.drawImage(C.o, 0, 0); ctx.globalAlpha = 1; }
+}

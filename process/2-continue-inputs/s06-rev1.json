@@ -1,0 +1,86 @@
+{
+ "fidelity": "close",
+ "defects": [
+  {
+   "severity": "medium",
+   "at": "26.72–29.04 (from 27.36, frame 684, fully present from 28.0 to the cut); left brow inner end (834–871, 185–227)",
+   "what": "The smile-state brow layer draws a broken black comma-shaped blob where the brow's inner end meets the dark hair strand. In the source the brow tucks cleanly behind the strand. About 110 px are 60–175 levels darker than the source at every frame from 28.0 on (27 px at 26.72, growing as the smile fades in). It shows at 1:1. Cause: r3_brow_s items with near-black tone and 7–9 px width: ink strokes #16 (841–849,197–203), #17 (844–855,185–195), #19 (854–861,199–203), #199 (834–841,219–226), #201 (844–852,196–204), #204 (857–865,192–193), and solids[2] ring 13 (v 0.088, 845–865 × 191–203.5).",
+   "fix": "Delete those strokes and that ring from data/r3_brow_s.js, or clip R3BROW_S (and the brow_s pass inside `mix`) with a polygon that excludes x<872, y 183–228, so the `over` hair owns that spot. Re-check at 27.6, 28.0 and 29.0: the dark-pixel count in the box (828,192)-(868,224) should be about 25, like the neutral state."
+  },
+  {
+   "severity": "medium",
+   "at": "All frames; left upper lid y≈282–284, x 808–943; right upper lid y≈277–280, x 1129–1183",
+   "what": "Straight horizontal seams cut across both upper eyelids. The ground outlines of r3_face and r3_face_s have long perfectly horizontal edges at y=283/284/284.5 (left) and y=277/278 (right), which look like a mask cut in the tracer. The left lid gets a pale 2–3 px band: row 283 is 175 in the render against 163 in the source (+12). The right lid gets a light-then-dark dotted line: y 277 is +5 and y 279–280 is −5 to −8, a line anomaly of +17 to +19 levels. The source has only curved lid hatching there.",
+   "fix": "Re-trace the face and face_s ground so the region mask doesn't end on a straight row there. Either extend the eye-region mask to end inside the dark lash line, or feather the two masks over ±4 px in region.py. A stopgap in code: after drawing `under` and `mix`, redraw a 1.5 px blurred copy of bands y 274–288 over x 800–950 and x 1120–1190."
+  },
+  {
+   "severity": "medium",
+   "at": "All frames; hoodie shoulder under the owl's feet, curve (1580,604)→(1600,608)→(1671,617)→(1700,620)→(1763,612)",
+   "what": "A thin, crisp white arc (1–2 px) runs across the hatched hoodie under the owl's feet. It sits exactly on the bottom edge of the owl layer's clipRings. The render is up to +76 levels brighter than the source at (1700,620) and +37 to +42 at x 1580–1610. The source has continuous dark hatching there.",
+   "fix": "Move those clipRings points about 4 px up, into the dark under-body and feet shadow (e.g. y 604→600, 617→613, 620→616, 619→615, 612→608), in r3_owl and r3_owl_post. Or feather the clip: draw the owl into a box canvas, then destination-in a 2 px blurred copy of the ring. Verify that the r−s peak along x 1580–1790, y 595–625 falls below 15."
+  },
+  {
+   "severity": "medium",
+   "at": "27.12–29.04, worst 28.0–29.04; brows (750–1350, 180–290)",
+   "what": "The brows are the weakest region: blurred MAE 3.2 mean and 4.3 at 29.0 (σ5), 5.5 at σ1.5. Both brows lack the source's crisp individual hair strokes. The right brow (1130–1310, 190–250) is lighter and softer, and the left brow in the smile state is a smooth grey band. Mid-transition the left brow sits 3 px low and 2 px left of the source at 27.96–28.0 (phase correlation −2.0, +3.2 px). The render brows are brighter than the source by up to +2.2 levels (mean +0.8).",
+   "fix": "Re-trace the brow ink with a lower ridge threshold or a second pass so single hairs 2–3 px wide survive, and raise their contrast (tone ≤0.1). For the transition, drive the brow patch with a per-frame template-match offset of the left brow over 27.08–28.2 instead of the grid flow (the source brow moves +8/−11 px by 28.0). Target brows ≤2.5 at σ5 on every frame."
+  },
+  {
+   "severity": "medium",
+   "at": "27.52–29.04; right jaw and hair edge (1250–1440, 430–800), fist and cheek (650–760, 500–620), right smile crease (1225–1260, 637–678)",
+   "what": "The face lift that comes with the smile only dissolves; nothing moves. The `over` layer (nape, hair, hand), traced on the neutral state, never moves, so the right jaw and hair edge stays 3.4 px low at 28.0, 4.9 px at 28.44 and 3.9 px at 29.0 against the source. It shows as a bright rim along that edge in the signed diff. The fist and cheek contour ends 2.3 px low at 29.0. Mid-transition (about 27.5) the right crease shows twice at half strength instead of one moving stroke.",
+   "fix": "Warp the part of `over` right of x 1200 and below y 420 by dy = −4 px × SMILE(t) (ease 27.08→28.2), for example by drawing that clipped region of the cached `over` with a translate. Translate the fist and cheek contour region (600–800, 480–640) by −2 px × SMILE(t). For the crease, displace the neutral stroke toward the smile stroke with the flow and cross-fade over a narrower window (0.3–0.7 of k), not a plain alpha dissolve."
+  },
+  {
+   "severity": "low",
+   "at": "28.04–28.52 (frames 701–713); right earcup x≈1788–1790, y 272–367",
+   "what": "Each blink-head layer (r3_owlhead_b28.04…b28.52) has a straight vertical edge through the right earcup's cushion pattern. For the 13 blink frames the pattern visibly steps at x≈1789: an error step of +22 levels and a line anomaly of −18 at 28.20. The step appears and disappears with the blink.",
+   "fix": "Extend the blink-head trace box right to x≥1860 so the whole earcup lies inside it, or clip the head layer along the headband and earcup silhouette instead of a straight line. Otherwise feather its right edge by 3 px."
+  },
+  {
+   "severity": "low",
+   "at": "All frames; eyes (780–990, 300–400) and (1110–1330, 290–400)",
+   "what": "At 1:1 the irises are blurrier, with fewer radial streaks and a weaker dark limbal ring. The upper-lid crease hatching and the under-eye bags are a smooth grey gradient, where the source uses crisp directional pen strokes that fan from the lid. The owl's small lower catchlights are also soft, not crisp white dots.",
+   "fix": "Add a pen-stroke pass for the lid and bag hatching (strokes 0.8–1.5 px wide, tone 0.25–0.45, following the lid curvature) and 12–16 radial iris streaks per eye. Draw the owl's secondary catchlights as unblurred 3–4 px white discs."
+  },
+  {
+   "severity": "low",
+   "at": "All frames; mouth line (940–1200, 625–700)",
+   "what": "The source's lip line is warm: on dark pixels R−B is +7 to +9 (for example BGR 107/105/116). The render line is neutral grey. The lip comb above the line renders as blotchy grey dabs, around x 1105–1125 and at the right corner (1175–1195, 628–640), where the source has fine clean diagonal ticks and a crisp, brushy dark corner terminal. The neutral mouth's left corner (x≈960, 672–676) is fainter than the source.",
+   "fix": "Stroke MLINE in a tinted ink, about rgb(cd+9, cd−2, cd−1), instead of rgb(cd,cd,cd). Re-trace COMB_N and COMB_S with thinner widths (≤1.2 px) and drop dabs wider than 3 px. End the smile line in a tapered dark hook instead of the grey blob."
+  },
+  {
+   "severity": "low",
+   "at": "All frames; laptop lid rim, x 230–1880, y 812–838",
+   "what": "The machined lid edge is blurred. The top dark line at y≈816 is 20–35 levels too light (render 100–120, source 76–86), the highlight at y≈832 is 15–30 too dim (129–157 against 140–172), and y≈836 is 10–20 too light. The rim is a 1650 px long, very readable edge.",
+   "fix": "After drawing `over`, stroke crisp unblurred lines along the rim: a dark rgb(70,70,70) line about 2 px wide at y 815.5–816.5 and a pale rgb(175,175,175) line 1 px wide at y 832, following the lid's slight curve from x 230 to 1880. Then re-check the row profile."
+  },
+  {
+   "severity": "low",
+   "at": "All frames, drifting upward after 27.6",
+   "what": "Exposure and colour. On static regions the render is 1.7–3.7 % brighter than the source (1.9 % at 26.72, rising to 3.7 % by 28.9). Frame means are +0.4 to +1.5 levels. The source has a faint warm-green cast: over the full frame B is about 2.6 levels below G and R (the room is 1.8 below). The render is exactly neutral. The flicker's frame-to-frame correlation with the source is 0.80.",
+   "fix": "At the end of draw, apply a channel multiply of about rgb(253,253,248) (globalCompositeOperation 'multiply', full frame). Add a slow gain ramp from 1.0 at 26.72 to about 0.985 at 29.0 so the late-shot +3 % excess comes down. Verify the per-channel means against the source at 26.8, 27.8 and 28.8."
+  },
+  {
+   "severity": "low",
+   "at": "All frames; skin, owl and hoodie fine texture",
+   "what": "The fine band carries 15–20 % less high-frequency energy than the source: high-pass std on the cheek is 5.3–5.9 against 6.7–7.0, forehead 18.2–18.7 against 21.7–22.1, hoodie 13.3–13.5 against 14.8–15.4. Owl plumage and skin read slightly plastic. Separately, the global grain has horizontal banding about twice the source's (row-band std 0.65–0.71 against 0.30–0.39 on the owl belly). That comes from the shared post.js.",
+   "fix": "Bake a seeded static 1 px stipple (±6 levels, density about 30 %) into `under` and the owl canvases. Report the post.js row banding to its owner; it is not fixable in the shot."
+  },
+  {
+   "severity": "low",
+   "at": "28.56 (frame 714)",
+   "what": "When the still owl switches from owlPre to owlPost, the owl body pops once: frame-to-frame change 2.3 against 0.9 typical, where the source shows 1.6.",
+   "fix": "Cross-fade owlPre to owlPost over 28.52–28.60 at alpha (tf−28.52)/0.08. Or make the switch on a shut-eye frame (28.20–28.36), where the change hides."
+  },
+  {
+   "severity": "high",
+   "at": "Whole shot (method); src/shots/s06/data/r3_*.js, 9.2 MB",
+   "what": "This is a compliance risk, not a visible defect. Every layer is a dense vectorisation of source frames: about 50 nested iso-value contour levels at 0.02 steps (r3_room alone has 7,042 rings and 107,801 points, face 2,967 rings, hair 2,869, body 4,920, owl 1,892), plus Hessian-traced strokes whose tones and widths were fitted against the source pixels. The pipeline stores no pixels, but the result is in effect a lossy vector re-encoding of the source frame (blurred MAE 1.3–1.9/255 on every frame), not a drawing made with the engraving engine. The fidelity log discloses this as \"a measured vector trace of the source ... not an independent illustration\". It may conflict with the brief's rule that no frame, crop or pixel of the source may appear in the render, and that the film is drawn entirely in code.",
+   "fix": "This needs a decision by the user or orchestrator; the reviewer cannot resolve it. If the method is not acceptable, rebuild the plates with the Plate/engrave engine, using measured value studies (coarse zones), hand-authored strokes and the owlInk kit, and keep only the measured motion (SMILE curve, mouth line, blink timing, flow). Expect the fidelity rating to drop to approx."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "s06 matches the source very closely at normal viewing size. I rendered every one of the shot's 58 frames and paired each with the exact source frame, decoded by index. Blurred MAE per frame is 1.30–1.89 at σ5 and 2.44–3.21 at σ1.5.\n\n**Timing matches frame for frame.**\n- The cuts land on frames 668 and 726, as in PLAN: the render shows s05 at frame 667 and s07 at 726.\n- The smile starts on frame 678 (27.12) in both. The mouth line sits within 1 px of the source on every frame.\n- The owl blink (frames 701–713, shut 705–709, open 713) matches frame for frame. The camera is locked off in both.\n- There is no boiling: frame-to-frame change is lower than the source's everywhere. There is no placeholder text or red error bar.\n\n**Determinism.** 26.80, 27.50, 28.20 and 28.90 rendered byte-identical across three separate runs in different orders. There is no Math.random, Date or image loading in s06.\n\n**Defects that show at 1:1.** In order of visibility:\n1. A black blob at the left brow's inner end, (834–871, 185–227), from 27.36 to the cut.\n2. Straight horizontal seams across both upper eyelids (y≈283 on the left, y≈278 on the right).\n3. A white clip-edge arc under the owl's feet, along y≈604–620.\n4. Soft, low-contrast brows, and the weakest region score.\n5. The jaw, hair and fist don't lift with the smile: 2–5 px low at the end. The right crease shows twice mid-dissolve.\n6. The blink-head seam across the right earcup.\n7. Smaller gaps: softer eyes and irises, a neutral grey lip line and blotchy lip comb, a blurred laptop rim, render 2–4 % too bright and neutral where the source has a faint warm-green cast, and 15–20 % less fine texture.\n\n**Method risk.** Separate from anything visible, the whole shot is a dense vectorisation of the source frames. Whether that is allowed under the no-source-pixels rule needs a decision from the user.\n\n**Tool caveat.** compare.sh pairs are only frame-aligned at multiples of 0.2 s. The render snaps to a 30 fps grid while the reference seek rounds up to the next 25 fps frame, so the 29.02 and 29.06 pairs falsely show s06 against s07. My per-frame metrics use exact frames.\n\n**Where the evidence is.** All output is under /Users/computer/rootline/apprentice-film/snapshots/:\n- s06-rev1-f1 and s06-rev1-f2: every frame.\n- s06-rev1-a: the dense compare pairs.\n- s06-rev1-motion: the side-by-side sheet (sheet.jpg).\n- s06-rev1-det1 and s06-rev1-det2: the determinism renders.\n- s06-rev1-crops: the 1:1 and zoomed evidence, including lbrow3x.jpg, dotline4x.jpg, owlfeet.jpg, owlR.jpg and diffmap.jpg.\n\nI edited no source files and deleted nothing."
+}

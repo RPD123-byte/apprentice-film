@@ -1,0 +1,21 @@
+// s26 (110.52–117.52) — PROVISIONAL test bed for the colour site (foundation F2, src/lib/hippie.js).
+// The s26 builder replaces this with the real shot (the shards blowing out into colour, the owl, the flash).
+//   local < 2.3  : the colour header strip alone, placed as the monitor framing measured at 92.0 s places it
+//                  (page→frame x' = 0.838x + 170.0, y' = 0.8464y + 132.3) — only to eyeball the strip.
+//   local >= 2.3 : the full colour page under the measured arrival camera (pageArrival: s 0.82 → 1 by 114.9 s).
+import { hippiePageCanvas, drawHippieBanner, pageArrival } from "../lib/hippie.js";
+
+export const shot = {
+  draw(ctx, local, t) {
+    ctx.save();
+    if (local >= 2.3) {
+      const { s, tx, ty } = pageArrival(t);
+      ctx.setTransform(s, 0, 0, s, tx, ty);
+      ctx.drawImage(hippiePageCanvas(), 0, 0);
+    } else {
+      ctx.setTransform(0.838, 0, 0, 0.8464, 170.0, 132.3);
+      drawHippieBanner(ctx);
+    }
+    ctx.restore();
+  },
+};

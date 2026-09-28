@@ -1,0 +1,74 @@
+{
+ "fidelity": "approx",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "32.60–33.60, room x 1530–2050 × 0–946 (src/shots/s09/room.js)",
+   "what": "The room is drawn as flat vector graphics, not engraving, and it looks mechanical next to the source. The cartons are flat quads: black faces with evenly spaced white 'barcode' stripes, and no lit top or side faces. The knob panel (≈1690–1745 × 440–490) is a flat grey rectangle with circles. The leaning panel at 1953–2043 × 533–640 is a flat grey quad with wavy stripes; the source has a dark leaning bag there. The flight case (1780–1880 × 500–640) reads as a UI wireframe (thin outlined rectangles and a rounded latch). The patch panels and the lower desk (1860–2030 × 790–946) are perfectly regular dot grids. The cables are uniform-width grey lines, the plant leaves are identical flat heart icons, and random sparkle dots sit at ≈1838–1878 × 404–468. The source has 3D engraved cartons with mid-grey faces and hand-drawn edges, rope-like cables with lit rims, and a lit desk-edge band at 1863–2035 × 762–790 (render: a 1 px line). Lower room 1760–2030 × 650–946: p90 76 vs 113. Mid room: p90 92 vs 78 (the stripes are too hard).",
+   "fix": "Paint the room through a Plate and engrave it, instead of direct fills:\n- Carton front faces: value 0.12–0.25 with vertical stroke direction (corrugation from line width, not drawn stripes), a lit top face at 0.4–0.5, and a 1–1.5 px wobbly lit edge.\n- Replace the dot grids with style-1 cross-hatch at value 0.08–0.15. Keep a jack grid only inside the two panels, at 1714–1788 × 322–396, and delete the sparkle dots.\n- Cables: tapered strokes 2.5–4 px wide with a 1 px lit rim along their upper side.\n- Flight case: engraved rails and corner caps at value 0.2, no outline boxes.\n- Leaning panel at 1953–2043 × 533–640: make it a dark bag (value ≤0.1) with a lit rim.\n- Plant leaves: vary size ±30% and rotation, give them a lit rim (0.5) and a mid-vein.\n- Desk: 3–5 tapered lit strokes along 1860–2035 × 762–790, with horizontal hatch at ~0.2 below it down to y≈900."
+  },
+  {
+   "severity": "high",
+   "at": "32.60–33.60 and on into s12, owl feet: left 1065–1175 × 855–935, right 1285–1445 × 890–946",
+   "what": "The talons are pale grey toes with no black outlines and faint claws. The source has crisp curled toes with bold black outlines and solid black hooked claw tips; they are among the most legible details in the lower frame. Left foot: p10 84 vs 48, HF 24.8 vs 31.5. The owl comes from s12, so the defect runs through both shots.",
+   "fix": "In the s12 owl (hero.js), outline each toe with a 2.5–3.5 px black tapered stroke. Add solid black hooked claws, ≈10–14 px long, curling down-left: left foot ≈3 toes at x≈1080, 1110, 1140 with tips at y≈925–935; right foot ≈3 toes at x≈1300–1430 with tips at y≈940+. Keep a white fill inside the toes and 1 px dark creases across them."
+  },
+  {
+   "severity": "medium",
+   "at": "shoulder slab 540–1580 × 700–946 (paintShoulder)",
+   "what": "The geometry matches within ~2 px, but the tone and texture do not.\n- The upper band of the left plane is too bright: 700–820 × 770–840 has mean 161 vs 139, median 182 vs 144, and >180 fraction 0.52 vs 0.21.\n- The texture is long dark strokes on a flat bright ground, with HF 23–24 vs 16–19 in 650–850 × 800–940. The source has dense fine vertical grain with a woven cross-hatch.\n- The crossP cross-hatch at 944–1040 × 838–902 reads as a pasted rectangle of graph paper.\n- The source crease has a 25–30 px mid-dark shadow band to its right (y 880: x 914–946 reads 17–48; y 920: x 890–930 reads 28–101). The render goes straight from a thin black line to ~170.\n- The lower right plane 930–1060 × 915–946 is too dark: 150–178 vs 180–215.",
+   "fix": "Slab values:\n- Multiply the left-plane value by 0.85 over y 760–840, fading out by y 860.\n- Right of CREASE_R, add a shadow band 28 px wide (value 0.25→0.6 across it).\n- Lift the right plane below y 910 (x 930–1100) by ~+0.12.\n\nTexture:\n- Cut the dark fold strokes' alpha to about 0.35–0.6 and their width to 1.0–1.8.\n- Add a fine 2–2.5 px vertical grain over the whole left plane at alpha 0.3–0.45.\n- Replace crossP with the woven weave spread across 950–1100 × 835–910, feathered over 30 px at its edges."
+  },
+  {
+   "severity": "medium",
+   "at": "speaker 2040–2206 × 370–946 (room.js speaker)",
+   "what": "The drivers are airbrushed, not engraved. Both dust caps are glossy spheres with specular dots, and the woofer has a smooth grey gradient patch at ≈2110–2190 × 810–875. Its cone ridges are evenly spaced thin rings, like a vinyl record. The drivers lack black: woofer black<30 is 0.28 vs 0.41, and its p90 is 166 vs 181. The cabinet band between tweeter and woofer (x 2165, y 585–620) reads 146–168 vs 52–96. The dust-cap highlight sits ~10 px low (render y≈750–760, source y≈740–750 at x 2165).",
+   "fix": "Engrave the drivers with a Plate: style 0, stroke direction tangent to the rings, and 5–7 bold irregular rings rather than thin even ones. Deepen the surround to value ≤0.03 and ~12 px wide. Replace the specular dots with an engraved highlight crescent, and move the woofer cap up 10 px. Darken the cabinet strip between the drivers (y 585–620) to ~0.3 value, and add contrasty black gaps to the cabinet grain (cabinet HF 38.8 vs 47.1)."
+  },
+  {
+   "severity": "medium",
+   "at": "owl face 700–1160 × 150–650 (s12 hero.js, shared)",
+   "what": "The expression is weaker than the source's.\n- Brow: the source right eye has a heavy black brow wedge, ≈8–12 px thick, from ≈(940,330) to (1100,280). The render has a 2–3 px line.\n- Pupils too big: the dark area is 18% larger on the right eye (bbox 95×97 vs 91×92) and 33% larger on the left (72×79 vs 68×73), and the white crescent is too wide.\n- Beak: a soft grey rounded blob; the source has a crisp outlined hooked beak with a clear tip.\n- Wing (1500–1950 × 500–850): the feather contours are grey, sketchy dashes, where the source has bold black primary outlines and dark gaps between 4–5 tail tips.",
+   "fix": "In s12's owl:\n- Add a tapered black brow over the right eye (max width 11 px, running from (940,332) to (1102,278)) and thicken the left upper lid to ~6 px.\n- Shrink the pupil discs by ~2 px radius (right) and ~2.5 px (left), and narrow the sclera crescent to ~4 px.\n- Outline the beak with a 2 px black line and a hooked tip at ≈(915,555).\n- Draw the wing's primary contours in solid black (#060606), 1.5–3 px wide, with a dark wedge between each pair of tail tips."
+  },
+  {
+   "severity": "medium",
+   "at": "beanie cuff 0–480 × 250–570, crown 0–400 × 0–290 (paintBeanie)",
+   "what": "The cuff lacks its rolled-under shadow. The source darkens over the bottom ~40 px: at x=100 it falls 168→95 over y 510–550, and 0–300 × 515–555 reads mean 86 vs render 119 (median 86 vs 139). The knit is too regular: on the shadow side the grid is equal-weight straight bold lines, like graph paper or a cage. The crown courses at 250–390 × 60–240 are soft blurred smears. The silhouettes are smooth where the source's are knit-bumpy. The source has dry-brush irregular ribs and short vertical ticks above the fold.",
+   "fix": "Knit shadow and lines:\n- Multiply CUFF by a vertical gradient (1.0 at 40 px above CUFF_BOT, 0.55 at CUFF_BOT) and add short vertical dark ticks (8–20 px, alpha 0.4–0.6) along the cuff's lower edge.\n- Break the courses into 20–60 px runs with ±40% width jitter; replace the gradient-faded taper with discrete strokes; add 1–2 px dry-brush gaps along the ribs.\n\nSilhouettes and ticks:\n- Wobble CROWN_R and CUFF_R by ±1.5 px at a 7–10 px period.\n- Add ~30 short vertical ticks (6–18 px) just above FOLD at x 150–390."
+  },
+  {
+   "severity": "medium",
+   "at": "neck 170–268 × 812–946 (paintHair NECK net)",
+   "what": "The neck is a bold, perfectly regular diamond lattice, 2.8–4.4 px lines at 8.4 px spacing, and it reads as fishnet stockings. The source neck is darker with a fine, irregular cross-hatch (mean 55 vs 46, but the render's lattice lines are much more visible).",
+   "fix": "Thin the net lines to 1.2–1.8 px at alpha 0.35–0.5. Jitter the spacing ±25%, break each line into 20–50 px runs, and raise the underlying NECK value by ~0.1 so the mean holds."
+  },
+  {
+   "severity": "low",
+   "at": "shirt at the bottom edge, 320–560 × 890–946",
+   "what": "The shirt stripes are hard black and white bars (HF 41–43 vs 27–28, black 0.71 vs 0.62) that run continuously from x≈320 to 560. The source shows softer grey stripes, mostly at x≈470–560. There is also a stray white curl at ≈(305–320, 900–915).",
+   "fix": "Stripe alpha 0.35–0.5, width 1.2–2.0 px. Clip the stripes to x 460–560 plus a narrow patch at 330–370, and drop the curl stroke."
+  },
+  {
+   "severity": "low",
+   "at": "lock-tip highlight 85–160 × 665–730",
+   "what": "The highlight is a compact bright blob with zigzag strokes, like a sticker. The source's is a cluster of elongated streaks along the lock flow (~50°) spanning 81–160 × 667–729.",
+   "fix": "Replace the 8 short broad strokes with 12–16 thin streaks (2–4 px wide, 30–60 px long) at 0.85–0.95 rad, staggered along the lock, and drop the blurred ellipse sheen."
+  },
+  {
+   "severity": "low",
+   "at": "33.12–33.36 (fast sway frames)",
+   "what": "The source softens slightly during the fastest sway (cuff HF 32.5→27.5 at 33.12–33.36). The render stays crisp at 31.4–32.8 throughout, so it looks a little stiff in motion.",
+   "fix": "When |Δtx| between table entries exceeds 2 px per frame, draw the head layer twice at ±0.5·Δtx/2 with 50% alpha, or apply a 0.6 px horizontal blur to the head canvas for those frames only."
+  },
+  {
+   "severity": "low",
+   "at": "head and slab plates (whole segment)",
+   "what": "Slight warm tint on the head and slab: beanie BGR 132.8/136.4/137.6 vs source 132.7/134.8/133.9; slab 182.8/186.5/187.8 vs 183.9/184.8/184.2. The source is neutral with a faint green cast (G +2 in the room and owl).",
+   "fix": "Engrave the head and shoulder plates with neutral white (or #f0f2f0) instead of INK #f2f0ea, or tint the composite to R−B ≈ 0."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "The timing, cuts, staging and motion of s09 match the source. The shot looks weaker than that because of how it is drawn: the room is flat vector graphics, the speaker is airbrushed, the knit and shoulder textures are mechanical, and the owl it takes from s12 has several likeness gaps. The whole shot is still very close in overall tone to the source.\n\n**What matches**\n- **Cuts.** Checked on source frames with OpenCV: s08→s09 is at frame 815 (32.60) and s09→s12 at frame 840 (33.60), and the render cuts on both. In the compare pair at 33.58 the reference is already s12, because compare.sh rounds 839.5 up to frame 840. That is a tool artifact, not a shot defect.\n- **Continuity at the cut.** The owl is continuous across 33.60: blurred owl-region difference 1.2 in the render vs 1.4 in the source.\n- **Sway.** Phase correlation of the beanie, lower hair and slab matches the source within about 0.3 px on the frames where the render and the source line up exactly (32.8, 33.0, 33.2, 33.4). The larger errors at 32.76, 33.12, 33.32 and 33.52 come from compare.sh rendering on a 1/30 s grid.\n- **Static parts.** The owl and the room are static in both.\n- **Flicker and global tone.** They track frame by frame. The frame mean is within 0.2 to 1.3 levels, black under 20 is 46.1–46.5% vs 45.7–46.6%, and whole-frame MAE at σ 8 blur is 6.1 to 6.4.\n- **Geometry.** Beanie fold and cuff edges, slab edges, owl eye centres (within 1 px), wing tip and speaker placement are measured-accurate.\n- **Texture stability.** Nothing boils or shimmers during the sway: cuff HF holds at 31–33.\n- **Clean render.** No placeholder text, no red error bars, no errors in the compare output.\n\n**Determinism.** The frames at 32.6, 32.8, 33.0, 33.2 and 33.4 are bit-identical across three separate compare runs.\n\n**Why the rating is approx, not close.** The drawing differs visibly in these places:\n1. The room reads as flat vector graphics: barcode stripes, dot grids, a wireframe flight case, clip-art leaves.\n2. The owl's talons lack their black outlines and claws (this is in s12's owl).\n3. The shoulder slab's upper band is too bright, the shadow band beside its crease is missing, and there is a pasted graph-paper patch.\n4. The speaker drivers are airbrushed, with glossy caps.\n5. On the owl's face (s12) the brow is weak, the pupils are oversized and the beak is soft.\n6. The beanie knit is a regular cage grid, and the cuff is missing the dark band where it rolls under.\n7. The neck is a fishnet lattice, and the shirt stripes are hard bars.\n\n**Files and cleanup.** Pairs are in `/Users/computer/rootline/apprentice-film/snapshots/s09-rev1-a`, `s09-rev1-motion` (10 fps) and `s09-rev1-m25` (25 fps, with sheet.jpg). Zoomed crops and the measuring scripts (sway.py, crops.py) are in `s09-rev1-work`. I deleted only my own bulky frame and reference PNGs and the logs I created. No source files were edited."
+}

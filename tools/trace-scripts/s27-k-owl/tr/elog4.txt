@@ -1,7 +1,0 @@
-127.8 regions 297 ink tones 31
-128.04 regions 359 ink tones 21
-128.28 regions 364 ink tones 23
-128.52 regions 342 ink tones 19
-128.76 regions 398 ink tones 25
-129.0 regions 275 ink tones 20
-bytes 370928

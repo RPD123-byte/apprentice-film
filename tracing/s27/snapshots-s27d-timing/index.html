@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=2206, height=946">
+    <title>s27 harness</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Archivo"; src: url("assets/fonts/Archivo-Var.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Shrikhand"; src: url("assets/fonts/Shrikhand.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Fraunces Soft"; src: url("assets/fonts/FrauncesSoft-Black.ttf") format("truetype"); font-weight: 900; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-500.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-600.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-700.woff2") format("woff2"); font-weight: 700; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 2206px; height: 946px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 100%; height: 100%; background: #000; }
+      #film { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-s27d1" id="root" data-composition-id="main" data-start="0" data-duration="140.8" data-fps="25" data-width="2206" data-height="946">
+      <canvas data-hf-id="hf-s27d2" id="film" width="2206" height="946"></canvas>
+    </div>
+    <script type="module">
+      // s27 scratch harness (not part of the film): s27 alone through the film's grade. Times are FILM times.
+      // t < 117.52 renders s27 at local 0. A query-less render; ?raw would skip the grade (not used by the snapshot tool).
+      import { createPost } from "./src/lib/post.js";
+      import { shot } from "./src/shots/s27.js";
+      await Promise.all(["400 100px Shrikhand", "900 100px \"Fraunces Soft\"", "600 20px Poppins", "500 20px Poppins", "700 20px Poppins", "600 27px Archivo"].map((f) => document.fonts.load(f)));
+      await document.fonts.ready;
+      const out = document.getElementById("film");
+      const paint = document.createElement("canvas"); paint.width = 2206; paint.height = 946;
+      const ctx = paint.getContext("2d");
+      const grade = createPost(out);
+      // timing probe: at load, render s27 at a sweep of times (in order, like a sequential render) and at two times twice
+      // (determinism), then paint the numbers as text; the snapshot shows the report.
+      const rep = []; const T = []; for (let i = 0; i < 60; i++) T.push(117.52 + i * 0.196);
+      const draw1 = (t) => { ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle = "#000"; ctx.fillRect(0,0,2206,946); shot.draw(ctx, t - 117.52, t); };
+      let t0 = performance.now(); draw1(118.5); rep.push(`first frame (build) ${(performance.now()-t0).toFixed(0)} ms`);
+      const ts = [];
+      for (const t of T) { const a = performance.now(); draw1(t); ctx.getImageData(0, 0, 1, 1); ts.push(performance.now() - a); }
+      ts.sort((a,b)=>a-b);
+      rep.push(`per frame over 60 times: median ${ts[30].toFixed(0)} ms, p90 ${ts[54].toFixed(0)} ms, max ${ts[59].toFixed(0)} ms`);
+      const hashAt = (t) => { draw1(t); const d = ctx.getImageData(0, 0, 2206, 946).data; let h = 0; for (let i = 0; i < d.length; i += 7) h = (h * 31 + d[i]) >>> 0; return h; };
+      for (const t of [117.6, 121.3, 126.7, 129.1]) { const h1 = hashAt(t); hashAt(t + 1.3 > 129.29 ? 118 : t + 1.3); const h2 = hashAt(t); rep.push(`t ${t}: hash ${h1} / ${h2} ${h1 === h2 ? "same" : "DIFFERENT"}`); }
+      function renderAt(t) {
+        ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle = "#111"; ctx.fillRect(0,0,2206,946);
+        ctx.fillStyle = "#0f0"; ctx.font = "40px monospace"; rep.forEach((r, i) => ctx.fillText(r, 40, 80 + i * 60));
+        grade(paint, 50, { fade: 1 });
+      }
+      const clock = { _t: 0, get t() { return this._t; }, set t(v) { this._t = v; renderAt(v); } };
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo(clock, { t: 0 }, { t: 140.8, duration: 140.8, ease: "none" }, 0);
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+      window.__film = { renderAt };
+    </script>
+  </body>
+</html>

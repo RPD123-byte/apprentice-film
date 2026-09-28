@@ -1,0 +1,12 @@
+import puppeteer from "/Users/computer/.npm/_npx/fadd01e97075bd25/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js";
+import fs from "fs"; import path from "path";
+const ROOT = "/Users/computer/rootline/apprentice-film";
+const browser = await puppeteer.launch({ executablePath: "/Users/computer/.cache/puppeteer/chrome-headless-shell/mac_arm-131.0.6778.204/chrome-headless-shell-mac-arm64/chrome-headless-shell", headless: "shell", args: ["--no-sandbox"] });
+const page = await browser.newPage();
+await page.setRequestInterception(true);
+page.on("request", (req) => { const u = new URL(req.url()); if (u.host !== "lt.local") { req.abort(); return; } const f = path.join(ROOT, decodeURIComponent(u.pathname)); if (u.pathname === "/t.html") { req.respond({ status: 200, contentType: "text/html", body: `<script type="module">const t0=performance.now(); const m = await import("${process.argv[2]}"); window.dt = performance.now()-t0; window.done = true;</script>` }); return; } if (!fs.existsSync(f)) { req.respond({ status: 404, body: "nf" }); return; } req.respond({ status: 200, contentType: "text/javascript", body: fs.readFileSync(f) }); });
+page.on("pageerror", (e) => console.log("[pageerror]", e.message));
+await page.goto("http://lt.local/t.html");
+await page.waitForFunction("window.done === true", { timeout: 600000 });
+console.log(process.argv[2], "module load ms", await page.evaluate(() => window.dt.toFixed(0)));
+await browser.close();

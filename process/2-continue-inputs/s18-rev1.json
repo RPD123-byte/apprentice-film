@@ -1,0 +1,86 @@
+{
+ "fidelity": "close",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "Shot A, 54.76-55.24 (frames 1338-1381), owl feet/legs; box x=(640+PATH_A.dx)..(+340), y 500-660. Worst: 1353, 1355, 1356, 1358, 1361, 1362",
+   "what": "The traced per-frame feet (OWL_A.feet) render as posterized islands: flat mid-grey fills, white slivers and hard dark outlines scattered over the keys. The feet are unreadable and change shape every frame. In the source the feet are readable talons on the keys, or a soft motion blur when lifted. This is the most visible drawing fault in shot A, and it shows at 1x. See snapshots/s18-rev1-pairs/feetA_strip.jpg and p1356_480_180_1020_660.jpg.",
+   "fix": "Stop drawing OWL_A.feet masses as posterized value fields. Draw each foot as a small rig: leg stroke, 3 front talons and 1 back talon, white fill with a 2-3 px dark contour, placed per frame at the measured contact point. On frames where the source foot is lifted and blurred (1353-1363 alternate), draw the same foot and blur it along the motion (sigma 4-6 px horizontal) instead of using grey islands. As a minimum, drop every feet mass under ~400 px2 and every mass whose value is 0.3-0.7 (the grey islands)."
+  },
+  {
+   "severity": "high",
+   "at": "Shot B, 55.32-55.40 (frames 1383-1385), belly/tail junction around x 1475-1600, y 0-130. A thin seam persists 1382-1416 at belly-relative x~1535 (frame x = 1535 + TRACK_B.dx), y 0-210",
+   "what": "Right after the cut into the close-up there is a black wedge and a black vertical stripe in the white belly next to the tail. At 1383 about 320 px are dark where the source is white; at 1384 the stripe is x 1475-1485, y 0-120. Loose grey feather fragments float along the belly's lower contour. On every later frame a thin grey/dark vertical seam line runs through the belly where the rigid belly drawing meets the separately moving tail. The source belly is seamless. See s18-rev1-pairs/p1383_1250_0_1750_330.jpg, p1384_1300_0_1700_330.jpg and seamB.jpg.",
+   "fix": "Before drawing the tail and belly, paint an opaque underlay polygon in the belly's white (value ~0.86) covering the junction, from belly x 1450-1650 (registered by TRACK_B) and y 0-230, so no plate shows through the gap. Then delete the belly ring edges and dark strokes whose belly-coordinate x is in 1520-1560 with y < 220 (the seam), or feather the belly's right edge with a 12-px alpha ramp over the tail. At 1383-1385, also check the tailA affine against the source: the tail sits ~40-60 px too far right or low relative to the belly."
+  },
+  {
+   "severity": "high",
+   "at": "Shot B, 55.28-56.72 still plate (1382-1417) and the moving keyboard afterwards: knob-cap row against the lit slats, x 1140-1500, y 370-440",
+   "what": "In the source the rear knob caps are crisp dark domes with thin white rims, cutting across the bottoms of the lit slats. The render has no dome silhouettes there, only a soft black gradient haze that fades the slats to black. It reads as fog or a smudge. The median-plate difference also shows bright/dark spots on almost every cap top along y 360-440. See s18-rev1-pairs/p1412_700_250_2206_520.jpg and p1410_1150_280_1650_480.jpg.",
+   "fix": "Draw the knob caps explicitly in the kb plate, over the traced ink: dark (value ~0.04) rounded rects at the existing KNOBS/capY positions (row 0: w 56, h 92; row 1: w 58, h 110; corner radius ~20 for the domed top), each with a 2-px white rim arc on its top (value ~0.8). Then refit or clip TONE_B.still/TONE_B.bg so no shade blob with sigma > 8 px straddles the slat/knob boundary around y 360-440. Those blobs are what produce the haze."
+  },
+  {
+   "severity": "high",
+   "at": "Shot A, all standing frames 1338-1381: owl beak and chin; at 1356 around (525-560, 395-440), moving with PATH_A",
+   "what": "This is a character likeness fault. The render's beak is a rounded blob with a large black open-mouth hole, plus a stray thin dark line running ~35 px down-left from the beak across the cheek. The source beak is a hooked, pointed upper mandible with a small V-shaped open mouth, and has no line. It changes the owl's expression in every frame of shot A. See s18-rev1-pairs/beakA.jpg and headA_1370.jpg.",
+   "fix": "In the three OWL_A.phase drawings, delete the stray dark stroke starting at the beak's lower-left corner. Replace the beak masses with a hand-drawn hooked beak: an upper mandible curving down-left to a point, about 34 px wide x 40 px tall at 1x, plus a small dark V mouth about 14 px wide. Take the exact placement from the 1370 source frame."
+  },
+  {
+   "severity": "medium",
+   "at": "Shot B take-off 56.76-56.92 (1419-1423) and wing 56.96-57.04 (1424-1426), left half of frame",
+   "what": "The leaping owl is a flat, featureless bright cut-out with a hard 8-15 px medium-grey rim against the black. The source has a soft motion-blurred edge ramp with visible directional feather streaks. The headphone cup at 1421-1422 is crisp dark blotches instead of a blurred double ring. The wing at 1424-1426 is flat white feathers with a grey band around each, and the source's scalloped covert-feather lines are replaced by random dark ticks. Blurred tone is within 2-3 levels, so this is a texture and edge fault, not a value fault. See s18-rev1-pairs/p1421_0_0_900_600.jpg, p1425_0_0_450_946.jpg and leap_1.jpg.",
+   "fix": "The rim comes from the dark 'base' silhouettes extending past the lit masses. For fly frames, either skip base or erode it by ~12 px so the lit mass meets black directly. Replace softHalf x8 with a directional blur along each frame's motion vector (about 25-40 px long, up-left for the body at 1420-1422, down-left for the wing at 1424-1426) plus a sigma-2 isotropic pass. On the 1424-1426 wing, draw 4-5 soft dark scallop arcs (covert feathers) at the source positions, about x 20-120, y 380-700."
+  },
+  {
+   "severity": "medium",
+   "at": "Shot B owl 1382-1416: belly, far wing (top-left x 0-700, y 0-330) and near-wing feather contours (1405-1416, x 150-800, y 0-250)",
+   "what": "The close-up owl is much crisper than the source's soft, near-camera drawing. Gradient p99 on the belly is 258-309 in the render against 183-234 in the source, while the keys match (442-458 against 428-439). The near-wing feather contours are drawn as a grey band with a dark core, a double-line look, where the source has single soft dark lines. The far wing breaks into grey posterized blotches. Its region error spikes every third frame: 3.4-3.8 at 1382, 1385, 1388, 1391, 1394, 1397, 1400, 1404, 1411, 1415, 1416, against ~2.3 on the others. See s18-rev1-pairs/p1394_0_0_800_330.jpg and p1416_0_0_800_330.jpg.",
+   "fix": "Draw the owl-B parts into their own layer and blur that layer with sigma ~1.7 px before compositing. Target belly gradient p99 ≈ source; the earlier sigma6 test cannot see this. Drop the light-grey halo masses that surround the dark feather-contour strokes, so each contour is a single tapered dark stroke. Re-trace or hand-draw the far-wing state that is used on the high-error frames."
+  },
+  {
+   "severity": "medium",
+   "at": "Shot A owl, all frames: silhouette and wing edges (e.g. 1370 wing leading edge x 820-980, y 250-300) and headphone ear cushion (1370 ~x 650-760, y 280-380)",
+   "what": "The source has inked dark contours. The render's owl edges are medium-grey bands (a grey rim), not inked contours, so against the bright slats the wing reads as a pasted cut-out. The ear cushion is blotchy black with white scratches and grey patches, where the source has a clean dark ring with fine hatching. Grey smudges sit around the headphones and the belly bottom. See s18-rev1-pairs/edge_wing_1370.jpg and headA_1370.jpg.",
+   "fix": "On P.o-style overlay, stroke a continuous 2-3 px dark contour (value ~0.15) along the outer silhouette of each OWL_A phase drawing and along the wing leading edges, and remove grey fills in the 0.35-0.65 value range within 6 px of the silhouette. Redraw the ear cushion as a dark ring, about 18 px thick, with 1-px concentric light hatch lines."
+  },
+  {
+   "severity": "medium",
+   "at": "Shot B pressed-key marks: 1383 and 1394 at x 925-1085, y 675-720; wedges missing at 1383, 1384, 1400 and 1401 (source wedge 1400: x 1000-1200, y 627-737)",
+   "what": "OWL_B.klines[1383] and klines[1394] contain 30-31 px wide, near-black lines (1070,706 to 935,691, width 30, tone 2; 1069,705 to 936,692, width 31, tone 5). They render as solid black rounded bars on the white keys. The source shows a pressed key's striped side-wall wedge there. The bands (stripe wedges) are absent for 1383, 1384, 1400 and 1401. The horizontal key-drop lines at y≈740 are 6-8 px wide grey, where the source's are ~3 px. See s18-rev1-pairs/p1383_700_550_1250_800.jpg, p1394_600_550_1150_800.jpg and p1400_850_450_1400_800.jpg.",
+   "fix": "Delete those two wide klines. Add band entries for 1383 and 1384 (wedge x 1000-1060, y 657-707) and for 1394 (wedge x 1000-1070, y 657-712), copying angle, pitch and tones from neighbouring frames such as 1390 and 1395. Add a band for 1400 and 1401 (x 1000-1200, y 627-737). Cap kline widths at 4 px."
+  },
+  {
+   "severity": "medium",
+   "at": "Shot B lifted, motion-blurred feet: 1387, 1388, 1392, 1395 (x~880-930, y~350-400), 1404, 1405, 1411",
+   "what": "Where the source foot is a soft motion blur, the render draws flat grey posterized blobs with hard edges, including small grey blocks in empty space (e.g. 1395, 1405). See s18-rev1-pairs/feetB_1.jpg, feetB_2.jpg and feetB_3.jpg.",
+   "fix": "For these frames, draw the parts into a small layer and apply a directional blur of about 6-12 px along the foot's motion, instead of drawing the posterized masses crisp."
+  },
+  {
+   "severity": "low",
+   "at": "Shot A plate: mixer face (x ~1180-1530, y ~270-470); speaker side panel (x ~1880-2080, y 340-740) and cone rings (x 1580-1850, y 540-780)",
+   "what": "The mixer's dense fine horizontal engraving is drawn as fewer, thicker, broken dashes. The speaker side panel is a grey mass with sparse blobby vertical dashes, where the source has dense fine vertical white grain. The cone rings are coarser and wider than the source's fine rings. Blurred value matches; the texture does not. See s18-rev1-pairs/p1375_1520_330_2100_800.jpg and p1356_700_150_1500_750.jpg.",
+   "fix": "Replace these traced textures with procedural engraving on the plate: mixer face with horizontal white lines at 5-6 px pitch and 1-1.5 px width with seeded breaks; side panel with vertical white lines at 4-5 px pitch, width following the measured value; cone with concentric rings at ~6 px pitch. Keep the existing tone correction."
+  },
+  {
+   "severity": "low",
+   "at": "Shot A fly-in 53.24-53.84 (1331-1345), owl layer",
+   "what": "The horizontal motion smear is under-applied. Inside the owl box the render's horizontal/vertical gradient ratio is 10-20% higher than the source's on every frame (e.g. 1334: 0.64 against 0.53; 1339: 0.98 against 0.78).",
+   "fix": "Scale SMEAR by ~1.3 (e.g. 1333: 4.2, 1334: 3.6, 1339: 2.7, 1340: 2.3, 1341: 2.1) and extend it to 1344-1345 at ~1.0."
+  },
+  {
+   "severity": "low",
+   "at": "Shot B slatted panel, x 1140-1500, y 0-380 (all of shot B)",
+   "what": "The dark slats carry grey pockmark blotches inside them, and their edges are smoother than the source's fine white speckled edges.",
+   "fix": "Draw the dark slats as solid black and add seeded 1-2 px white specks along their edges (a density of ~1 per 6 px of edge) instead of grey interior masses."
+  },
+  {
+   "severity": "low",
+   "at": "Review tooling (not a shot fault): tools/compare.sh and sidebyside.sh away from t = multiples of 0.2 s",
+   "what": "I confirmed the fidelity log's note. The snapshot tool quantises render time to a 30-fps grid but seeks the source accurately. At 53.24 and 53.26 the render side shows s17 while the source shows s18, and 55.30 and 56.72 are one frame apart. That makes wing phases look mismatched in sheet.jpg. A frame-accurate harness that renders the real main.js at t = n/25 shows the cuts land exactly on 1331, 1382 and 1433.",
+   "fix": "Judge s18 motion from snapshots/s18-rev1-motion/render_vs_source_25fps.mp4 (frame-accurate, frames 1328-1436), or from compare.sh times that are multiples of 0.2 s."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "**Fidelity: close.** Framing, timing, camera moves and blurred tone match the source almost exactly, but there are clear local drawing faults (below). I did not edit any source files.\n\n**How I checked**\n- Frame-accurate check: I rendered every frame 1328–1436 through the real main.js at t = n/25, using my own harness in `snapshots/s18-rev1-h`, and paired each with the exact source frame.\n- Tool checks: `tools/compare.sh` at 39 times, and `tools/sidebyside.sh` at 10 fps.\n\n**What matches**\n- **Cuts:** all three land on the source frames 1331, 1382 and 1433. The frames either side (1330 is s17, 1433 is s19) are continuous with the neighbours.\n- **Held frames:** 1351, 1376, 1401 and 1426 are handled correctly.\n- **Owl path and wing phase:** follow the source frame by frame.\n- **Synth tip (1418–1432):** matches to within 0.5 px and 0.04° (ECC correlation over 0.98).\n- **Error across frames 1331–1432:** blurred σ6 mean 2.98/255 (max 4.38 at 1422), σ2 mean 4.98.\n- **Brightness:** the render is 1.2 levels brighter than the source.\n- **Plates:** static, no boil. No placeholder text or error bars.\n\n**Determinism:** the same timestamps (53.4, 54, 55.4, 56, 57 s) in two separate compare.sh runs are byte-identical. 12 frames rendered in forward and reversed order in separate browsers are also byte-identical (max diff 0).\n\n**Why it is not better than \"close\":** the good numbers come from the method, not independent drawing. Every plate and owl drawing is a vector trace of the source frames: outlines, value fields fitted to source pixels, and gaussian tone blobs fitted to the blurred source difference. No raster pixels are embedded, but it is effectively rotoscoped (`owlB.js` is 1.3 MB). The fidelity log discloses this. The owner should decide whether it is acceptable under the \"drawn by code\" rule.\n\n**Visible faults, most visible first**\n- **Shot A feet (1338–1381):** posterized grey islands instead of readable talons.\n- **Shot B belly:** a black wedge or stripe next to the tail at 1383–1385, right after the cut, then a thin seam line on the belly through 1416.\n- **Shot B knob caps:** replaced by a soft black haze over the lit slats (x 1140–1500, y 370–440).\n- **Owl beak in shot A:** a round, gaping black mouth plus a stray line across the cheek, instead of the hooked beak. This affects likeness.\n- **Take-off and wing (1419–1426):** flat cut-outs with hard grey rims, with no directional motion blur.\n- **Shot B owl:** about 35% crisper than the source's soft close-up; feather contours read as double lines.\n- **Shot A owl edges:** grey rims instead of inked contours.\n- **Pressed-key marks:** two 30-px black bars (1383, 1394) and missing wedges (1383, 1384, 1400, 1401).\n- **Smaller items:** mixer, speaker and slat textures simplified; fly-in smear about 15% too weak.\n\n**Files**\n- `snapshots/s18-rev1-pairs`: crops, strips and sequence sheets.\n- `snapshots/s18-rev1-motion/render_vs_source_25fps.mp4`: frame-accurate side-by-side.\n- `snapshots/s18-rev1-cmp`, `snapshots/s18-rev1-det`, `snapshots/s18-rev1-motion/sheet.jpg`: tool outputs.\n- As the user allowed, I deleted only my own large scratch output from this run: the source-frame dump, the raw harness PNGs, and the tool PNGs.\n\n**Unrelated:** the page console logged that s27 failed to load (`./s27/drawn/props.js` has no `MUG_BOX` export). That is another shot and does not affect s18."
+}

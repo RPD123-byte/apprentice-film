@@ -2,7 +2,8 @@
 # Tile SOURCE frames (optionally a crop) from T0 to T1 every STEP seconds, with timestamps, to study motion/timing.
 # Usage: tools/strip.py T0 T1 STEP out.jpg [x0 y0 x1 y1] [--cols N] [--w TILEWIDTH]
 import cv2, numpy as np, sys, os
-V=os.environ.get('REF','/Users/computer/rapport-videos/videogen/clips/01-13-FINISHED-v3-share.mp4')
+V=os.environ.get('REF') or os.environ.get('APPRENTICE_SOURCE')
+if not V or not os.path.isfile(V): sys.exit('set APPRENTICE_SOURCE=/path/to/your/copy/of/the/original.mp4 (2206x946, 25 fps, 140.8 s)')
 argv=sys.argv[1:]; opts={}; a=[]
 i=0
 while i<len(argv):

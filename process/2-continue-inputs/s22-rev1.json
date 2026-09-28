@@ -1,0 +1,74 @@
+{
+ "fidelity": "approx",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "74.52–84.04, every frame (page area x150–2018, y135–946); src/lib/sokoIll.js / sites.js (F1-owned, not s22)",
+   "what": "The framed page is the largest visible difference, and it is not s22's drawing. The designer's trousers are bright, streaky white; the source has dark cargo trousers with engraved folds. His sweater is white with scribbled cross-hatching; the source shows a softly shaded shirt. His face is anime-style with large clear eyes; the source's is heavy-lidded, with hair over the eyes. His feet sit close together at y≈820–860; in the source the knees are wide and the feet at y≈870–900. The cables hanging from the desk are missing. The left room has a keyboard and sequencer on a table where the source has big boxes. The 'NIGHT.' glyphs sit about 10 px left: the T stem is at x812–830 against 822–840, and the '.' at 858–873 against 870–887. The page shows a residual shear of −0.0029 (−2.6 px at y 900). σ3 MAE over the page is 12.4–13.9 in every frame, which is most of the shot's 10.0 average.",
+   "fix": "For the sokoIll.js owner: redraw the designer to the source, e.g. from frame 1900 (76.00). Trousers value ≈0.15–0.3 with fold hatching following the form. Shirt shaded, not hatched. Face heavy-lidded, with hair over the eyes. Knees apart, feet at y≈870–900. Add the cables from the desk edge (x 600–900, y 590–760). Match the left box stack. Tighten the headline tracking by about 1.2 % so the end of 'NIGHT.' lands at x≈887. s22 cannot fix this without owning the lib."
+  },
+  {
+   "severity": "high",
+   "at": "81.72–83.92 (walk, 2.2 s) and 74.52–79.76 (cut drawing); src/shots/s22/lines.js, s22/traced.js",
+   "what": "The owl's face detail is washed out. The walking owl has no visible eye at all. The source has two dark closed-eye strokes at 82.00: frame (643,73)→(660,74) and (651,78)→(668,79), about 100–140 on a white of about 225. LINES.walk does contain them, at anchor-local (108.6,38.9)→(125.6,35.4) and (112.1,42.6)→(122.9,44.1), but with multiply 0.92–0.97, so they are invisible. The cut drawing has lost the scowl: the source has two brow strokes, cup-local ≈(26,11)→(39,15) and (35,9)→(40,20), and a dark pupil at ≈(32,20). The render shows one flat grey parallelogram of value ~150 there (frame 1870). Across all traced lines the multiply median is 0.93–0.95 (min 0.74) because they were traced from medians. The feet and claws and the scissor edges are soft grey blobs; the source has crisp dark toe and blade lines. High-pass detail in the owl footprint is 76–88 % of the source after 79.6 s.",
+   "fix": "Deepen the facial lines to multiply 0.5–0.65 at width 1.2–1.6 px. Walk eye: anchor-local (102.7,37.2)→(119.7,38.0) and (110.8,42.1)→(127.8,42.9). Cut drawing brows: cup-local (26,11)→(39,15) and (35,9)→(40,20), plus a pupil dot r≈1.8 px, value ≈0.25, at (32,20). Add dark toe lines (0.6 multiply, 1 px) on the feet, and dark centre and edge lines on the scissor blades. Re-measure these strokes on single sharp source frames (e.g. 1870 and 2050), not on medians, which average them away."
+  },
+  {
+   "severity": "medium",
+   "at": "82.64–84.04; src/shots/s22/rim.js RIM_RING",
+   "what": "The measured torn rim has contaminated points. First, a V-spike runs through the designer's eyes at x1069–1086 (indices 180–186, y 357.9–366 against ~362). It sits at frame centre and is very visible. Second, a downward spike at x509–519 (indices 224–225, y 366.9, from a leaf behind). Third, the three corners have kinked or looped ends: TR (indices 95–100), BR (112–116) and TL (0, 268–269). Fourth, the top run under the card has spikes: points 35–36 (1001.5,171.3) and 39–45 (1014.5–1020.5, y 173–181) are 10–17 px above the rim line of ~187. The interpolated run from 887.5 therefore rises to y 171, and a bright sliver shows above the card's top edge at x960–1020, y171–178 from 83.12 to 84.00 (up to 585 px at +40…+209/255 against the source). s23's rim has none of these, so they pop at the 84.04 cut.",
+   "fix": "Replace the top run, points 34–46, with a straight line from (887.5,186.1) to (1024.5,188.4). Set y=362.3 for x 1067–1086 and y=362.5 for x 503–519. Drop the backtracking points 98–99, 113–114 and 269 (or 0) so each corner is one clean vertex, near (1972,187), (1973,356) and (193,187). Better, re-run measure_rim.py with the designer's face, the leaf and the owl's feet masked."
+  },
+  {
+   "severity": "medium",
+   "at": "82.6–84.04, top margin x700–1800, y0–118 (owl masked)",
+   "what": "The light pool above the card is too dark and grows with the card. The bias in the middle third is −2.4 at 82.56, −5.0 at 82.8, −6.0 at 83.04, −6.8 at 83.28 and −7.9 at 84.00, and the right third reaches −6.1 at 84.00. At 84.00, x 1000–1600, y 20–105, the render reads 84–88 against the source's 96–106. The source's pool is also more concentrated near the page edge, and there is a diagonal cut-off right of the owl (x≈1650).",
+   "fix": "Add a card-driven light term in addRoomLight. Blur the card polygon at σ≈60 px, add it outside the screen rectangle only, and ramp its gain from 0 at 82.5 to ~0.15 at 84.0 (or scale it by the card's area). Alternatively, apply a time ramp ×1.0→×1.18 on the ROOM_G2 knots x 900–1800, y 0–112 from 82.6 on."
+  },
+  {
+   "severity": "medium",
+   "at": "82.28–82.44, card bottom-right, x780–862, y274–300",
+   "what": "The card has no dark edge or shadow. The source has a thin dark contour and a soft shadow where the card overlaps the remaining headline. In the render the pure-white card merges into the white 'T' crossbar of 'NIGHT.' below it (which F1 also places about 10 px left), so the card reads as notched. Its bottom edge disappears and a horizontal step appears at y≈288–290, x 780–858.",
+   "fix": "In drawPeel, after filling the card, stroke its bottom and right edges with a 1.2–1.5 px line, rgb(25,28,25) at alpha 0.8. Under the card, add a soft shadow on the strip content: blur 3 px, 30 % black, offset +2 px down, clipped to the right of the card's left edge."
+  },
+  {
+   "severity": "medium",
+   "at": "74.52–84.04, owl in the top margin (global, src/lib/post.js)",
+   "what": "The owl's whites are 10–15 levels dim and flat. Mean is 204–226 against 216–240, p90 is short by 14–19, and max is 231–239 against 250–253. The darks match (p10 within ±5), so the owl reads greyer than the source. The render is at the grade's ceiling here (255 × vignette ≈0.87 × flicker ≈230), so s22 cannot fix it.",
+   "fix": "In post.js, let shot.grade() return a highlight headroom (e.g. hi: 1.08). Multiply f by mix(1, hi, smoothstep(0.8, 1.0, L)) before the final clamp, or exempt near-whites from the vignette. s22 would then pass hi≈1.08 while the owl is in the top margin."
+  },
+  {
+   "severity": "low",
+   "at": "76.6–77.4 right margin x>2130; 83.2 left margin",
+   "what": "The outer-margin blacks are slightly lifted: 13–15 at x 2155–2205 against 7–10 in the source, and the left margin p5 is 5 against 3 at 83.2.",
+   "fix": "Scale ROOM_G knots x=2130 and x=2206 by ~0.65 for y≥112, or subtract ~4/255 from the room light beyond x 2120."
+  },
+  {
+   "severity": "low",
+   "at": "74.52–84.04, darks (global)",
+   "what": "The source's green cast is missing: from 80.56 the source darks carry G−R ≈ +2.5…+5. At 83.2 the top margin reads BGR 44.1/48.4/43.9 in the source against a neutral 43.3/44.2/43.6. This was deliberately left out because s21 and s23 are neutral.",
+   "fix": "If wanted, apply it in the global grade per film section, not in s22."
+  },
+  {
+   "severity": "low",
+   "at": "all frames (global, src/lib/post.js grain)",
+   "what": "The grain hash produces a fixed periodic pattern. Row-mean profiles have a period of 5.2 px and column-mean profiles 9.7 px (row-profile std 1.0–1.4 against 0.45 in the source). The raw s22 frames do not have it. Grain in the dark margins is also finer and weaker than the source's (frame-to-frame σ2 difference 0.6–0.8 against 1.4–1.8).",
+   "fix": "Replace h() in post.js with an integer hash (e.g. pcg2d on floor(px) and frame), and make the grain coarser and ~2× stronger in darks (L<0.2)."
+  },
+  {
+   "severity": "low",
+   "at": "src/shots/s22/owlData.js, lines.js (process, not visual)",
+   "what": "Compliance question. The owl is an auto-trace of grade-inverted source medians: 27 drawings, about 93k contour points, 30–94 nested tone levels at 0.1 px, plus 'fine lines' taken from render-minus-source ridges. No pixels are stored, but it is a vector re-encoding of source imagery. Nine dead files remain in src/shots/s22/: cut.js, late.js, lateSpecs.js, art.js, owl21.js, poses21.js, sc21.js, soft21.js and variants.js.",
+   "fix": "The orchestrator or the user should confirm this is acceptable under 'never embed any frame/crop/pixel of the source'. If it is not, pose owlInk.js to the measured keyframes instead. Delete the dead files."
+  },
+  {
+   "severity": "low",
+   "at": "first frame / cache builds",
+   "what": "The first frame took 14–45 s to build (page canvas and sprites) and warm frames take median 377 ms, p90 609 ms, against a target of ≤300 ms. This was measured at load average ~70, so it is not a fair benchmark.",
+   "fix": "Re-benchmark on a quiet machine. If it is still slow, pre-build the late sprites incrementally and cache roomGain at a lower resolution (e.g. ¼ res, bilinear)."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "s22 moves in time with the source; the drawing does not match as closely. Fidelity is approx, not the builder's \"close\".\n\n**Timing, camera and staging are frame-exact.** I rendered all 238 frames 1863–2100 with my own copy of the builder's harness (snapshots/s22-rev1-h, t = F/25). Against source frames ±2, 236 of 238 frames match best at offset 0. The other two (80.32 and 80.36, in the held brandish drawing) prefer −1 or −2, but only by 0.5/255. The rest is exact too:\n- **Camera settle:** it matches the source (ECC 1.0117/1.026 against 1.012/1.026 at 74.52), and the camera is otherwise locked to under 0.4 px.\n- **Beats:** the dash line is re-registered, and the outline, strip jump, dissolve, throw, reach and peel all land on the right frames.\n- **Cuts:** both land on the source cuts, frames 1863 and 2101.\n\nThe per-frame σ3 error is 9.6–10.6/255 (mean 10.03). It comes almost entirely from the page (12.4–13.9), which is F1's sokoIll/sites drawing. That page is the most visible difference: the designer, his trousers and face, and the room objects all differ.\n\n**Problems in s22's own work:**\n- **The owl's faces are washed out.** The walking owl has no visible eye, and the cut drawing has lost its scowl. The traced fine lines are only 3–7 % dark.\n- **Rim artifacts.** The measured rim has a V-spike through the designer's eyes, a spike at x 515, looped corners, and a sliver poking above the card from 83.12 to 84.0.\n- **Light pool too dark.** The top-margin light above the card is 5–18 levels too dark over 82.6–84.0.\n- **Card edge missing.** At 82.3–82.44 the card has no dark edge, so it merges into the white headline letters below it.\n\n**Owl whites:** they are 10–15 levels short, but that is the global grade's ceiling, not something s22 can fix. Tone elsewhere is right: the blacks are deep and the margins are within ±1 until 82.5.\n\n**Checks:**\n- **Determinism:** 7 timestamps rendered in 4 separate compare runs, in different orders, gave bit-identical PNGs (max diff 0).\n- **Errors:** no console errors, placeholders or error bars.\n- **Tool artifacts:** `compare.sh` at 74.52 actually renders 74.50, which is s21 (it seeks on a 30 fps grid). At 84.02 it pairs with source frame 2101, which is s23's first frame. So those two compare pairs are not defects.\n\n**Evidence** is in snapshots/s22-rev1-qa, -qb, -qc, -qm (the compare and sidebyside output, with st/ and owl/ crops) and in snapshots/s22-rev1-h (zoom JPGs and all.log). I deleted my own full-frame PNG renders and the source frames I extracted, to save disk."
+}

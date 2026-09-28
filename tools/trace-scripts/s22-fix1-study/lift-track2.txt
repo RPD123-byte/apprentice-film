@@ -1,7 +1,0 @@
-79.84 rms 44.4 rot -42.0 deg cup at (142.0,84.0)
-79.88 rms 63.1 rot -174.0 deg cup at (209.0,87.0)
-79.92 rms 71.8 rot -171.0 deg cup at (227.0,83.0)
-79.96 rms 66.3 rot +6.0 deg cup at (269.0,29.0)
-80.00 rms 68.1 rot +4.5 deg cup at (301.0,33.0)
-80.04 rms 66.1 rot -151.5 deg cup at (303.0,114.0)
-80.08 rms 59.7 rot +57.0 deg cup at (359.0,78.0)

@@ -17,7 +17,8 @@ from kinds import RMS_KINDS
 
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
 SCORE = args[0] if args else os.path.join(ROOT, "audio", "score.wav")
-SRC = os.path.join(ROOT, "snapshots", "audio-work", "src.wav")
+from srcaudio import source_wav
+SRC = source_wav(ROOT)  # snapshots/audio-work/src.wav, extracted from $APPRENTICE_SOURCE if missing
 RATE = float(sys.argv[sys.argv.index("--rate") + 1]) if "--rate" in sys.argv else 0.8
 ALL = not any(f in sys.argv for f in ("--events", "--bed", "--music"))
 CF = [31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]

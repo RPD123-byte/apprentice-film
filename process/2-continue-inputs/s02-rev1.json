@@ -1,0 +1,98 @@
+{
+ "fidelity": "approx",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "6.04–10.52 (full-frame stare/look), also 10.52–12.7 and 17.5–19.12; designer.js",
+   "what": "The designer does not look like the source. Positions match: iris, pencil, teeth and drops are within about 5 px. The drawing itself reads cartoonish and angry, where the source is a fine, gaunt manga face that looks terrified. (a) Brows are thick black bars (~20 px): left x≈840–945, y≈185–215, tilted down toward the centre; right x≈1120–1255, y≈180–210. The source brows are thin (6–8 px), raised and nearly level at y≈205–230 (left x≈767–907, right x≈1127–1297). (b) The dark eye rings are missing. The source has hatched crescents about 40 px tall under both lower lids (y≈355–400) and cross-hatched inner sockets; the render is plain white there. (c) The eye openings are flat almonds about 75 px tall with a doubled lower lid, and the irises are about 55 px with a heavy dark ring. The source eyes are rounder, about 100 px tall with white above and below the iris, and the irises are about 70 px, lighter and finely striated. (d) The nose is two solid black oval nostrils at (1005,585) and (1090,585) plus hatch marks. The source nose has a drawn bridge from y≈420, a rounded tip and outlined alae (x≈968–1133, y≈500–605), and its nostrils are not solid black. (e) There is scratchy horizontal hatching on both cheeks (x≈720–900 and 1200–1330, y≈380–470) and dense cross-hatch scribbles beside the nose bridge; the source cheeks are clean. (f) The face is broader and squarer, the upper lip is only a line, the chin contour is missing, and the pencil ferrule is a checkered block.",
+   "fix": "Redraw the features in designer.js (stare, look and soft layers). Make the brows 6–8 px tapered strokes, raised to y≈210–225 and near level. Add value-painted, hatched rings under each eye (a crescent about 40 px tall, value ~0.35–0.5, strokes following the socket). Enlarge the eye openings to ~100 px tall and the irises to ~70 px with radial striation and a lighter ring. Replace the nostril blobs with a line-drawn nose: bridge sides, tip and alae over x 968–1133, y 420–605. Delete the cheek and between-brow scribbles. Add a full upper lip and a chin contour below the pencil. Re-check against the tone fit afterwards."
+  },
+  {
+   "severity": "high",
+   "at": "16.20–19.12 (flying owl); owl.js / owlInk flyFront, shot.js OWL_SOFT",
+   "what": "The flying owl reads as a soft white cut-out rather than the source's crisp inked bird. (a) The headphone cups are thin pale-grey rings; the source cups are large, dark and ribbed. The same is true on the sitting owl at 14.44–16.2. (b) The feet are tiny grey squiggles. The source has white talons with dark outlines, about 40 px, dangling under the body, so the render's silhouette ends 20–40 px higher (455–477 bbox bottom −30 to −40; at f462 the lowest point is y 526 vs 551). (c) The wings are lumpy stacks of scalloped ovals with no outline. The source wings have smooth leading edges, long primaries split by dark lines and grey undersides. The left wing tip reaches 30–45 px too far left (f428: x 967 vs 1011; f462: 1193 vs 1222). (d) There is no dark contour on the body, which is flat white, and blur is added on top (OWL_SOFT0 0.5 plus up to 1.4 px). Edge energy in the owl region is 0.70–0.80 of the source at 442–474. (e) The body is too small: at f462 it is ~238 px wide vs ~273 px and ~30 px shorter. (f) Position wobbles against the source: the whole owl sits ~36 px left at f436–437 (beak x 1443/1450 vs 1479/1487), and at f446 the head is ~45 px right of the source's banked head.",
+   "fix": "In s02's owl layer: draw the cups as dark ovals (~40×75 px, fill ~#1c1c1c with rib highlights) and thicken the headband. Add two talon groups hanging ~35 px below the belly. Stroke a 2–3 px dark contour around the body and wings, and add chest feather scallops. Set OWL_SOFT0 = 0 and scale the OWL_SOFT table by ~0.5. Scale the flyFront body/head ×1.12. Pull the left wing-tip targets in by ~35 px. Re-fit the root x for 434–438 and the head bank at 444–448 from the source beak position."
+  },
+  {
+   "severity": "medium",
+   "at": "6.04–10.5 room (e.g. x 1500–1790, y 0–510; x 0–470, y 40–520) and 14.44–16.2 hold backdrop (x 0–695, y 144–420; x 1255–1500, y 94–414); carton faces",
+   "what": "The room's tone fields are perfectly regular grids of round white dots, a mechanical halftone. The source uses hand cross-hatching: a woven line grid with irregular density and dark shapes such as picture frames. In the hold, the upper-left dot field is about 3× too bright (mean 9.4 vs 3.3 over x 0–700, y 140–420) and reads as a grey dotted rectangle where the source is near black. The carton faces also carry a fine dot halftone.",
+   "fix": "Replace mesh() in scratch.js with two-direction line hatching: 5–7 px jittered spacing, line width driven by value, slight angle noise, and some dark voids. Drop the hold's upper-left field to ≤4 mean, or remove it, keeping only the vertical post and hanging cables. Remove the dot texture from the carton faces."
+  },
+  {
+   "severity": "medium",
+   "at": "14.44–16.2 hold (also visible 13.6–17.6 under pan and flight); room.js HOLD_WORLD",
+   "what": "The carton stack geometry is wrong. (a) The stack's left steps are missing. The source has a second-tier box at x≈540–817, y≈436–607 and a third-tier box at x≈474–805, y≈607–806; the render is black there, and at f340 the incoming cartons in the upper right (x≈1740–2206, y 0–550) are absent. (b) An open flap wedge was invented at x≈711–850, y≈440–590; the source box there is closed. (c) The far-right cartons have only a front face (x 1737–1878). The source's dark top and side faces and edge lines run to x≈2090, and the lower-tier outlines span x 1758–2100, y 670–946. (d) The board behind is a short bright streak at x≈1455–1706, y≈232–255 that looks like a floating white bar (left third mean 16 vs 9). The source board is long and dark, running to x≈2090. (e) The box faces are airbrushed gradients with glowing centres and drips from the top edges, with no ink edge lines. The source uses vertical streak hatching with dark ink edges and a light edge highlight. (f) The chair back at x≈584–750, y≈690–946 is only a thin arc; in the source it is a dark filled shape with a light rim. (g) The cables hanging behind the stack top (x≈970–1080, y 0–250) are missing, while long curved grey cables were added at x≈507–706, y≈100–380.",
+   "fix": "Add the two left step boxes. Replace the flap with a closed box. Extend the far-right boxes with dark top and side faces and 1–2 px light edge lines out to x≈2090. Lengthen the board to x≈2090 and darken it to a mean of ~4. Re-texture the faces with vertical streak hatching and dark contour strokes, and remove the glow gradients and drips. Fill the chair back. Move the cables to x≈970–1080."
+  },
+  {
+   "severity": "medium",
+   "at": "11.84–13.2 and 17.6–19.12; tracks.js DESB",
+   "what": "The designer is over-blurred in both pans. Sobel edge energy on the designer is 0.67–0.79 of the source's at f296–330 and f440–477 (e.g. f300: 29.5 vs 40.7). The source hair strands stay crisp at 296–304, while the render shows smeared, doubled strands 8–20 px long. The σ8 MAE fit cannot see blur, so it drifted to over-smoothing.",
+   "fix": "Scale DESB smear L and sigma by ~0.6 for frames ≥294 and 440–477 (currently 17–20 px, σ 2.8–3.4). Re-fit per frame on a gradient-energy match inside the designer mask instead of blurred MAE."
+  },
+  {
+   "severity": "medium",
+   "at": "17.5–19.12 return pan (soft face layer)",
+   "what": "The beanie crown is a smooth grey gradient with blotches, and the cuff ends have noisy salt-and-pepper patches. There are no knit ribs and no thick dark fold line at the top of the cuff. The source is ribbed knit throughout with a strong fold line. The beanie is ~30 px too narrow (f474: x 349–1251 vs 333–1267). The face sits ~17 px left (nose x 812 vs 829). The designer region is 4–5 levels darker (f466: 78 vs 83; f474: 121 vs 125). The soft face also keeps the cartoon eyes and nostrils, without the dark rings.",
+   "fix": "Rebuild the soft layer as a line drawing: vertical rib hatching on crown and cuff, a 6–8 px dark fold line, and no speckle patches. Widen the beanie ~15 px on each side. Shift the soft designer +15 px in x for f455–477. Raise the gain by ~5% so it matches."
+  },
+  {
+   "severity": "medium",
+   "at": "19.08→19.12 boundary (s02 f477 → s04 f478)",
+   "what": "The join into s04 pops, though the source has no cut here: the camera move is continuous. The render's step across it is 33.8 (σ8 blurred MAE, frame to frame) vs 19.0 in the source. s02's last frame is the soft, blurred face, and s04's first frame is a crisp, heavily hatched drawing. s04's f478 also matches source f479 (MAE 1.6), so it is one frame ahead.",
+   "fix": "On the s02 side, sharpen the return-pan face (the two items above) so its look matches the next shot. Tell the s04 owner about the one-frame lead and the style jump."
+  },
+  {
+   "severity": "medium",
+   "at": "14.44–16.2 sitting owl; owl.js perch",
+   "what": "The sitting owl is a rough likeness. The feet are spread too wide: talons at x≈1010–1045 and 1120–1150 vs the source's ≈1044–1079 and 1109–1139. The toes are round blobs; the source has black hooked claws. The headphone cups are pale grey where the source's are black. The facial-disc rings around the eyes and the worried brow arcs are missing. The body is flat white with no chest feather texture or side shading, and the top of the head is flatter.",
+   "fix": "Move the left foot +35 px and the right foot −10 px, and draw hooked black claws. Make the cups dark. Add the facial-disc arcs and brow arcs. Paint side and belly shading (value ~0.75) with feather scallops."
+  },
+  {
+   "severity": "low",
+   "at": "16.00–16.32 (f400–408) take-off",
+   "what": "The spreading wings are grey clusters of lumpy scallops at belly height, in front of the body. In the source the wings come out from behind the shoulders as smooth shapes and spread level. At 405–408 the render's body overlaps the box lid, 20–30 px too low, while in the source the talons visibly dangle above the lid.",
+   "fix": "Root the take-off wings at the shoulders (about 60 px higher) and draw them behind the body with smooth outlines. Lift the body 20–30 px at 405–408 and show the talons."
+  },
+  {
+   "severity": "low",
+   "at": "8.76 (f219) and 8.76–8.84 (f219–221)",
+   "what": "The in-between at f219 is three translucent copies of the stare iris at the centre, which reads as a ghost. The source's 219 is a new drawing: a dark, larger, smeared iris with a catchlight and the lids half lowered. The source also redraws the whole face on 219, 220 and 221 (43k, 22k and 18k changed pixels as hair and line shifts), while the render holds the drawing and only moves the irises.",
+   "fix": "At f219, draw one dark iris about 1.25× size, smeared 16 px along x, with a catchlight at the upper left and lids halfway. Optionally jitter the hair strands and lid lines by 2–4 px on 219–221."
+  },
+  {
+   "severity": "low",
+   "at": "15.68 (f392) blink",
+   "what": "At f392 the render still shows the tired half-lids. The source eyes are essentially open at 392, slightly smaller than at 393. On the heavy-lid frames (380, 390, 391) the source's lower half-eyes are black, while the render's are grey.",
+   "fix": "Use the open state (about 0.85 scale) at f392, and darken the iris fill in the tired state to near black."
+  },
+  {
+   "severity": "low",
+   "at": "11.3–13.9 outbound pan world",
+   "what": "The room is greyer than the source early in the pan: black share 25.6% vs 38.5% at f313 and 27% vs 34% at f283. The shelves around 12.5–13.5 lack the book spines the source shows clearly. At f346 there are dim book-block textures at lower left (x≈140–470, y≈400–946) where the source is near black.",
+   "fix": "Darken the pan world's mid-tones, add book-spine strokes on the shelf rows, and remove the lower-left blocks from the pan mosaic region."
+  },
+  {
+   "severity": "low",
+   "at": "6.04–10.5 stare room and hoodie",
+   "what": "The cables are regular white dashed lines (x≈220–470, y≈140–320), where the source has solid ribbed cables. The room has more pure black than the source (42% vs 37%, median 15 vs 27), because the source's low-mid cross-hatching is missing. The hoodie's diagonal fur-like hatching is heavier and longer than the source's sparse fine hatching.",
+   "fix": "Draw the cables as solid tapered strokes with tick ribbing. Add low-value cross-hatch in the dark room areas. Thin the hoodie hatching and space it out by about 1.5×."
+  },
+  {
+   "severity": "low",
+   "at": "hand/hairsil.js",
+   "what": "The outer outlines of the hair masses are thresholded, traced outlines of averaged source frames. This is disclosed, but it sits close to the 'never embed any pixel of the source' rule.",
+   "fix": "Redraw the two hair silhouettes as authored control-point curves, using the trace only as a reference for measurement."
+  },
+  {
+   "severity": "low",
+   "at": "tooling (not an s02 defect)",
+   "what": "hyperframes snapshot (compare.sh) samples times on a floor(t*30)/30 grid. So 6.04, 11.56, 12.76, 13.96, 17.56, 18.76 and f/25+0.01 times such as 8.73, 16.93, 17.93, 18.93 render the previous 25 fps frame, and frame 151 (s02's first) can never be sampled: 6.0333 gives s01 and 6.0667 gives f152. The film renderer uses exact i/25, so the real cuts are correct: the s01→s02 step is 67.4 vs 69.3 in the source.",
+   "fix": "For frame-exact compares use t = round(1.2*f)/30 + 0.001."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "Timing and camera are close; the drawing is visibly simplified and in places off-model, so the honest rating is approx, not close.\n\n**What matches:**\n- **Eye scan:** the iris track is within 1 px of the source on every frame from 174 to 217.\n- **Beats:** the snap (218–220), blink (380/381–389/390–392), crouch, take-off (405) and the camera stop at 361 all land within ±1 frame.\n- **Camera:** the blurred error has its minimum at 0 frame offset through both pans, so the pan timing and path are frame-accurate.\n- **Measured positions:** the pencil, teeth and laptop lid are within about 10 px.\n\n**Error level (σ8 blurred MAE, frame-correct pairing, 229 frames):**\n\n| section | mean |\n|---|---|\n| stare/look | 10.7 |\n| outbound pan | 8.3 |\n| hold | 6.1 |\n| flight | 7.9 |\n| return pan | 12.3 |\n| overall | ~9.1 |\n\nThese agree with the builder's fidelity log, which is honest.\n\n**Most visible gaps:**\n1. The designer's face on the 4.5 s full-frame stare: heavy angry brows, no dark eye rings, almond eyes, a cartoon nose with black nostrils, and scribbled cheeks. The source is a gaunt, terrified manga face.\n2. The flying owl: pale thin headphone cups, missing talons, lumpy outline-free wings, blurred with no ink contour, and about 12% too small.\n3. The room's tone is regular round-dot halftone grids instead of hand cross-hatching, with over-bright dot fields in the hold.\n4. The carton stack: its left step boxes are missing, a box flap was invented, and the far-right faces and the board are truncated.\n5. Over-blurred designer in both pans, with edge energy at 0.67–0.79 of the source.\n6. The return-pan beanie is a smooth gradient with speckle patches.\n7. A visible style pop into s04 at 19.12. The source has no cut there, and s04 is also one frame ahead.\n\n**Checks:**\n- **Determinism:** 10 timestamps rendered in two separate runs were bit-identical.\n- **Errors:** no placeholder text, error bars or console errors.\n- **Hard rules:** no Math.random or Date and no image loads in s02.\n- **Traced element:** the hair outlines are traced from the source (disclosed in the fidelity log).\n\n**Evidence:** `/Users/computer/rootline/apprentice-film/snapshots/s02-rev1-work/`. The pair images are `p*.jpg`. The key crops are `c152face.jpg`, `sweat.jpg`, `mouth.jpg`, `snap.jpg`, `snapface.jpg`, `c367*.jpg`, `c373right.jpg`, `blink.jpg`, `takeoff.jpg`, `flight1-3.jpg`, `owlfly.jpg`, `wing.jpg`, `ret.jpg`, `pan.jpg`, `pan300.jpg` and `end.jpg`. The scripts are `pairs.py`, `metrics.py`, `iris.py` and `owlpos.py`.\n\n**Renders:** `snapshots/s02-rev1-{a,b,m1,m2,m3,m4,det,bnd,sbsA,sbsB,probe}`.\n\n**Cleanup:** I published no Artifacts and deleted nothing. Every file I created is under the `snapshots/s02-rev1-*` directories listed above. The `snapshots/s02-rev1-r2-*` directories belong to another agent; I did not touch them."
+}

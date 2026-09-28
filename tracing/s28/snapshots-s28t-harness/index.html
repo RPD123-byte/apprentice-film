@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=2206, height=946">
+    <title>s28t harness</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Archivo"; src: url("assets/fonts/Archivo-Var.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Var.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Fraunces"; src: url("assets/fonts/Fraunces-Variable.ttf") format("truetype"); font-weight: 100 900; }
+      @font-face { font-family: "Shrikhand"; src: url("assets/fonts/Shrikhand.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Fraunces Soft"; src: url("assets/fonts/FrauncesSoft-Black.ttf") format("truetype"); font-weight: 900; }
+      @font-face { font-family: "Satoshi"; src: url("assets/fonts/Satoshi-Variable.woff2") format("woff2"); font-weight: 300 900; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-500.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-600.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/Poppins-700.woff2") format("woff2"); font-weight: 700; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 2206px; height: 946px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 100%; height: 100%; background: #000; }
+      #film { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-s28t1" id="root" data-composition-id="main" data-start="0" data-duration="140.8" data-fps="25" data-width="2206" data-height="946">
+      <canvas data-hf-id="hf-s28t2" id="film" width="2206" height="946"></canvas>
+    </div>
+    <script type="module">
+      // s28t scratch harness (not part of the film): s27 (< 129.3), s28 (129.3-136), s40 (>= 136), through the film's grade,
+      // like main.js. The requested time is snapped up to the 25 fps frame (the film render's grid): request k/25 + 0.0005.
+      import { createPost } from "./src/lib/post.js";
+      const S27 = (await import("./src/shots/s27.js").catch((e) => { console.error(e); return {}; })).shot;
+      const S28 = (await import("./src/shots/s28.js")).shot;
+      const S40m = await import("./src/shots/s40_endcard.js");
+      const S40 = S40m.shot ?? S40m.s40;
+      if (S27) { S27.start = 117.52; S27.end = 129.3; }
+      S28.start = 129.3; S28.end = 136.0; S40.start = 136.0; S40.end = 140.8;
+      const out = document.getElementById("film");
+      const paint = document.createElement("canvas"); paint.width = 2206; paint.height = 946;
+      const ctx = paint.getContext("2d");
+      const grade = createPost(out);
+      const fadeAt = (t) => Math.min(1, Math.max(0, (140.77 - t) / 0.57));
+      function renderAt(t0) {
+        const t = t0 < 1 ? 131.6 : Math.ceil(t0 * 25 - 1e-6) / 25;
+        const s = t < 129.3 ? S27 : t < 136.0 ? S28 : S40;
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 2206, 946);
+        ctx.save();
+        try { if (s) s.draw(ctx, t - s.start, t, s); } catch (e) { console.error(e); ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle = "#f00"; ctx.fillRect(0, 0, 2206, 60); ctx.fillStyle = "#fff"; ctx.font = "30px sans-serif"; ctx.fillText(String(e && e.stack || e).slice(0, 180), 20, 40); }
+        ctx.restore();
+        grade(paint, t, { fade: fadeAt(t), ...(s && s.grade ? s.grade(t - s.start, t) : {}) });
+      }
+      window.__film = { renderAt };
+      await Promise.all(["900 100px Archivo", "400 20px Fraunces", "900 100px 'Fraunces Soft'", "500 20px Poppins", "600 20px Poppins", "700 20px Poppins"].map((f) => document.fonts.load(f)));
+      const clock = { _t: 0, get t() { return this._t; }, set t(v) { this._t = v; renderAt(v); } };
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo(clock, { t: 0 }, { t: 140.8, duration: 140.8, ease: "none" }, 0);
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

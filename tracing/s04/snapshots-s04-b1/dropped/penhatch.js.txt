@@ -1,0 +1,220 @@
+// s04 pen hatching: the source draws the lit figure (hoodie, face shadows, neck, beanie) with fine tapered pen strokes
+// laid in parallel bundles (cross-hatched where it is darkest). The traced keys only caught those strokes in broken
+// fragments, so inside the hatched areas the key's tone is re-rendered here as procedural strokes:
+//   - WHERE and WHICH WAY come from coarse measured fields (s04/hf/*.js, 12 px grid: mask, stroke direction, a second
+//     cross-hatch direction and its strength, the paper ground; 24 px grid: stroke spacing),
+//   - HOW DARK comes from the key's own value study: the strokes cover exactly the darkening the key has there
+//     (coverage = (ground - key mean) / (ground - ink)), so the blurred value of the key is kept.
+// The strokes themselves (positions, lengths, taper) are generated, seeded, never measured.
+import { hash } from "../../lib/rng.js";
+
+const ALPHA = []; for (let c = 35; c < 127; c++) if (c !== 92) ALPHA.push(String.fromCharCode(c));
+const IDX = new Int16Array(128).fill(-1); ALPHA.forEach((ch, i) => { IDX[ch.charCodeAt(0)] = i; });
+const unpack = (s, lo, hi) => { const a = new Float32Array(s.length); for (let i = 0; i < s.length; i++) a[i] = lo + (IDX[s.charCodeAt(i)] / 90) * (hi - lo); return a; };
+
+const CACHE = new WeakMap();
+export function decodeHF(HF) {
+  let F = CACHE.get(HF);
+  if (F) return F;
+  const { S, nx, ny, S2, mx, my } = HF;
+  F = { S, nx, ny, S2, mx, my, th1: unpack(HF.th1, 0, Math.PI), th2: unpack(HF.th2, 0, Math.PI), w2: unpack(HF.w2, 0, 1),
+    mask: unpack(HF.mask, 0, 1), C: HF.C ? unpack(HF.C, 0, 1) : null, G: unpack(HF.G, 0, 255), per: unpack(HF.per, 4, 13) };
+  // the direction as a doubled-angle vector, so it interpolates across the 0/pi wrap
+  F.cx = new Float32Array(nx * ny); F.cy = new Float32Array(nx * ny);
+  for (let k = 0; k < nx * ny; k++) { F.cx[k] = Math.cos(2 * F.th1[k]); F.cy[k] = Math.sin(2 * F.th1[k]); }
+  CACHE.set(HF, F);
+  return F;
+}
+// bilinear sample of a grid (values at grid nodes i*S, j*S)
+function samp(a, nx, ny, S, x, y) {
+  let fx = x / S, fy = y / S;
+  fx = Math.max(0, Math.min(nx - 1.001, fx)); fy = Math.max(0, Math.min(ny - 1.001, fy));
+  const i = Math.floor(fx), j = Math.floor(fy), u = fx - i, v = fy - j, k = j * nx + i;
+  return (a[k] * (1 - u) + a[k + 1] * u) * (1 - v) + (a[k + nx] * (1 - u) + a[k + nx + 1] * u) * v;
+}
+const angAt = (F, x, y) => Math.atan2(samp(F.cy, F.nx, F.ny, F.S, x, y), samp(F.cx, F.nx, F.ny, F.S, x, y)) / 2;
+
+// A canvas (w x h, frame px + margin M) of the ground with the strokes, plus the feathered mask as a canvas.
+//   mean(x, y): the key's blurred value there (0..255, frame px)
+//   opts: ink (paint value of a stroke), seed, gain (coverage), lenK (stroke length / spacing), cross (cross-hatch)
+export function penHatch(HF, mean, w, h, M, opts = {}) {
+  const F = decodeHF(HF);
+  const { ink = HF.ink ?? 70, seed = 11, gain = 1, lenK = 9, minLen = 16, maxLen = 110, maxW = 0.5, soft = 0.45, cross = 1, useC = 1, thinW = 0.24 } = opts;
+  const mk = () => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
+  // the ground: the measured paper value, smoothly interpolated
+  const gc = document.createElement("canvas"); gc.width = F.nx; gc.height = F.ny;
+  const gg = gc.getContext("2d"), gd = gg.createImageData(F.nx, F.ny);
+  const mc = document.createElement("canvas"); mc.width = F.nx; mc.height = F.ny;
+  const mg = mc.getContext("2d"), md = mg.createImageData(F.nx, F.ny);
+  for (let k = 0; k < F.nx * F.ny; k++) {
+    const v = Math.round(F.G[k]);
+    gd.data[4 * k] = gd.data[4 * k + 1] = gd.data[4 * k + 2] = v; gd.data[4 * k + 3] = 255;
+    md.data[4 * k] = md.data[4 * k + 1] = md.data[4 * k + 2] = 255; md.data[4 * k + 3] = Math.round(Math.min(1, F.mask[k] * 1.25) * 255);
+  }
+  gg.putImageData(gd, 0, 0); mg.putImageData(md, 0, 0);
+  const out = mk(), g = out.getContext("2d");
+  g.imageSmoothingEnabled = true;
+  // grid node (i, j) sits at frame (i*S, j*S): a node-centred upscale
+  const S = F.S;
+  const maskC = mk(), mkg = maskC.getContext("2d");
+  mkg.imageSmoothingEnabled = true; mkg.drawImage(mc, M - S / 2, M - S / 2, F.nx * S, F.ny * S);
+
+  // coverage wanted at a frame point for the whole hatch (0..1)
+  const cov = (x, y) => {
+    if (F.C && useC) return Math.max(0, Math.min(1, samp(F.C, F.nx, F.ny, S, x, y) * gain));
+    const G = samp(F.G, F.nx, F.ny, S, x, y), m = mean(x, y);
+    return Math.max(0, Math.min(1, ((G - m) / Math.max(20, G - ink)) * gain));
+  };
+  if (opts.debug) for (const [x, y] of [[300, 620], [420, 600], [1600, 650], [1800, 720], [1150, 560], [1250, 780]]) console.log(`pt ${x},${y} G ${samp(F.G, F.nx, F.ny, S, x, y).toFixed(0)} m ${mean(x, y).toFixed(0)} cov ${cov(x, y).toFixed(2)} mask ${samp(F.mask, F.nx, F.ny, S, x, y).toFixed(2)} per ${samp(F.per, F.mx, F.my, F.S2, x, y).toFixed(1)}`);
+  const mAt = (x, y) => samp(F.mask, F.nx, F.ny, S, x, y);
+  const perAt = (x, y) => samp(F.per, F.mx, F.my, F.S2, x, y);
+
+  // the strokes: seeds on lattices shared by all cells of one (direction, spacing) bin, so a bundle of parallel strokes
+  // runs on across cells; each stroke then bends with the measured direction and its width follows the coverage
+  const strokes = [];
+  const NB = 12, DB = [5, 6.5, 8, 10];
+  const binOf = (a) => ((Math.round((((a % Math.PI) + Math.PI) % Math.PI) / (Math.PI / NB)) % NB) + NB) % NB;
+  const dBin = (d) => { let b = 0; for (let i = 1; i < DB.length; i++) if (Math.abs(DB[i] - d) < Math.abs(DB[b] - d)) b = i; return b; };
+  function family(fam) {
+    for (let j = 0; j < F.ny; j++) for (let i = 0; i < F.nx; i++) {
+      const k = j * F.nx + i;
+      if (F.mask[k] < 0.08) continue;
+      const cx = i * S, cy = j * S;
+      let a = angAt(F, cx, cy);
+      if (fam === 1) {
+        if (!cross) continue;
+        a = F.w2[k] > 0.55 ? F.th2[k] : a + 1.05;
+      }
+      const b = binOf(a), ab = (b * Math.PI) / NB, db = dBin(perAt(cx, cy)), d = DB[db];
+      const L0 = Math.max(minLen, Math.min(maxLen, lenK * d)), Ls = L0 * 1.1;
+      const nX = -Math.sin(ab), nY = Math.cos(ab), tX = Math.cos(ab), tY = Math.sin(ab);
+      // lattice coordinates of the cell's corners -> the (u, v) range to enumerate
+      let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9;
+      for (const [px, py] of [[cx - S / 2, cy - S / 2], [cx + S / 2, cy - S / 2], [cx - S / 2, cy + S / 2], [cx + S / 2, cy + S / 2]]) {
+        const u = (px * nX + py * nY) / d, v = (px * tX + py * tY) / Ls;
+        u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v);
+      }
+      for (let ui = Math.floor(u0) - 1; ui <= Math.ceil(u1) + 1; ui++) {
+        const rowSh = hash(ui, b, db, fam, seed);
+        for (let vi = Math.floor(v0 - rowSh) - 1; vi <= Math.ceil(v1) + 1; vi++) {
+          const hj = hash(ui, vi, b * 7 + db, fam, seed + 3);
+          const uu = ui + (hj - 0.5) * 0.28, vv = vi + rowSh + (hash(vi, ui, fam, seed + 5) - 0.5) * 0.3;
+          const px = uu * d * nX + vv * Ls * tX, py = uu * d * nY + vv * Ls * tY;
+          if (px < cx - S / 2 || px >= cx + S / 2 || py < cy - S / 2 || py >= cy + S / 2) continue;
+          strokes.push({ r: hash(ui * 3 + 1, vi * 5 + 2, fam, seed + 21), x: px, y: py, fam, d, L: L0 * (0.7 + 0.55 * hash(ui, vi, fam, seed + 9)), jit: (hash(vi, ui, seed + 13) - 0.5) * 0.07 });
+        }
+      }
+    }
+  }
+  family(0); family(1);
+
+  // one family carries coverage up to C1 (strokes at most maxW of the spacing wide); past it the cross family adds
+  const phi = 1 / 1.1 * 0.95, prof = 0.7, C1 = maxW * phi * prof;
+  const stepN = 5; let wSum = 0, wN = 0, cSum = 0;
+  const geo = [];
+  for (const st of strokes) {
+    const half = st.L / 2, ds = half / stepN;
+    // trace the stroke both ways along the field (each step turned to keep its heading)
+    const dirAt = (x, y) => {
+      if (st.fam === 1) { const k = Math.max(0, Math.min(F.nx * F.ny - 1, Math.round(y / S) * F.nx + Math.round(x / S))); return (F.w2[k] > 0.55 ? F.th2[k] : angAt(F, x, y) + 1.05) + st.jit; }
+      return angAt(F, x, y) + st.jit;
+    };
+    const a0 = dirAt(st.x, st.y), P = [[st.x, st.y]];
+    for (const sgn of [1, -1]) {
+      let x = st.x, y = st.y, hx = Math.cos(a0) * sgn, hy = Math.sin(a0) * sgn;
+      const seq = [];
+      for (let s = 0; s < stepN; s++) {
+        const a = dirAt(x, y);
+        let dx = Math.cos(a), dy = Math.sin(a);
+        if (dx * hx + dy * hy < 0) { dx = -dx; dy = -dy; }
+        x += dx * ds; y += dy * ds; hx = dx; hy = dy; seq.push([x, y]);
+      }
+      if (sgn > 0) P.push(...seq); else P.unshift(...seq.reverse());
+    }
+    // width along the stroke: the coverage this family must carry there, tapered to both ends
+    const n = P.length, ws = new Float32Array(n);
+    let any = 0;
+    for (let q = 0; q < n; q++) {
+      const [x, y] = P[q];
+      const m = mAt(x, y);
+      if (m < 0.05) { ws[q] = 0; continue; }
+      const c = cov(x, y) * Math.min(1, m * 1.3);
+      // split between the families: by the measured cross-hatch strength, and past C1 whatever one family cannot carry
+      const k2 = Math.max(0, Math.min(F.nx * F.ny - 1, Math.round(y / S) * F.nx + Math.round(x / S)));
+      const x2 = cross ? Math.max(0, (F.w2[k2] - 0.45) / 0.55) * 0.5 : 0;
+      const c1 = Math.min(C1, c * (1 - x2)), c2 = c - c1;
+      const cf = st.fam === 0 ? c1 : c2;
+      const s = q / (n - 1), tp = Math.sin(Math.PI * Math.min(1, Math.max(0, s))) ** 0.6;
+      // light areas get FEWER strokes (each stroke is on where the coverage beats its own rank), dark areas wider ones
+      const cThin = thinW * phi * prof, pres = cf / cThin;
+      const on = Math.max(0, Math.min(1, (pres - st.r) / 0.18 + 0.5));
+      ws[q] = thinW * st.d * Math.max(1, pres) * on * tp; wSum += ws[q]; wN++; cSum += c;
+      if (ws[q] > 0.12) any = 1;
+    }
+    if (any) geo.push({ P, ws, d: st.d });
+  }
+  const drawAll = (gainAt) => {
+    g.globalCompositeOperation = "source-over"; g.clearRect(0, 0, w, h);
+    g.drawImage(gc, M - S / 2, M - S / 2, F.nx * S, F.ny * S);
+    g.fillStyle = `rgb(${ink},${ink},${ink})`;
+    for (const { P, ws, d } of geo) {
+      const n = P.length, k = gainAt(P[n >> 1][0], P[n >> 1][1]);
+      g.beginPath();
+      for (let side = 0; side < 2; side++) {
+        for (let qq = 0; qq < n; qq++) {
+          const q = side ? n - 1 - qq : qq;
+          const a = P[Math.max(0, q - 1)], bpt = P[Math.min(n - 1, q + 1)];
+          let dx = bpt[0] - a[0], dy = bpt[1] - a[1]; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
+          const hw = (Math.min(ws[q] * k, d * maxW * 1.5) / 2) * (side ? -1 : 1);
+          const X = P[q][0] + M - dy * hw, Y = P[q][1] + M + dx * hw;
+          if (qq === 0 && side === 0) g.moveTo(X, Y); else g.lineTo(X, Y);
+        }
+      }
+      g.closePath(); g.fill();
+    }
+    if (soft > 0) {   // the source's strokes are soft-edged (a video of a drawing)
+      const t = mk(), tg = t.getContext("2d");
+      tg.filter = `blur(${soft}px)`; tg.drawImage(out, 0, 0); tg.filter = "none";
+      g.clearRect(0, 0, w, h); g.drawImage(t, 0, 0);
+    }
+  };
+  // calibration: per 12 px cell, the darkening the strokes achieved (blurred) against the darkening the key has there;
+  // the widths are scaled by the ratio and the strokes drawn again, a few times (so the key's blurred value is kept)
+  const gainG = new Float32Array(F.nx * F.ny).fill(1);
+  const gainAt = (x, y) => samp(gainG, F.nx, F.ny, S, x, y) * (opts.gainAll ?? 1);
+  drawAll(gainAt);
+  const qw = Math.ceil(w / 4), qh = Math.ceil(h / 4), qc = document.createElement("canvas"); qc.width = qw; qc.height = qh;
+  const qg = qc.getContext("2d", { willReadFrequently: true });
+  for (let it = 0; it < (opts.calib ?? 3); it++) {
+    qg.clearRect(0, 0, qw, qh); qg.filter = "blur(1.5px)"; qg.drawImage(out, 0, 0, qw, qh); qg.filter = "none";
+    const qd = qg.getImageData(0, 0, qw, qh).data;
+    const ach = (x, y) => {
+      let fx = (x + M) / 4 - 0.5, fy = (y + M) / 4 - 0.5; fx = Math.max(0, Math.min(qw - 1.001, fx)); fy = Math.max(0, Math.min(qh - 1.001, fy));
+      const i = Math.floor(fx), j = Math.floor(fy), u = fx - i, v = fy - j, k = 4 * (j * qw + i);
+      return (qd[k] * (1 - u) + qd[k + 4] * u) * (1 - v) + (qd[k + 4 * qw] * (1 - u) + qd[k + 4 * qw + 4] * u) * v;
+    };
+    const r = new Float32Array(F.nx * F.ny).fill(1);
+    for (let j = 0; j < F.ny; j++) for (let i = 0; i < F.nx; i++) {
+      const k = j * F.nx + i;
+      if (F.mask[k] < 0.2) continue;
+      const x = i * S, y = j * S, G = F.G[k], want = G - mean(x, y), got = G - ach(x, y);
+      if (want <= 3 && got <= 3) continue;
+      r[k] = Math.max(0.5, Math.min(2, Math.max(1, want) / Math.max(2, got)));
+    }
+    let cur = r;
+    for (let pass = 0; pass < 1; pass++) {
+      const nxt = new Float32Array(cur.length);
+      for (let j = 0; j < F.ny; j++) for (let i = 0; i < F.nx; i++) {
+        let sum = 0, n = 0;
+        for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= F.nx || jj >= F.ny) continue; sum += cur[jj * F.nx + ii]; n++; }
+        nxt[j * F.nx + i] = sum / n;
+      }
+      cur = nxt;
+    }
+    for (let k = 0; k < gainG.length; k++) gainG[k] = Math.max(0.15, Math.min(4, gainG[k] * cur[k]));
+    drawAll(gainAt);
+  }
+  const drawn = geo.length;
+  if (opts.debug) console.log(`penHatch: seeds ${strokes.length} drawn ${drawn} mean w ${(wSum / Math.max(1, wN)).toFixed(2)} mean cov ${(cSum / Math.max(1, wN)).toFixed(3)}`);
+  return { canvas: out, mask: maskC, count: strokes.length };
+}

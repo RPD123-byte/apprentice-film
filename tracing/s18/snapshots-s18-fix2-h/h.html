@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>LOADING</title>
+<style>html,body{margin:0;background:#000}</style></head>
+<body><canvas id="film" width="2206" height="946"></canvas>
+<script>window.gsap={timeline:()=>({fromTo(){return this;}})};</script>
+<script type="module">
+try {
+  const m = await import("./src/main.js");
+  window.mods = { A: await import("./src/shots/s18/shotA.js"), B: await import("./src/shots/s18/shotB.js") };
+  window.ovr = (o) => { for (const [k, v] of Object.entries(o)) { const [mod, name] = k.split("."); Object.assign(window.mods[mod][name], v); } };
+  const out = document.getElementById("film");
+  window.renderT = (t) => { const t0 = performance.now(); m.renderAt(t); const url = out.toDataURL("image/png"); return { url, ms: performance.now() - t0 }; };
+  document.title = "READY";
+} catch (e) { console.error(String(e && e.stack || e)); document.title = "FAIL"; }
+</script></body></html>

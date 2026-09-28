@@ -1,0 +1,4 @@
+{ "pose": "LOOK", "frames": [71.12, 71.28, 71.44, 71.6], "windows": [{ "anchor": "head", "win": [55, 45], "off": [27, 40], "weight": 1 }],
+  "params": [{ "path": "grip.off.0", "step": 8 }, { "path": "grip.off.1", "step": 8 }, { "path": "grip.sag", "step": 8, "min": 0 }, { "path": "grip.thP", "step": 6 }, { "path": "grip.finger", "step": 0.08, "init": 0.32, "min": 0, "max": 1 },
+    { "path": "grip.S.0", "step": 8 }, { "path": "grip.S.1", "step": 8 }, { "path": "grip.B.0", "step": 8 }, { "path": "grip.B.1", "step": 8 }, { "path": "grip.thB", "step": 6 }],
+  "rounds": 6, "sigma": 1.5, "maeW": 1 }

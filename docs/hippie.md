@@ -6,13 +6,13 @@ source is embedded: the page is numbers (polygons, strokes, a coarse sky grid) p
 
 ## Method: traced (user decision, 2026-09-27)
 
-For the colour ending the user approved **traced geometry** (STYLE.md, "User decision (2026-09-27), the ending").
-So this is the **traced page again**, restored from `archive/prev-builds/f2r-prev/hippie.traced.js`, with the fixes
+For the colour ending the user approved **traced geometry** (docs/STYLE.md, "User decision (2026-09-27), the ending").
+So this is the **traced page again**, restored from `archive/prev-builds/f2r-prev/hippie.traced.js` (in git history; its notes are in `tracing/hippie/prev-builds-f2r-prev/`), with the fixes
 listed below. The hand-drawn rebuild that replaced it (ΔE ≈ 8.5 on the page) is kept verbatim at
-`archive/prev-builds/f2-drawn-prev/hippie.drawn.js` with its doc (`hippie.drawn.md`). The API is unchanged, so no shot
+`tracing/hippie/prev-builds-f2-drawn-prev/hippie.drawn.js` with its doc (`hippie.drawn.md`). The API is unchanged, so no shot
 had to change.
 
-How the trace was made (pipeline: `tools/trace-scripts/f2k-tools/`, see its README; it reproduces the stored data
+How the trace was made (pipeline: `tracing/hippie/trace-scripts-f2k-tools/`, see its README; it reproduces the stored data
 exactly, e.g. `trace.py spec-sr2.json` gives TR_SR vertex for vertex):
 
 * The source frame is un-graded exactly (inverse of the finish pass: flicker, vignette, S-curve, halation —
@@ -182,5 +182,5 @@ jacket, laptop); the strip's slot, crop and mapping; the arrival camera.
   than the snapshot tool's 180 s protocol timeout; each half of the shot list loads fine on its own), so the checks ran
   on a copy of the composition that loads only s23–s27 (a copy of `src/shots/index.js` that skips the other shots,
   everything else symlinked), and on a page-alone harness (the page / strip through `post.js`, ~6 s per render).
-* The trace pipeline and specs: `tools/trace-scripts/f2k-tools/` (to re-trace a tile: `trace.py spec-<tile>.json
+* The trace pipeline and specs: `tracing/hippie/trace-scripts-f2k-tools/` (to re-trace a tile: `trace.py spec-<tile>.json
   tr-<tile>.json`, then `emit.py` and splice the `TR_*` literal into `hippie.js`).

@@ -1,0 +1,77 @@
+--- ../../src/shots/s28.js	2026-09-27 07:31:29
++++ s28x.js	2026-09-27 08:22:46
+@@ -35,24 +35,25 @@
+ //     s28/mug.js), the strip at the left edge 129.32-129.84 (s28/leftpatch.js) and the bottom strip 129.32-130.48
+ //     (s28/botpatch.js); the figure is composited in a second GL pass over them
+ //   - key gains (keygain.js) and the locked view's gain (corr.js) refitted
+-import { W, H } from "../config.js";
+-import { canvas } from "./s28/draw.js";
+-import { camAt, camFrom } from "./s28/cam.js";
+-import { createGL } from "./s28/gl.js";
+-import { drawTrace } from "./s28/trace.js";
+-import { LIDQ, BREATH } from "./s28/data.js";
+-import { DEPTH } from "./s28/depth.js";
+-import { overlayEndCard, CARD_IN } from "./s40/card.js";
+-import { FIG, ROOM, NLOCK } from "./s28/keys/index.js";
+-import { RESID } from "./s28/resid.js";
+-import { LIDCOL } from "./s28/lidcol.js";
+-import { CORR } from "./s28/corr.js";
+-import { KEYGAIN } from "./s28/keygain.js";
+-import { MUGKEYS, MUGTRACK } from "./s28/mug.js";
+-import { LEFTPATCH } from "./s28/leftpatch.js";
+-import { BOTPATCH } from "./s28/botpatch.js";
++import { W, H } from "./src/config.js";
++import { canvas } from "./src/shots/s28/draw.js";
++import { camAt, camFrom } from "./src/shots/s28/cam.js";
++import { createGL } from "./src/shots/s28/gl.js";
++import { drawTrace } from "./src/shots/s28/trace.js";
++import { LIDQ, BREATH } from "./src/shots/s28/data.js";
++import { DEPTH } from "./src/shots/s28/depth.js";
++import { overlayEndCard, CARD_IN } from "./src/shots/s40/card.js";
++import { FIG, ROOM, NLOCK } from "./src/shots/s28/keys/index.js";
++import { RESID } from "./src/shots/s28/resid.js";
++import { LIDCOL } from "./src/shots/s28/lidcol.js";
++import { CORR } from "./src/shots/s28/corr.js";
++import { KEYGAIN } from "./src/shots/s28/keygain.js";
++import { MUGKEYS, MUGTRACK } from "./src/shots/s28/mug.js";
++import { LEFTPATCH } from "./src/shots/s28/leftpatch.js";
++import { BOTPATCH } from "./src/shots/s28/botpatch.js";
+ 
+-const LOCK = 131.36;                                  // camera locked from here
++const LOCK = 131.36;
++const XQ = new URLSearchParams(location.search), XSOFT = +(XQ.get("soft") || 0), XSB = +(XQ.get("sb") || 3), XROOMLOCK = !!XQ.get("roomlock"), XLOCKBASE = !!XQ.get("lockbase");                                  // camera locked from here
+ // hold each 25 fps source frame (a no-op for the 25 fps film render; previews/snapshots sample other grids, e.g.
+ // floor(t*30)/30, and ceil keeps them on the source frame the reference shows) — as s01 does
+ const frameT = (t) => Math.ceil(t * 25 - 1e-6) / 25;
+@@ -368,6 +369,10 @@
+     const soft = canvas(c.width, c.height), sg = soft.getContext("2d");
+     sg.filter = "blur(4px)"; sg.drawImage(c, 0, 0); sg.filter = "none";
+     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "destination-over"; g.drawImage(soft, 0, 0); g.restore();
++    if (XSOFT > 0) {   // EXPERIMENT (end-s28-rev1): soften the flat colour regions under the ink
++      const sm = canvas(c.width, c.height), smg = sm.getContext("2d"); smg.filter = `blur(${XSB}px)`; smg.drawImage(c, 0, 0); smg.filter = "none";
++      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = XSOFT; g.drawImage(sm, 0, 0); g.restore();
++    }
+     g.save();
+     g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "destination-in";
+     const clip = canvas(c.width, c.height), cg = clip.getContext("2d"); cg.translate(-x0, -y0); cg.fillStyle = "#000";
+@@ -582,7 +587,9 @@
+     // second nearest around the midpoint between keys; then the second key again, but only where the nearest one
+     // could not see (behind the figure or the lid) — the strip the parallax uncovers
+     const tr = tf;
+-    const { top: r1, low: r2, a: ra } = nearestTwo(tr, ROOM_T, tr > LOCK + 0.1 ? 0 : 0.16);   // locked: slow dissolves
++    let rsel = nearestTwo(tr, ROOM_T, tr > LOCK + 0.1 ? 0 : 0.16);   // locked: slow dissolves
++    if (XROOMLOCK && tr > LOCK + 0.1) { const off = ROOM_T.findIndex((x) => x > LOCK); const q = nearestTwo(tr, ROOM_T.slice(off), 0); rsel = { top: q.top + off, low: q.low + off, a: q.a }; }
++    const { top: r1, low: r2, a: ra } = rsel;
+     const K1 = roomKey(r1), K2 = roomKey(r2);
+     K1.cam = K1.cam || camAt(frameT(K1.t)); K2.cam = K2.cam || camAt(frameT(K2.t));
+     const o1 = dbg && dbg.noResidRoom ? null : residOff(roomName(K1), tf, K1.mesh), o2 = dbg && dbg.noResidRoom ? null : residOff(roomName(K2), tf, K2.mesh);
+@@ -592,7 +599,8 @@
+       // then the nearest key's real drawing at its cross-fade weight — both keys follow the measured residual motion
+       const g1 = K1.gain && { canvas: K1.gain, k: gk }, g2 = K2.gain && { canvas: K2.gain, k: gk };
+       const ro = dbg && dbg.roomOnly;
+-      if (!ro || ro === "base") gl.draw(K1.full, cam, { off: o1, gain: g1 });
++      if (XLOCKBASE && tf > 130.9) { const KL = roomKey(ROOM_T.findIndex((x) => x > LOCK)); KL.cam = KL.cam || camAt(frameT(KL.t)); gl.draw(KL.full, cam, { gain: KL.gain && { canvas: KL.gain, k: gk } }); }
++      else if (!ro || ro === "base") gl.draw(K1.full, cam, { off: o1, gain: g1 });
+       if (!ro || ro === "K2") gl.draw(K2, cam, { off: o2, clipUV: true, gain: g2 });
+       if (!ro || ro === "K1") gl.draw(K1, cam, { off: o1, alpha: ro ? 1 : ra, clipUV: true, gain: g1 });
+     } else {

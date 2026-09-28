@@ -1,0 +1,4 @@
+{ "pose": "CROUCH", "frames": [71.84, 71.88, 71.92, 71.96], "win": [34, 30], "anchor": "head", "rounds": 8,
+  "params": [ {"path": "head.off.0", "step": 6}, {"path": "head.off.1", "step": 6}, {"path": "head.sy", "step": 0.05, "min": 0.6, "max": 1.1},
+              {"path": "head.nod", "step": 0.1}, {"path": "phones.cupEl", "step": 0.12}, {"path": "phones.cupAz", "step": 0.1}, {"path": "phones.r", "step": 4},
+              {"path": "eye.el", "step": 0.06}, {"path": "eye.az", "step": 0.06} ] }

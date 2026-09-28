@@ -1,0 +1,68 @@
+{
+ "fidelity": "approx",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "Every take, 40.72–45.56. Worst examples: 44.44 (face H/LW, x0–265 y100–600), 43.60 (E faces FW/LUy, x760–890 y180–650), 44.20 (H/LB0, x0–600 y540–700), 45.40 (J/G0, x0–185)",
+   "what": "The surfaces look like smooth-shaded CG panels, not charcoal drawing. The shader's short tapered dashes come out as lens-shaped spots that read as leopard spots or fish scales on mid-tone and foreshortened faces. The source draws long continuous hatching lines across the whole face. Every quad edge is a uniform 1–2 px black line, so edges look ruled. The box details the source shows on nearly every lit face are missing: handle slots, tape seams and flaps (for example the handle slots at 41.44 x≈1850–1900 and the ones at 43.12). The far stacks are 2–3 large panels where the source has many small receding boxes. Gradient-magnitude correlation with the source is only 0.29 across all 125 frames.",
+   "fix": "In gl.js dash(): lengthen the dashes to L = 20 + 30*rh rows and len = 0.75–0.98. Taper only the last ~8% at each end with smoothstep instead of sqrt(sin). Measure dash length in screen pixels (scale al by 1/fwidth(al)) so foreshortened faces don't collapse into dots. Make stroke width follow (1 - value). Add per-face decals in face uv on 'plain' box faces: a handle slot (dark rounded rectangle about 0.10×0.14 of the face at uv (0.5, 0.22), with a light lower lip) and a tape seam (4–6 px, value ~0.15, at v≈0.5). Replace the uniform edge ink with broken charcoal edges 2–6 px wide. Split each far 'boxwall' face into 3–6 stacked boxes with their own edges."
+  },
+  {
+   "severity": "high",
+   "at": "44.44–45.12 (frames 1111–1128), owlFront.js",
+   "what": "The front and 3/4 owl does not look like the source character. The render stacks a head on a separate white sphere, like a snowman. The source has one continuous plump pear-shaped body. The legs are thin stick legs with dark 'bandage' stripes, planted wide apart; the source has short white feathered legs close together, with one foot pumping. The headphone cups are dotted mesh ovals where the source has solid dark cups with a lit rim. The wings are flat, and the white silhouette is 60–90 px wider than the source at 44.56–44.80 (w 420–505 vs 356–414). The 3/4 frames 44.92–45.12 show a round ball with the wing thrust out to the left; the source shows a twisting running body with the rear leg kicked back. At 44.88 only the owl is blurred, with a 3 px filter (owl-region Laplacian variance 220). The source is only slightly soft there (271, against ~700 on neighbouring frames), and that softness covers the whole frame; the render's background stays sharp.",
+   "fix": "Merge head and body into one silhouette with no neck crease: body ≈1.15× head width, bottom ≈1.3 head-heights below the eye line. Replace the striped legs with white feathered legs 30–40 px long and grey three-toed feet under the body. Set foot poses per frame from the source: at 44.48–44.60 one foot lifted ~40 px; at 44.92–45.12 the rear leg kicked back to the right ~60 px. Draw the cups as solid value-0.15 discs with a 4–6 px light rim. Pull the wing tips in to the measured silhouette extents. At 44.88, blur the owl by at most 1 px, or apply ~1.5 px to the whole frame instead."
+  },
+  {
+   "severity": "high",
+   "at": "Take H 43.92–44.44 (left x0–560); takes I/J 44.48–45.40 (gear room); J1 44.88–45.12 is the worst take (σ12 24.2, σ4 32.0, gc 0.25)",
+   "what": "In take H the left rack is a flat, front-facing light-grey diagram: a keyboard strip, flat decks and white scribbled loops for cables. When the camera moves fast, its edges also show doubled ghost copies (44.20). The source's left wall is dark gear seen at a steep angle, receding into depth, with an angled synth and heavy white hatching. The cable coil on the floor (44.00–44.24, ≈x390–745, y800–946 at 44.08) is missing. In the gear room the speaker is a dark cone with radial spokes and reads as an eyeball (centre ≈(1936,418), r≈165). The tape decks are flat light-grey slabs, the cables are a black scribble ball (≈x1560–1700, y400–520 at 44.88), and the shelf interiors are much lighter than the source's. The keyboard keys alias into barcode stripes (41.92 x1800–2206; 45.40 x1850–2150), and the keyboard has no casing or control panel.",
+   "fix": "H: map the rack onto a receding quad (left edge x≈0, y0–946; right edge x≈560, y150–640, as measured at 44.08), darken it to value 0.15–0.3 with white hatching, and redraw the gear as boxes seen at an angle. Restore the coil decal (fix-pass-2 setH had A2.decal 'coil' at [300,840]–[760,930]) in the H roto faces. Speaker: 3–4 concentric surround rings and a dust cap with a single highlight, no spokes. Keyboard: pre-filter or mipmap the keys texture by its screen footprint and add a 15–25 px dark casing and a panel strip. Decks: box fronts with depth. Shelf interiors at value ≤0.2. Cables: rope loops 3–6 px wide with white highlights."
+  },
+  {
+   "severity": "medium",
+   "at": "Fast-camera frames: 41.24 (1031), 42.04 (1051, 607 px/frame), 43.72 (1093, 177 px/frame, 5 sub-frames), 44.00 (1100), 44.20 (1105)",
+   "what": "Motion blur is far too short and comes out as stepped copies. The shutter is 0.005 s, only 0.125 of a frame, drawn with 1–7 discrete sub-frames. The result is crisp black edges with ladders of 2–4 ghost copies: the box edge at 43.72 x≈215–245 and the doubled rack edges at 44.20. On 100–150 px/frame motion the source smears edges over roughly 25–45 px (estimated by eye, not measured).",
+   "fix": "Set shutter to ~0.012 s (0.3 frame) and N = clamp(ceil(mv*0.3/3), 1, 16) so steps are at most 3 px apart. Alternatively, apply a directional blur to the roto layer along the median quad motion vector. Soften the ink edges when mv > 60 px."
+  },
+  {
+   "severity": "medium",
+   "at": "Back-view owl 40.72–44.40 and 45.16–45.68 (owl.js)",
+   "what": "Placement is good: head top within ~4 px and torso x within ~3 px of the source. The drawing is off in several ways. The body is a tall capsule. The cups are flat mid-grey (≈0.55); the source's are dark (≈0.15) with a lit rim. The wing span is 35–45 px wider than the source in most frames and 87–134 px wider at 42.40–42.48: the render's right wing reaches x 1224–1287, while the source's right wing is raised and folded and ends at x 1147–1189. The feet end 15–25 px higher than the source's, and the legs are short and splayed symmetrically. The head never turns into the 3/4-back view the source uses at 41.36–41.52, 42.00–42.16, 43.28–43.44 and 44.08–44.24. The floor shadow is weak and attached to the feet; the source shows a separate dark ellipse about 120×25 px, 20–40 px below the feet during hops (41.20, 42.16, 42.96, 43.60).",
+   "fix": "Make the body rounder (height:width ≈1.25). Draw the cups at value 0.15 with a light rim. Clamp the wing tips to the measured silhouette extents, adding a raised right-wing pose for 42.36–42.52. Lengthen the legs by ~15–20 px and alternate the stride (one foot tucked). Add a head-yaw parameter (±25°, beak and one cup showing) keyed to the listed frames. Draw the shadow as a separate ellipse (alpha ~0.6, 120×25 px) on the floor, 20–40 px below the feet when the track's y rises."
+  },
+  {
+   "severity": "medium",
+   "at": "40.96 (film frame 1024): the cut from take A to take B",
+   "what": "The cut to take B lands one frame late. Frame 1024 draws take A pushed further in: keyboard at x0–500, box cluster, dark corridor. In the source, 1023 is a held repeat of 1022 and 1024 is already take B's first frame: a big lit box over x≈100–900 with a keyboard sliver at x0–180. Cause: ROTO_A contains frame 1024 and SETS has B.t0 = 40.98.",
+   "fix": "Remove frame 1024 from rotoA.js. Add B quads for 1024 by propagating 1025's quads backward with flow, then correcting them on the grid. Set RS('B', 40.94, …) in sets.js."
+  },
+  {
+   "severity": "medium",
+   "at": "Take I 44.48–44.84, plus 44.40–44.44; region x820–1080, y60–420",
+   "what": "The deep black at the end of the corridor is lifted to grey. Behind the owl the render draws a grey cross-hatched far wall with median 9–22, against 0–4 in the source (44.72–44.80). The source is pure black there, apart from a few gear silhouettes. Mean values match only because the render spreads grey evenly.",
+   "fix": "Set the value of the far 'FAR'/boxwall faces behind the owl to 0 in rotoI/rotoH, or clip them to the measured gear silhouettes, and remove the crosshatch there."
+  },
+  {
+   "severity": "low",
+   "at": "Floor, all takes (band x900–1500, y840–940)",
+   "what": "The floor is too smooth: fine horizontal streaks on a lit grey plane. Its texture energy is about half the source's (high-pass std 4–7 vs 7–12; 44.80: 14.5 vs 28.0). The source floor has coarse dark scratch strokes. The floor cable in the gear room (source 44.80, ≈x1850–2000, y780–946) is missing.",
+   "fix": "Draw floor strokes 2–3 px wide, 30–80 px long and 8–12 px apart along the corridor, with contrast raised until the high-pass std matches the source. Add the cable decal in I/J."
+  },
+  {
+   "severity": "low",
+   "at": "45.60–45.68 (the designer's room fading in)",
+   "what": "The fading-in room from s16's painter is noticeably crisper and more contrasty than the source's soft, low-contrast fade. Mean luma matches (24.1 vs 23.2 at 45.64).",
+   "fix": "While the room fades in, draw room16() with about 1.2 px blur and contrast about 0.8 around the mean."
+  },
+  {
+   "severity": "low",
+   "at": "Review tooling and the cut frames 40.72 and 45.72 (not an s15 bug; needs checking)",
+   "what": "hyperframes snapshot, which compare.sh uses, rounds page time down to 1/30 s (runtime ja(): floor(t*fps+1e-9)/fps; the behaviour matches fps 30 exactly). So every frame with n ≡ 4 (mod 5) (40.76, 40.96, 41.16, …) renders frame n−1, and 40.72 and 45.72 show the neighbouring shot. The builder's note that the '40.72 snapshot shows s14' is this artifact, and the per-time timing columns in raw compare.sh pairs are wrong on those frames. If the final 25 fps render seeks the same way, frame 1018 would show s14 and frame 1143 would show s15.",
+   "fix": "Confirm the film render seeks at frame/25 (data-fps=25). The main.js owner could choose the shot by Math.round(t*25) instead of comparing raw t. For reviews, request T = (floor(1.2n)+1)/30 + 0.0005 to hit frame n exactly (done here, in snapshots/s15-rev1-r4-fix)."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "Fidelity: approx. The staging, the take structure, the held frames, the owl's path and the tone at coarse scale all follow the source closely. The drawing is visibly simplified, and in places it looks like computer shading rather than charcoal.\n\n**How I checked**\n- Rendered all 125 frames of s15, plus the frames either side of each boundary, in 5 separate compare runs: snapshots/s15-rev1-r4-{dense,motion,motion2,tail,fix}.\n- Paired each render with the source frame it actually shows, decoded in order, because compare.sh rounds page time down to 1/30 s. Correct pairs are in snapshots/s15-rev1-r4-pairs/p<frame>.jpg; contact sheets are sheet0–3.jpg; owl crops are owl-back.jpg, owl-front.jpg, owl4488.jpg and owl4516.jpg; boundaries are boundary-start.jpg and boundary-end.jpg; zooms are whip-zoom.jpg, texture-zoom.jpg, takeH-left.jpg and gearJ1.jpg.\n\n**Numbers.** Over all frames I get:\n- blurred error 17.0 levels at σ12 and 21.1 at σ4\n- mean luma 87.8 in the render against 89.5 in the source\n- gradient-magnitude correlation 0.29\n\nThat matches the builder's own figures, so the log is honest about the numbers. These tonal errors are low partly because the tone was fitted against the source to minimise this same metric. The low structural correlation (0.29) reflects how much the drawing differs.\n\n**Timing.** Take boundaries, held frames, the wink at 44.44, the 3/4 view at 44.88, the profile at 45.16, the dimming at 45.44–45.60 and the room fading in at 45.60 all land on the source frame. The one exception: the cut from take A to take B is one frame late at 40.96 (frame 1024).\n\n**Owl placement.** Head top is within ~4 px and torso x within ~3 px of the source through the back-view run.\n\n**Biggest visible gaps, in order**\n1. The surface drawing: short dashes that turn into spots, ruled black edges, and no box handle slots or tape seams.\n2. The front and 3/4 owl: a head sitting on a separate ball, striped stick legs, and mesh-dotted cups.\n3. The gear: the frontal flat rack in take H, a speaker that reads as an eyeball, keyboards that alias into barcodes, and the missing cable coil.\n4. Motion blur in fast-camera frames that is too short and shows stepped ghost copies.\n5. Back-view owl likeness: wings too wide, cups too light, legs too short, the head never turns, and the shadow is weak.\n6. A grey hatched far wall in take I where the source is pure black.\n\n**Other checks**\n- **Determinism:** 30 timestamps rendered in separate runs are bit-identical (0 px differ).\n- **Errors:** no red error bars or placeholder text in any frame. I did not read the browser console.\n- **Speed:** not measured; per-frame time in the snapshot tool is dominated by the reference-frame extraction.\n\n**Outside s15.** s16's frame at 45.76 is not deterministic: two runs differ in about 52k pixels, max 196, inside x859–1420, y153–536. The owner of s16 should check this."
+}

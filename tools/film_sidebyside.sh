@@ -1,9 +1,11 @@
 #!/bin/sh
 # Full-film comparison: the code render on top, the source underneath, both labelled, with the code render's audio.
-# Usage: tools/film_sidebyside.sh renders/film.mp4 [out.mp4]
-REF="${REF:-/Users/computer/rapport-videos/videogen/clips/01-13-FINISHED-v3-share.mp4}"
+# Usage: tools/film_sidebyside.sh renders/film.mp4 [out.mp4]   (needs APPRENTICE_SOURCE)
+# For the titled, published version of this comparison see comparison/ (npm run compare).
+. "$(dirname "$0")/lib.sh"
+need_source
+label_font
 IN="$1"; OUT="${2:-renders/sidebyside.mp4}"
-FONT=/System/Library/Fonts/Supplemental/Arial.ttf
 ffmpeg -v error -y -i "$IN" -i "$REF" -filter_complex "\
 [0:v]scale=1920:-2,drawtext=fontfile=$FONT:text='CODE':x=24:y=20:fontsize=34:fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=10[a];\
 [1:v]scale=1920:-2,drawtext=fontfile=$FONT:text='ORIGINAL':x=24:y=20:fontsize=34:fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=10[b];\

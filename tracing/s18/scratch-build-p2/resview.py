@@ -1,0 +1,17 @@
+import sys; sys.path.insert(0,'/Users/computer/rootline/apprentice-film/src/shots/s18/trace'); sys.path.insert(0,'.')
+import numpy as np, cv2
+exec(open('/Users/computer/rootline/apprentice-film/src/shots/s18/trace/trace_owlB.py').read().split('# ---- body silhouette')[0].replace("SP = sys.argv[1]; out = sys.argv[2]","SP='.'; out=None"))
+m = ((cons > 0.55) * 255).astype(np.uint8)
+m = cv2.morphologyEx(m, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))
+m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15)))
+m = comps(fillholes(m), keep=1); sil=cv2.erode(m, np.ones((3, 3), np.uint8))
+tiles=[]
+for n in [int(v) for v in sys.argv[1].split(',')]:
+    P = Z[f'P{n}']; E = Z[f'E{n}'].copy()
+    dx, dy = TB[n]; Mt = np.float32([[1, 0, dx], [0, 1, dy + RY0]])
+    b = cv2.warpAffine(body, Mt, (2206, 946), flags=cv2.INTER_NEAREST); s = cv2.warpAffine(sil, Mt, (2206, 946), flags=cv2.INTER_NEAREST)
+    E = np.where(s > 0, b, E)
+    d = np.abs(cv2.GaussianBlur(P, (0, 0), 1.5) - cv2.GaussianBlur(E, (0, 0), 1.5))
+    v=np.dstack([np.clip(d*3,0,1)*255, np.clip(P,0,1)*255, np.clip(E,0,1)*255]).astype(np.uint8)
+    tiles.append(cv2.resize(v,None,fx=0.4,fy=0.4))
+cv2.imwrite('resview.jpg',np.vstack(tiles))

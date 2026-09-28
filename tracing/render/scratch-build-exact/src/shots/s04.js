@@ -1,0 +1,218 @@
+// s04 (19.12–23.12): the owl lands on his shoulder, then the camera arcs round his left side, past his profile,
+// to over his shoulder at the laptop (MIXING DOWN on the screen). One continuous move in the source (no cut at
+// either end: s02 runs into it and it runs on into s05).
+//
+// Measured beats (snapshots/s04-study, snapshots/s04-fix1-study):
+//   19.12–19.56  2D pan, content moves (+157, −121) px, ease-out (camtrack, 0.04 s steps); the owl glides in, eyes shut
+//   19.68        feet on the shoulder; 19.72 wings up; 19.76 eyes half open, 19.80 open; 19.84–20.20 wings fold
+//   20.10–20.80  held still (frame diff = grain only)
+//   20.84–23.12  the arc: camera orbits ~115° round his left side (fit: 14° → 131° about the head, rising, pitching
+//                down); the laptop lid slides out left (20.9–21.9); his eyes swing from the owl to the lens 21.28–21.48;
+//                profile ≈ 22.0–22.3; the speaker enters left 22.25; the laptop screen enters left 22.56
+// Joins: before the arc the picture is s02's own world (its engraved room, imported live, and its designer drawing,
+// copied into s04/designer02.js), carried on by the measured pan from s02's last camera offset, so 19.12 → 19.16 is
+// only camera motion. Key A of the arc morph is that same drawing.
+// Layers: room → designer (key drawings A–E warped along measured landmark tracks, hard switches between keys) →
+// pencil (per frame) → owl (one continuous build) → laptop lid (in front of him until ~22.3).
+import { W, H } from "../config.js";
+import { paintKeyB2 } from "./s04/keyB2.js";
+import { paintKeyC2, paintKeyD2 } from "./s04/keyCD2.js";
+import { SPANS } from "./s04/tracks.js";
+import { Warper, mlsGrid, mlsPoints } from "./s04/morph.js";
+import { camAt, drawRoom, drawLaptop, roomBlur, roomGain, releaseRoom, drawBackdrop } from "./s04/room.js";
+import { landing, carried, drawOwlState } from "./s04/owl.js";
+import { drawPencil, pencilAt } from "./s04/pencil.js";
+import { drawTail, tailReady, tailLight, releaseTail, aboveBody } from "./s04/s05tail.js";
+import { room02, worldOff, HOLD, smearAt, paintKeyA02, paintEyes02, keyCanvasA, drawLid02, releaseWorld02 } from "./s04/world02.js";
+
+const TA = 20.84;                    // the arc starts here; before it the picture only pans
+const M = 180;                       // key canvas margin (px)
+const TB = 22.84;                    // s05's drawings take over the laptop/desk/hands and his body (below the neck)
+const TE = 22.88;                    // ... the owl
+const TF = 23.0;                     // ... and the figure (its head matches s05's drawing only from here)
+
+// key drawings: the time each is drawn at, and the hard switch time between consecutive keys (never two keys at once)
+const KEYS = { A: 20.84, B: 21.64, C: 22.04, D: 22.48, E: 23.04 };
+const SPAN_LIST = [
+  { key: "20.84-21.64", a: "A", b: "B", cut: 21.52 },
+  { key: "21.64-22.04", a: "B", b: "C", cut: 21.86 },
+  { key: "22.04-22.48", a: "C", b: "D", cut: 22.26 },
+  { key: "22.48-23.04", a: "D", b: "E", cut: 99 },
+  { key: "23.04-23.12", a: "E", b: "E", cut: 99 },
+];
+const sm = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+
+let C = null;
+// a key drawn in ink straight onto a Canvas2D (frame coordinates of its key time), with the key margin
+function keyInk(paint) {
+  const c = document.createElement("canvas"); c.width = W + 2 * M; c.height = H + 2 * M;
+  const g = c.getContext("2d"); g.translate(M, M); paint(g);
+  return c;
+}
+function build() {
+  if (C) return C;
+  C = {
+    keys: {
+      A: keyCanvasA(M, paintKeyA02),
+      B: keyInk(paintKeyB2),
+      C: keyInk(paintKeyC2),
+      D: keyInk(paintKeyD2),
+    },
+    warper: new Warper(W, H),
+    owlC: document.createElement("canvas"),
+    scratch: null,
+    spans: {},
+  };
+  for (const [k, s] of Object.entries(SPANS)) {
+    const rows = s.rows.map((r) => Float32Array.from(r));
+    C.spans[k] = { ...s, rows };
+  }
+  return C;
+}
+// key A's eyes: a small separate layer (the irises swing from the owl to the lens at 21.28–21.48), cached per
+// quantised look; it covers only the eye band of key A's canvas, with a transparent border so the clamped texture
+// sampling outside it stays empty
+const EYE_RECT = [690, 210, 1400, 430];          // frame px of the held (20.40) framing
+function eyesLayer(look) {
+  const q = Math.round(look * 8) / 8;
+  if (!C.eyeMap) C.eyeMap = new Map();
+  if (C.eyeMap.has(q)) return C.eyeMap.get(q);
+  const [x0, y0, x1, y1] = EYE_RECT, c = document.createElement("canvas");
+  c.width = x1 - x0 + 2; c.height = y1 - y0 + 2;
+  const g = c.getContext("2d");
+  g.save(); g.beginPath(); g.rect(1, 1, c.width - 2, c.height - 2); g.clip();
+  g.translate(1 - x0 + HOLD[0], 1 - y0 + HOLD[1]); paintEyes02(g, q); g.restore();
+  const L = { c, x0: x0 - 1, y0: y0 - 1 };      // canvas origin in frame px (held framing)
+  C.eyeMap.set(q, L);
+  return L;
+}
+// the key-A grid re-targeted at the eye layer (same vertices, uv remapped into the small canvas)
+function eyeGrid(grid, L) {
+  const cw = C.keys.A.width, ch = C.keys.A.height, uv = new Float32Array(grid.uv.length);
+  for (let k = 0; k < uv.length; k += 2) { uv[k] = (grid.uv[k] * cw - M - L.x0) / L.c.width; uv[k + 1] = (grid.uv[k + 1] * ch - M - L.y0) / L.c.height; }
+  return { cols: grid.cols, rows: grid.rows, pos: grid.pos, uv };
+}
+const glanceLook = (t) => 1 - sm((t - 21.28) / 0.2);
+
+// landmark positions of a span at time t (row interpolation)
+function spanRow(S, t) {
+  const f = (t - S.t0) / 0.04, i = Math.max(0, Math.min(S.rows.length - 1, Math.floor(f))), j = Math.min(S.rows.length - 1, i + 1), u = Math.max(0, Math.min(1, f - i));
+  const a = S.rows[i], b = S.rows[j], out = new Float32Array(a.length);
+  for (let k = 0; k < a.length; k++) out[k] = a[k] + (b[k] - a[k]) * u;
+  return out;
+}
+// the grid mapping a key canvas (drawn at key time tk) to frame time t, chaining span warps between tk and t
+function keyGrid(tk, t) {
+  const c = C.keys.A;
+  const cw = c.width, ch = c.height;
+  let grid = null;
+  const legs = [];
+  const spans = SPAN_LIST.map((s) => C.spans[s.key]);
+  if (t >= tk) { for (const S of spans) { if (S.t1 <= tk + 1e-6 || S.t0 >= t - 1e-6) continue; legs.push([S, Math.max(S.t0, tk), Math.min(S.t1, t)]); } }
+  else { for (const S of spans.slice().reverse()) { if (S.t0 >= tk - 1e-6 || S.t1 <= t + 1e-6) continue; legs.push([S, Math.min(S.t1, tk), Math.max(S.t0, t)]); } }
+  for (const [S, from, to] of legs) {
+    const src = spanRow(S, from), dst = spanRow(S, to);
+    if (!grid) grid = mlsGrid(src, dst, cw, ch, M);
+    else {
+      const pts = []; for (let k = 0; k < grid.pos.length; k += 2) pts.push([grid.pos[k], grid.pos[k + 1]]);
+      const q = mlsPoints(src, dst, pts);
+      q.forEach((p, k) => { grid.pos[2 * k] = p[0]; grid.pos[2 * k + 1] = p[1]; });
+    }
+  }
+  if (!grid) grid = mlsGrid(new Float32Array([0, 0, 1000, 0, 0, 1000]), new Float32Array([0, 0, 1000, 0, 0, 1000]), cw, ch, M);
+  return grid;
+}
+// which key is on screen at t: one key only, switching hard at each span's cut time
+function keyAt(t) {
+  let k = "A";
+  for (const s of SPAN_LIST) if (t >= s.cut) k = s.b;
+  return k;
+}
+function drawDesigner(ctx, t, tq = t) {
+  const Wp = C.warper;
+  Wp.clear();
+  const k = keyAt(tq);
+  const g = keyGrid(KEYS[k], t);
+  Wp.draw(C.keys[k], g, 1);
+  if (k === "A") { const L = eyesLayer(glanceLook(t)); Wp.draw(L.c, eyeGrid(g, L), 1); }
+  ctx.drawImage(Wp.c, 0, 0);
+}
+
+// the s02 world (room, figure, eyes, pencil, lid) at the world offset o
+function drawWorld(g, t, o) {
+  const R = room02();
+  g.drawImage(R.c, R.x0 + o[0], R.y0 + o[1]);
+  const dx = o[0] - HOLD[0], dy = o[1] - HOLD[1];
+  g.drawImage(C.keys.A, -M + dx, -M + dy);
+  { const L = eyesLayer(1); g.drawImage(L.c, L.x0 + dx, L.y0 + dy); }
+  g.save(); g.translate(dx, dy); drawPencil(g, pencilAt(TA)); g.restore();
+  drawLid02(g, o[0], o[1]);
+}
+
+export const shot = {
+  draw(ctx, local, t) {
+    build();
+    // switches happen on source frames (the snapshot tool samples a hair early)
+    const tq = Math.ceil(t * 25 - 1e-6) / 25;
+    if (t < TA) {
+      // ---- the landing: s02's world under the measured pan, smeared along the pan as the source is
+      const o = worldOff(t), sm0 = smearAt(t);
+      if (sm0.len < 2) drawWorld(ctx, t, o);
+      else {
+        const m = Math.ceil(sm0.len) + 4;
+        if (!C.scratch) C.scratch = document.createElement("canvas");
+        const S = C.scratch;
+        if (S.width !== W + 2 * m || S.height !== H + 2 * m) { S.width = W + 2 * m; S.height = H + 2 * m; }
+        const sg = S.getContext("2d");
+        sg.setTransform(1, 0, 0, 1, 0, 0); sg.globalCompositeOperation = "source-over"; sg.globalAlpha = 1;
+        sg.fillStyle = "#000"; sg.fillRect(0, 0, S.width, S.height);
+        drawWorld(sg, t, [o[0] + m, o[1] + m]);
+        const N = Math.min(8, 2 + Math.round(sm0.len / 2));
+        const bh = Math.hypot(sm0.d[0], sm0.d[1]) || 1, ux = sm0.d[0] / bh, uy = sm0.d[1] / bh;
+        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 1 / N;
+        for (let k = 0; k < N; k++) { const s = (k / (N - 1) - 0.5) * sm0.len; ctx.drawImage(S, -m + ux * s, -m + uy * s); }
+        ctx.restore();
+      }
+      drawOwlState(ctx, landing(t), C.owlC);
+      return;
+    }
+    // ---- the arc
+    const cam = camAt(t);
+    // from TE the figure, the laptop/desk and the owl are s05's own drawings moved as the source moves them; the room
+    // crossfades into s05's over 22.80–22.92 (see s04/s05tail.js)
+    let tail = tq >= TB - 1e-6 && tailReady();
+    const roomA = tail ? sm((t - 22.8) / 0.12) : 0;
+    if (tail) {
+      // s05's painters are another agent's live code: if they throw, fall back to s04's own arc drawing
+      try {
+        if (roomA < 1) drawRoom(ctx, cam, roomBlur(t), roomGain(t));
+        if (roomA > 0) drawTail(ctx, t, { room: roomA });
+        const figTail = tq >= TF - 1e-6;
+        // the laptop and hands, then his body (s05's), his head (key D, over the body) until the source's head matches
+        drawTail(ctx, t, { desk: true, fig: figTail ? true : "body" });
+        if (!figTail) {
+          ctx.save(); aboveBody(ctx, t); drawDesigner(ctx, t, tq); ctx.restore();
+          drawPencil(ctx, pencilAt(t));
+        }
+        if (tq >= TE - 1e-6) drawTail(ctx, t, { owl: true });
+        else drawOwlState(ctx, carried(t), C.owlC);
+        if (roomA > 0) tailLight(ctx, t, 0.245 * 0.75 * roomA);
+        return;
+      } catch (e) {
+        console.warn("[s04] s05 tail failed, drawing the arc instead:", e);
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; ctx.filter = "none";
+        ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+        tail = false;
+      }
+    }
+    drawRoom(ctx, cam, roomBlur(t), roomGain(t));
+    drawBackdrop(ctx, cam, t, room02(), HOLD);
+    const lapFront = t < 22.3;
+    if (!lapFront) drawLaptop(ctx, cam, t);
+    drawDesigner(ctx, t, tq);
+    drawPencil(ctx, pencilAt(t));
+    drawOwlState(ctx, carried(t), C.owlC);
+    if (lapFront) drawLaptop(ctx, cam, t);
+  },
+  release() { C = null; releaseRoom(); releaseWorld02(); releaseTail(); },
+};

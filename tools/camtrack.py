@@ -4,7 +4,8 @@
 #   x_t = s * x_t0 + tx   (frame pixels).  Fixed point of a pure zoom: (tx/(1-s), ty/(1-s)).
 # Usage: tools/camtrack.py T0 T1 STEP [x0 y0 x1 y1]   (optional region to track, e.g. to ignore a moving character)
 import cv2, numpy as np, sys, os
-V=os.environ.get('REF','/Users/computer/rapport-videos/videogen/clips/01-13-FINISHED-v3-share.mp4')
+V=os.environ.get('REF') or os.environ.get('APPRENTICE_SOURCE')
+if not V or not os.path.isfile(V): sys.exit('set APPRENTICE_SOURCE=/path/to/your/copy/of/the/original.mp4 (2206x946, 25 fps, 140.8 s)')
 t0,t1,step=float(sys.argv[1]),float(sys.argv[2]),float(sys.argv[3])
 roi=[int(v) for v in sys.argv[4:8]] if len(sys.argv)>=8 else None
 c=cv2.VideoCapture(V); fps=c.get(5)

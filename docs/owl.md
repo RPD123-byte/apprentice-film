@@ -293,7 +293,8 @@ banking, yaw, s = 0.14–0.25), **8** the F4c parts at close-up scale (layered /
 grip feet dark / pale, edge-on cups + slim band, shield / grin beaks, sweat, a `featherEdge` head with a spiky tuft and
 `discLine`), **10–15** each fitted preset alone at `FIT_PLACE` (pair it with the source frame at `FIT_PLACE[name].t`).
 
-- In a browser: serve the project root with any static server and open `tools/owl-gallery.html` (opens on page 7;
+- In a browser: serve the project root with any static server and open `tools/owl-gallery.html` (kept in
+  `tracing/owl/tools-dev-pages/`; copy it back to `tools/` first, it imports `../src/lib/owlInk.js`; opens on page 7;
   page 2 is a live playground with sliders and anchor dots; the "fit" menu opens pages 10+).
 - Headless (no server): a scratch HyperFrames project whose timeline shows page `floor(t)` — this pass used
   `snapshots/s12-f4c-gal/` (`index.html` + `src/` and `assets/` symlinked; page 9 there times `owlLayer`):

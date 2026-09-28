@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>LOADING</title>
+<style>html,body{margin:0;background:#000}</style></head>
+<body><canvas id="film" width="2206" height="946"></canvas>
+<script type="module">
+import { createPost } from "./src/lib/post.js";
+const q = new URLSearchParams(location.search);
+const modPath = q.get("m") || "./src/shots/s18.js";
+try {
+  const mod = await import(modPath);
+  const shot = mod.shot;
+  const out = document.getElementById("film");
+  const paint = document.createElement("canvas"); paint.width = 2206; paint.height = 946;
+  const ctx = paint.getContext("2d");
+  const grade = createPost(out);
+  window.renderFrame = (n, raw) => {
+    const t = (n % 10000 + 0.5) / 25;
+    const t0 = performance.now();
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, 2206, 946);
+    shot.draw(ctx, t - 53.24, t, shot, n);
+    ctx.restore();
+    ctx.getImageData(0, 0, 1, 1);
+    const ms = performance.now() - t0;
+    let url;
+    if (raw) url = paint.toDataURL("image/png");
+    else { grade(paint, t, { fade: 1 }); url = out.toDataURL("image/png"); }
+    return { url, ms };
+  };
+  document.title = "READY";
+} catch (e) { console.error(String(e && e.stack || e)); document.title = "FAIL"; }
+</script></body></html>

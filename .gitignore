@@ -1,6 +1,16 @@
+# dependencies and local environments
 node_modules/
-renders/
-snapshots/
-.DS_Store
+.venv/
 __pycache__/
 *.pyc
+.DS_Store
+
+# outputs and scratch (never committed)
+renders/
+snapshots/
+comparison/media/
+comparison/renders/
+comparison/snapshots/
+
+# fonts that may not be redistributed: download with scripts/fetch-fonts.sh (see assets/fonts/LICENSES.md)
+assets/fonts/Satoshi-Variable.woff2

@@ -1,0 +1,3 @@
+{ "pose": "LAND", "frames": [73.04, 73.08, 73.12, 73.16], "rounds": 10, "sigma": 1.5, "base": {"off": [0, 0]},
+  "windows": [ {"anchor": "head", "win": [42, 36], "off": [-5, -5], "weight": 1} ],
+  "params": [ {"path": "sx", "step": 0.08, "min": 0.8, "max": 1.4, "init": 1.1}, {"path": "sy", "step": 0.08, "min": 0.8, "max": 1.4, "init": 1.1}, {"path": "off.0", "step": 8, "init": 0}, {"path": "off.1", "step": 6, "init": 0} ] }

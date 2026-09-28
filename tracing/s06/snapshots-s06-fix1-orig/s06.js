@@ -1,0 +1,121 @@
+// s06 (26.72–29.04): front view across the laptop lid. The designer, heavy-lidded and sweating, rests his cheek on the
+// fist holding a pencil; the owl in headphones sits on his right shoulder (frame right) and looks at him.
+//
+// Measured on the source (camera locked off: camtrack s = 1.0000, drift < 0.2 px; cuts on frames 668 and 726).
+// Every layer is an r3 layer measured by s06/trace3/ (see its README): a soft ground of nested value outlines, solid
+// darks and calibrated pen strokes, stored as numbers in data/r3_*.js — no source pixels are stored or loaded.
+// States: the neutral mean (26.76–27.04), the held smile (28.44–28.96) for the face, brows and mouth; the owl still
+// before (26.76–27.04) and after (28.56–29.00) its blink, and its head measured on each blink frame (28.04–28.52).
+// What moves:
+//   - the mouth eases into a small smile 27.08 -> 28.40: its line is fitted on every source frame (data/mouth.js), with
+//     the lip comb re-attached to it; the brow and mouth patches move with the optical flow of each frame
+//     (data/flow.js), and the face dissolves from its neutral to its smile drawing with the measured smile amount (the
+//     nose, jaw and cheek lift 1-5 px, the crease forms);
+//   - the owl blinks 28.04–28.52 (lids lower, shut 28.20–28.36, half 28.40–28.48, open 28.52) while its head rolls up
+//     to ~2 deg: each of those frames draws that frame's own measured head over the still body.
+// Caches: `under` (room, hoodie, neutral face), `faceS` (the smile face, box-sized), `over` (nape, hair, beanie, fist,
+// pencil, laptop), the still owls. Per frame: under -> neutral brows + mouth (flow) -> [smile face + brows + mouth,
+// faded in] -> mouth line + comb -> over -> owl.
+import { W, H } from "../config.js";
+import { mk } from "./s06/kit.js";
+import { drawMouthLayer, drawMouthTop, flowMap, flowMapRel } from "./s06/motion3.js";
+import { drawR3, release3 } from "./s06/face3.js";
+import { L as R3FACE } from "./s06/data/r3_face.js";
+import { L as R3FACE_S } from "./s06/data/r3_face_s.js";
+import { L as R3BROW } from "./s06/data/r3_brow.js";
+import { L as R3BROW_S } from "./s06/data/r3_brow_s.js";
+import { L as R3MOUTH } from "./s06/data/r3_mouth.js";
+import { L as R3MOUTH_S } from "./s06/data/r3_mouth_s.js";
+import { L as R3HAIR } from "./s06/data/r3_hair.js";
+import { L as R3BEANIE } from "./s06/data/r3_beanie.js";
+import { L as R3HAND } from "./s06/data/r3_hand.js";
+import { L as R3BODY } from "./s06/data/r3_body.js";
+import { L as R3NAPE } from "./s06/data/r3_nape.js";
+import { L as R3PENCIL } from "./s06/data/r3_pencil.js";
+import { L as R3LAPTOP } from "./s06/data/r3_laptop.js";
+import { L as R3ROOM } from "./s06/data/r3_room.js";
+import { L as R3OWL } from "./s06/data/r3_owl.js";
+import { L as R3OWL_POST } from "./s06/data/r3_owl_post.js";
+import { BLINK3 } from "./s06/owl3.js";
+import { releaseScratch } from "./s06/ink.js";
+
+const interp = (tab, t) => {
+  if (t <= tab[0][0]) return tab[0][1];
+  for (let i = 1; i < tab.length; i++) if (t <= tab[i][0]) { const a = tab[i - 1], b = tab[i]; return a[1] + (b[1] - a[1]) * (t - a[0]) / (b[0] - a[0]); }
+  return tab[tab.length - 1][1];
+};
+// smile amount (right mouth corner, y 693 -> 657 px) per source frame, normalised
+const SMILE = [[26.72, 0], [27.06, 0], [27.12, 0.06], [27.2, 0.17], [27.28, 0.25], [27.36, 0.36], [27.44, 0.44], [27.52, 0.55], [27.6, 0.64], [27.68, 0.7], [27.76, 0.78], [27.84, 0.83], [27.92, 0.89], [28.0, 0.92], [28.08, 0.97], [28.16, 1], [29.1, 1]];
+// each time shows the source frame on screen at that time (frame floor(t * 25); t = n / 25 in the film render)
+const frameT = (t) => Math.floor(t * 25 + 1e-3) / 25;
+
+// every measured coordinate is a pixel-centre (numpy) coordinate: canvas pixel i covers [i, i+1], so the data is
+// drawn half a pixel down-right to land on the source's pixels
+const HALF = 0.5;
+// the box of the face layers (the smile state is drawn into a canvas of this size)
+const FB = R3FACE_S.box, FBW = FB[2] - FB[0], FBH = FB[3] - FB[1];
+
+let cache = null;
+function build() {
+  if (cache) return cache;
+  const [under, g] = mk(W, H);
+  g.translate(HALF, HALF);
+  drawR3(g, R3ROOM);
+  drawR3(g, R3BODY);
+  drawR3(g, R3FACE);
+  const [faceS, s] = mk(FBW, FBH);
+  s.translate(HALF - FB[0], HALF - FB[1]);
+  drawR3(s, R3FACE_S);
+  const [over, o] = mk(W, H);
+  o.translate(HALF, HALF);
+  drawR3(o, R3NAPE);
+  drawR3(o, R3HAIR);
+  drawR3(o, R3BEANIE);
+  drawR3(o, R3HAND);
+  drawR3(o, R3PENCIL);
+  drawR3(o, R3LAPTOP);
+  const [mix, m] = mk(FBW, FBH);
+  cache = { under, faceS, over, mix, m };
+  // the owl, still before and after its blink (box-sized)
+  for (const [k, Lr] of [["owlPre", R3OWL], ["owlPost", R3OWL_POST]]) {
+    const b = Lr.box, [c, og] = mk(b[2] - b[0], b[3] - b[1]);
+    og.translate(HALF - b[0], HALF - b[1]); drawR3(og, Lr); cache[k] = [c, b[0], b[1]];
+  }
+  return cache;
+}
+
+export const shot = {
+  draw(ctx, local, t) {
+    const L = build();
+    const tf = frameT(t), k = interp(SMILE, tf);
+    ctx.drawImage(L.under, 0, 0);
+    // the neutral brows and mouth, moved by the flow of the frame
+    if (k < 0.999) {
+      ctx.save(); ctx.translate(HALF, HALF);
+      drawR3(ctx, R3BROW, flowMap(tf, "brows"));
+      drawMouthLayer(ctx, R3MOUTH, flowMap(tf, "mouth"));
+      ctx.restore();
+    }
+    // the smile state (face, brows, mouth measured on the held smile, moved by flow(t) - flow(smile)), faded in
+    if (k > 0.001) {
+      const m = L.m;
+      m.setTransform(1, 0, 0, 1, 0, 0); m.globalAlpha = 1; m.clearRect(0, 0, FBW, FBH);
+      m.drawImage(L.faceS, 0, 0);
+      m.save(); m.translate(HALF - FB[0], HALF - FB[1]);
+      drawR3(m, R3BROW_S, flowMapRel(tf, "brows"));
+      drawMouthLayer(m, R3MOUTH_S, flowMapRel(tf, "mouth"));
+      m.restore();
+      ctx.save(); ctx.globalAlpha = Math.min(1, k); ctx.drawImage(L.mix, FB[0], FB[1]); ctx.restore();
+    }
+    ctx.save(); ctx.translate(HALF, HALF);
+    drawMouthTop(ctx, tf, k);
+    ctx.restore();
+    ctx.drawImage(L.over, 0, 0);
+    // the owl: still (pre / post), or during the blink (28.04-28.52) the still body with that frame's own head
+    const bl = BLINK3[tf.toFixed(2)];
+    const [oc, ox, oy] = tf < 28.3 || bl ? L.owlPre : L.owlPost;
+    ctx.drawImage(oc, ox, oy);
+    if (bl) { ctx.save(); ctx.translate(HALF, HALF); drawR3(ctx, bl); ctx.restore(); }
+  },
+  release() { cache = null; releaseScratch(); release3(); },
+};

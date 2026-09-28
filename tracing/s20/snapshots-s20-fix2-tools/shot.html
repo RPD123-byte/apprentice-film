@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face { font-family: "Geist"; src: url("/assets/fonts/Geist-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Geist Mono"; src: url("/assets/fonts/GeistMono-Var.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Archivo"; src: url("/assets/fonts/Archivo-Var.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+@font-face { font-family: "Fraunces"; src: url("/assets/fonts/Fraunces-Variable.ttf") format("truetype"); font-weight: 100 900; }
+@font-face { font-family: "Satoshi"; src: url("/assets/fonts/Satoshi-Variable.woff2") format("woff2"); font-weight: 300 900; }
+body{margin:0;background:#000}</style></head><body><canvas id="c" width="2206" height="946"></canvas>
+<script type="module">
+await Promise.all(["900 100px Archivo","400 20px Geist","600 20px Geist","500 20px 'Geist Mono'","400 20px Fraunces","700 20px Fraunces","800 40px Satoshi"].map(f=>document.fonts.load(f)));
+await document.fonts.ready;
+const q = new URLSearchParams(location.search);
+const mod = await import('/src/shots/s20.js?v=' + Math.random());
+const shot = mod.shot;
+if (q.get('dbg')) shot.debug = Object.fromEntries(q.get('dbg').split(':').map(k => [k, true]));
+const { createPost } = await import('/src/lib/post.js');
+const paint = document.createElement('canvas'); paint.width = 2206; paint.height = 946;
+const ctx = paint.getContext('2d');
+const c = document.getElementById('c');
+const grade = q.get('raw') ? null : createPost(c);
+window.__render = (t) => {
+  ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha = 1; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 2206, 946);
+  const t0 = performance.now();
+  ctx.save(); shot.draw(ctx, t - 63.12, t); ctx.restore(); ctx.getImageData(0, 0, 1, 1);
+  const ms = performance.now() - t0;
+  if (grade) grade(paint, t, { fade: 1, ...(shot.grade ? shot.grade(t - 63.12, t) : {}) });
+  else { const g = c.getContext('2d'); g.clearRect(0,0,2206,946); g.drawImage(paint, 0, 0); }
+  return { url: c.toDataURL('image/png'), ms, info: window.__info || '' };
+};
+window.__ready = true;
+</script></body></html>

@@ -1,0 +1,86 @@
+{
+ "fidelity": "close",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "whole shot (src/shots/s05/data/*.js, 11 MB; ink.js, layers.js, KEYS key578-key587)",
+   "what": "Method breaks the hard rule. The drawing is a machine vectorization of source frames: iso-value outlines of source luminance in 0.025 steps, plus auto-traced strokes. Frames 578-587 are each traced whole. That makes it a posterized vector copy of source pixels, which in substance breaks 'never load or embed any frame/crop/pixel of the source' and 'everything drawn by code'. Its near-identical match to the source (blurred MAE about 3.9) comes from the tracing, not from drawing. The fidelity log already flags this as 'a judgement call'.",
+   "fix": "Needs the lead's or user's decision before this shot counts as done. If tracing is not allowed, drop data/fig*, owl*, desk*, key*, lh/rh/arm* and rebuild the figure, owl, desk and room as authored geometry. Use the Plate/engrave or legacy/ procedural drawing, and keep only the measured tables: HAND_*, POSE_B, LH_SET, DIP, LIGHT, TINT_T, PENCIL_T, CLIP_B, the settle grids as camera motion, and screen timing. Re-rate fidelity afterwards; the legacy path would be approx at best."
+  },
+  {
+   "severity": "medium",
+   "at": "laptop screen 24.16-26.68 (screen quad about x315-898, y168-648)",
+   "what": "The Pure Imagination page is the largest remaining error. Blurred error there is about 10.5, against about 3.3 outside the screen, in every frame. Visible differences: (1) the source's fan behind 'Pure' is a big layered yellow/orange/pink/purple/blue fan that rises from behind 'Pure' up past the date line; the render's is a small orange-pink fan beside the 'e'. (2) The source's 'Imagination' and 'Pure' are heavier, with ultra-bold soft-serif counters; the render's lettering is thinner. (3) At the left edge (rows y 380-560) the source's rainbow ribbon runs out to the bezel, but the render's ribbon starts 10-30 px further right, leaving a black wedge beside the rim. (4) The sun face, camera, rocket and right-hand cloud are drawn differently. (5) The page is crisper and less grainy than the source's soft, noisy screen. The logo difference is intended.",
+   "fix": "In src/shots/s05/pure.js: widen the fan behind 'Pure' to about 1.8x its current angle so its top reaches the date baseline (about y 250-265 at 25.0), in 5 bands (yellow, orange, pink, purple, blue). Set 'Imagination' about 25% heavier. Extend the ribbon's left end to the page edge at x 350-375, y 380-560. Add about 2-3 levels of screen noise and a 0.6 px soften to the page."
+  },
+  {
+   "severity": "medium",
+   "at": "right hand/forearm, 23.60, 24.60 and 25.16 (mixed frames), plus the slides 23.72-24.28, 24.28-24.88 and 25.12-25.48 (region x880-1520, y560-800)",
+   "what": "The pose change is two rigid drawings, moved and cross-faded. On the mixed frames (POSE_B 0.5 at 23.60, 0.65 at 24.60, 0.7 at 25.16) the back of the hand has two contour lines, there is a ghost index fingertip, and the cuff line is doubled. Light slivers show under the cuff at about (1170-1200, 718-735) at 24.60 and 25.20. Right-hand error is 7-9.7 during the moves against 4.7 at rest; the forearm/cuff error is 8-9.5 against 6.7. Placement is right (within 0.5 px, on frame).",
+   "fix": "In s05.js POSE_B, replace the 0.5/0.65/0.7 mixes with hard switches at the frame where NCC flips (23.60→A, 24.60→A, 25.16→B), or add one traced or drawn in-between pose. Close the slivers by painting the cuff's dark underside about 4 px lower at x 1165-1205, y 715-738."
+  },
+  {
+   "severity": "medium",
+   "at": "sōko page on the laptop 23.12-23.68 (x330-900, y190-640)",
+   "what": "The page is crisper and higher-contrast engraving than the source's dim, soft, glowing page. The figure is drawn differently: the render has a larger head, long hair and sits upright; the source's figure is smaller, hunched in a beanie and softly lit. The gear stacks right of the desk also differ. Screen error is about 7.9 at rest and 14-15 through the settle. Text placement matches: the MIXING DOWN bbox is identical to within 1 px, and mean and p95 luminance match.",
+   "fix": "In sites.js/screen.js for the laptop view: redraw the figure about 15% smaller, hunched forward over the laptop, wearing a beanie. Drop the white-line engraving on the gear stacks, using a soft grey fill with a 1.5 px blur. Give the figure a radial glow from the laptop, about 40 px across, at page centre (0.52, 0.55)."
+  },
+  {
+   "severity": "medium",
+   "at": "file window 23.72-23.88 (screen)",
+   "what": "The source's window zooms open with heavy motion blur: a soft, ghosted left edge and smeared list rows at 23.72-23.80. The render's window has hard edges and almost no zoom blur. The source's list is greyer, with more and denser rows (about 17 px pitch, against about 19 px). Brightness timing matches (screen luminance 130/172/200 in the source against 137/180/204 in the render at 23.72/23.76/23.80).",
+   "fix": "In screen.js, smear the window along its scale direction: about 30 px at 23.72, 15 px at 23.76, 6 px at 23.80, and 0 from 23.88. Feather its left edge by about 12 px while it zooms. Tighten the row pitch to about 17 px and desaturate the icons by about 50%."
+  },
+  {
+   "severity": "medium",
+   "at": "shirt/back x1500-2000, y500-946; beanie x1280-1600, y0-300 (all frames)",
+   "what": "ink.js addTone lays a perfect 45/135-degree crosshatch with a 2.95 px period. After the grade it measures 6-10 grey levels on the shirt and back and 3-7 on the beanie. The source's tone there is 1-3 and about 1. So the render shows a regular mechanical dot screen on the character, which the style guide forbids.",
+   "fix": "Set TONE.gain from 1.75 to about 0.4, checked against the source's diagonal 4.15 px amplitude in graded output at 25.00, or cap the tone amplitude per layer. Better still, break the pattern's regularity with a low-frequency phase jitter from noise2(x/40, y/40)."
+  },
+  {
+   "severity": "low",
+   "at": "settle 23.16-23.52",
+   "what": "The per-frame key tracings boil. Motion-compensated residual outside the screen is 4.6-5.25 against the source's 3.7-4.2 (20-30% more texture crawl). The handover from key587 to the warped layers pops: 6.56 at 23.48→23.52 against the source's 4.57, 44% more.",
+   "fix": "Build the keys from one base tracing warped per frame, with only the blur and light traced per frame. Or cross-fade key587 into the warped-layer path over 23.48-23.56, at a 0.5 mix on frame 588."
+  },
+  {
+   "severity": "low",
+   "at": "owl, beanie and face detail (owl plaster about (1520,320); beanie; owl chest)",
+   "what": "Fine line work is lost to posterization. The plaster lacks the source's dotted perforations and central pad detail. The beanie knit is a blotchy smear instead of the source's crisp crosshatch knit. The owl's chest and feathers are flattened into smooth grey patches with contour banding. Mid-frequency line energy (σ1.5-4) is 8-12% below the source in every region.",
+   "fix": "Draw the plaster perforations as 2x3 dots (r about 1.2 px, value 0.35) on each arm and a pad rectangle, centred about (1520,320). Re-stroke the beanie knit as a 45/135-degree hatch at about 6 px pitch, following the brim curvature. Add about 20 short feather strokes on the owl's chest (x1500-1700, y420-640)."
+  },
+  {
+   "severity": "low",
+   "at": "mouth/pencil end about (1370-1396, 354-366), all frames, worst in the settle",
+   "what": "The pencil's back end is drawn over the lips with a double dark outline and a light rim. In the source the lips close cleanly over the pencil. The jaw outline also bulges slightly at 23.48.",
+   "fix": "Clip the pencil layer to the mouth opening, or redraw the upper and lower lip contours over the pencil after it is drawn. Remove the second outline around the pencil end."
+  },
+  {
+   "severity": "low",
+   "at": "red selection 25.20-26.68 (quad about (472,350),(755,299),(780,432),(502,492))",
+   "what": "Timing and growth match the source (it appears at 25.20 and reaches full size at 25.32). The outline is too thin and too saturated: 3 px at about BGR(27,46,166), against the source's 4-8 px dark crimson at about BGR(51,55,117). The render has about 58% of the source's red pixels. The top-right corner sits about 7 px high: (755,299) against (758,306).",
+   "fix": "In the pure.js selection, widen the stroke to about 2.5 page px (5-6 screen px) with a 1 px soften, colour it about rgb(120,50,55) at about 80% alpha, and move the top-right corner down 7 screen px."
+  },
+  {
+   "severity": "low",
+   "at": "note card 25.48-25.60 (x757-827, y243-347)",
+   "what": "Card timing matches (luminance 70/84/115 against 70/89/124). In the source, though, the card pops in as a plain white blank at 25.48-25.56 and its contents appear later. The render's card already shows its smiley, text lines and buttons.",
+   "fix": "Hold the card's contents at 0 until about 25.60 and fade them in over 25.60-25.68."
+  },
+  {
+   "severity": "low",
+   "at": "left screen edge, rows y440-530",
+   "what": "The black seam between the bezel's inner rim and the page is about 3 px wider than in the source: the page starts 6 px inside the rim, against 3 px.",
+   "fix": "Move SCREEN_Q's left edge, and the page quad's left corners in screen.js, about 3 px left, keeping the rim line where it is."
+  },
+  {
+   "severity": "low",
+   "at": "load/perf (src/shots/index.js imports every shot module up front)",
+   "what": "About 11 MB of generated JS data is parsed by every render worker at startup, even for frames outside s05. The fidelity log reports about 400 ms for 23.52 under load, over the 300 ms target.",
+   "fix": "Dynamic-import the data modules inside inkLayer() on first use, and free the key canvases after 23.52."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "**Visual fidelity: close.** Timing, framing, camera and tone all match the source.\n- Whole frames differ from the source by about 3.8-4.3 (blurred MAE, σ2) at every checked frame.\n- Every beat lands within 0-1 frame: the file window at 23.72, the dissolve at 24.00-24.16, the selection at 25.20-25.32, the card at 25.48-25.68, the owl's head dip, and the hand tracks.\n- Colour and tone are within about 2 levels in every region, blacks stay deep, and there is no placeholder text and no red error bar.\n- The s04→s05 boundary lines up within 1 px. compare.sh cannot show s05 at exactly 23.12: it samples 23.10, which is still s04. The s05→s06 hard cut lands on frame 668.\n- Determinism: the same timestamps rendered in separate compare runs (11 checked) are identical, 0 pixels different.\n\n**The match comes from tracing the source.** The whole drawing is a dense vectorization of source frames: iso-value outlines at 0.025 steps plus auto-traced strokes, with 10 settle frames traced whole, 11 MB of data in all. In practice that embeds a posterized copy of the source, which I rate as a violation of the hard rule. If the lead or user decides tracing is not allowed, this shot is not truly built. The legacy procedural path would be approx at best.\n\n**Visible defects, even accepting the method:**\n- The laptop screen pages are the largest error, about 10.5 inside the screen against about 3.3 outside. On Pure Imagination the fan, the lettering weight and the left ribbon differ. On sōko the page is too crisp and the figure is drawn differently. The file window is missing its zoom blur.\n- The right hand shows double contours and slivers on the cross-fade frames 23.60, 24.60 and 25.16.\n- A mechanical 2.95 px dot screen sits on the shirt, back and beanie, 3-7x stronger than the source's.\n- Texture boils through the settle, and pops at 23.52.\n- Fine detail is lost to posterization: the plaster's perforations, the beanie's knit, the owl's feathers.\n- The pencil end sits over the lips instead of between them.\n- The selection outline is too thin and too saturated.\n\nCleanup: as you asked, I deleted only what this run created: the snapshots/s05-rev1c-* folders and logs, the source frames I extracted and my crops in the scratchpad. Earlier s05-rev1 files and other agents' files are untouched."
+}

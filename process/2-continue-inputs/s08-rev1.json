@@ -1,0 +1,62 @@
+{
+ "fidelity": "close",
+ "defects": [
+  {
+   "severity": "low",
+   "at": "30.56–31.9 s, F0 box x 140–500, y 0–180 (top-left mark)",
+   "what": "This is the biggest visible difference, and it is intentional. The render shows an original 'Wonder / Camp' script where the source has a third-party wordmark. Blurred error in the box is ~22 levels (4–7 everywhere else). The masses are similar: 13.1k vs 13.8k bright pixels. The render's ink starts at x 182 against the source's 158, and its strokes are ~11.6 px against ~10 px.",
+   "fix": "Do not copy the source mark. If the tone gap should shrink, shift the mark ~15–20 px left (ink from x ~165) and thin the stroke by ~1.5 px (MARK w − 1.5) so the mass and footprint match the source's box."
+  },
+  {
+   "severity": "medium",
+   "at": "Whole segment, all page art outside the card: 'ure' letters, fan, lobes, date text, U ribbon, cloud",
+   "what": "The page art is too crisp compared with the soft capture. Edge blur (erf fit, frames 764/765, render vs source): 'ure' letters 0.64 vs 1.12 px; date line 1 0.90 vs 1.44; 'Linden Hollow' 0.92 vs 1.39; fan/lobes 0.92 vs 1.43; U ribbon/star 1.05 vs 1.36; cloud top edge 0.53 vs 1.47. At 790: 'ure' 0.77 vs 1.39, date 1.05 vs 1.72. Card edges already match (0.10 vs 0.12). Knock-on effects: the keylines between the stripes in the 'r' dip to 10–12 levels where the source only reaches 16–29, the date text's dark rim is weaker than the source's soft halo, and the cloud sparkle is hard-edged. Blurring the render by σ 1.1–1.8 lowers the error in these regions but not on the card.",
+   "fix": "In buildStatic, add about σ 1.0 F0 px to the page layers only (leave the card, typed text and selection sharp). Suggested values: ORN overpaint soft 0.5→1.1 (this also softens dateLines); CLOUD overpaint soft 0.5→1.4; RIB overpaint soft 0.9→1.2; purePageRegion drawImage blur 0.45→1.0; redrawPills 0.8→1.2; redrawStars 0.6→1.1. Then re-fit edges. Target: each region's σ within ±0.15 px of the source's values above."
+  },
+  {
+   "severity": "medium",
+   "at": "30.56–~31.2 s, F0 lower-left: u's right counter x 355–455 y 615–946; r nub x 720–770 y 705–760",
+   "what": "Local shape errors inside the 'ure' letters. The u's oval counter has the highest box error after the mark (blurred MAE 5.9–6.3). (a) On the oval's right wall the yellow band stops at y≈765 in the render. In the source it continues as a thin pale-yellow taper up to y≈700 at x 430–440; the render shows dark ground and keylines there (signed error −29 at (430,740)). (b) The pink/orange keyline wobbles at x 398–408, y 700–745 where the source line is a straight diagonal. (c) The small pink and salmon nub under the r's dark wedge is split by a black gap with dark green below it. The source has pink and salmon pieces with pale rims (error −24 at (750,720–760)).",
+   "fix": "In s08/ornaments.js, extend the oval's yellow piece up the right wall to y≈700 as a taper (x 430–440 at y 700–765). Straighten the pink/orange boundary to a line from ≈(408,700) to ≈(398,745). Retrace the nub pieces so they touch, with no dark-green gap, and lighten their rims."
+  },
+  {
+   "severity": "low",
+   "at": "30.56–~30.8 s, F0 x 700–870, y 880–946 (bottom edge under the r/e)",
+   "what": "The yellow/white keyline between the r stripes and the 'e' bowl runs too steeply. Render x at y 900/920/940 is ≈812/825/835; the source curve flattens to the right at ≈800/815/845–850. The orange/yellow keyline also swells to ~8 px at x 735–742, y 900–930. Error cells reach 40–46 levels at (830–870, 920–946). The area leaves frame by ~30.8 s.",
+   "fix": "Retrace that yellow wedge's right boundary in ornaments.js through (790,880), (800,900), (815,920) and (850,946). Keep the orange/yellow keyline an even ~5 px through y 900–930."
+  },
+  {
+   "severity": "low",
+   "at": "Whole segment, right frame edge, output x ≥ 2198 (≥ 2194 by 32.56), y 240–320 (pastel tail)",
+   "what": "There is a seam in the last 6–10 px at the right edge. The traced tail keylines flatten or kink instead of continuing their slope. At 30.56, x 2205: render keylines at y 258/281/303/312, source 259/283/307/319 (the bottom pink edge turns up 7 px). At 32.56, x 2203: render 263/295, source 268/300. The right edge is the push-in's anchor, so the seam stays in frame for the whole shot.",
+   "fix": "Extend the RIB_B boundary polylines and RIB_C centre lines past F0 x 2215, following their slope from x 2170–2195. The keylines should cross F0 x 2206 at y≈259, 283, 307 and 319."
+  },
+  {
+   "severity": "low",
+   "at": "Cloud sparkle, F0 (1698–1765, 884–945), first ~0.8 s",
+   "what": "The render sparkle is crisp, with a heavy 7 px keyline that stays visible on its left arm against the dark ground. The source sparkle is soft and low-contrast, and its left arm fades into the ground. The horizontal arm's half-level extent is ~1705–1759 in the render against ~1708–1756 in the source.",
+   "fix": "In sparkle(), set the keyline to lineWidth 5, shrink rx by ~1.5 px, and let the cloud zone's extra blur (soft ~1.4) soften it."
+  },
+  {
+   "severity": "low",
+   "at": "30.56–~30.9 s, top edge, pills at output x 1180–1560, y 0–45",
+   "what": "The pills' bottom edge sits ~1 px low. Erf fit at frame 764: render y 42.2–43.5, source 41.1–42.3. Their bodies are 4–6 levels too dark (136 vs 143; 132 vs 137).",
+   "fix": "In redrawPills, set y1 127.3→~126.9 (page units, about −1 F0 px) and fill '#d6d7cb'→~'#dedfd3'."
+  },
+  {
+   "severity": "low",
+   "at": "Date lines, F0 y 340–480, whole time the text is in frame",
+   "what": "Line 1 strokes are ~1 px too thin on their left sides. Left (dark→bright) edges sit +1.06 px right of the source's, right edges +0.04; on 'rch' the left edges sit +1.40. Phase correlation shows line 1 shifted (+0.5, +0.6…0.96) px. 'Linden Hollow' right edges sit 0.8 px left, and the whole line is shifted (−0.3…−0.65, −0.6) px.",
+   "fix": "Embolden line 1 by ~0.4 page units: raise the l1 stroke width, or set shadowOffsetX 1→0 so the rim stops eating the left sides. Nudge line 1 by (−0.5, −0.7) F0 px and 'Linden Hollow' by (+0.5, +0.6) F0 px."
+  },
+  {
+   "severity": "low",
+   "at": "30.84–31.2 s (frames 771–780), top output row 0",
+   "what": "Once the black crop strip has scrolled out, row 0 is 20–25% darker than the source and row 1 is 10–20% brighter. The render's crop edge is harder than the source's. The black strip is also at level ~3 where the source is ~1.",
+   "fix": "Widen the strip gradient from 9.7–11.0 to ~9.2–11.3 F0 px so the edge softens like the source's."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "s08 is very close to the source, so I rate it close. I agree with the builder's fidelity log, apart from one systematic look gap.\n\n**Overall error.** Over all 51 frames (764–814) the blurred (σ3) mean error is 3.38 levels (range 2.84–3.88), matching the log's 3.37.\n\n**What matches:**\n- **Camera:** an ECC alignment of render against source leaves at most 0.5 px at the frame corners on every frame, and the held frames sit at 0.84–0.88 s and 1.84–1.88 s in both.\n- **Typing and caret:** the typed letters and the caret match on all 51 frames: 'r' shows at 764, 'e' at 769 … 'd' at 799, and the caret is gone from 802.\n- **Light:** brightness and flicker per region track within about ±1 level.\n- **Selection line:** width (12 px FWHM), position (within 1 px) and colour match.\n- **Card:** its inner lines sit within 0.4 px of the source.\n- **Texture:** the scan-line period matches the source's (2.09→2.90 px), with no moiré, and noise levels match.\n\n**Cuts.** I rendered through the real film path (main.js), because tools/compare.sh at 30.56 shows s07. That tool seeks on a 1/30 s grid and lands on 30.533, so this is a quirk of the tool, not the shot. Through the film path, frame 763 is s07, 764 is s08 and 815 is s09, which matches the source's cuts exactly.\n\n**Determinism.** Two separate compare runs with the times in opposite orders produced bit-identical frames at 30.8, 31.0 and 32.2. The film-path and compare renders are also identical at 765 and 790. At 814 they differ only in the grade's grain, because the compare tool seeks 32.533 instead of 32.56. No console errors, placeholders or red bars. A frame takes about 0.3 s; the first takes about 1 s.\n\n**Remaining gaps, most visible first:**\n- **Mark:** the substitute top-left mark is required by the no-third-party-logo rule, and it is the largest difference.\n- **Crispness:** the page art is too sharp across the board, with edge blur σ ~0.6–1.0 px where the source has 1.1–1.5 px. This also makes the keylines too dark and the sparkle hard-edged.\n- **Lower-left shapes:** a few local shape errors inside the 'ure' letters and at the bottom edge in the first ~0.5 s.\n- **Right-edge seam:** a 6–10 px seam in the pastel tail at the right frame edge, present for the whole shot.\n- **Small offsets:** pills, date strokes and the crop-edge row are off by about a pixel or a few levels.\n\n**Files.** I created scratch outputs under snapshots/s08-rev1r-* and, as you asked, deleted them all at the end. Nothing else was touched: the older snapshots/s08-rev1-all.log and s08-rev1-motion.log belong to an earlier run and are still there. No source files were edited."
+}

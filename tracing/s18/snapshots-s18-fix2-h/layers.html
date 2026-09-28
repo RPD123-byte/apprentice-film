@@ -1,0 +1,16 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>LOADING</title></head><body>
+<script>window.gsap={timeline:()=>({fromTo(){return this;}})};</script>
+<script type="module">
+try {
+  const A = await import("./src/shots/s18/shotA.js");
+  const I = await import("./src/shots/s18/inkdraw.js");
+  // layer(f, dbg, km): pre-grade drawA with DBG / KM settings -> png data url
+  window.layer = (f, dbg, km) => {
+    Object.assign(A.DBG, { layers: "all", noFeet: false, feet: null }, dbg || {}); const km0 = { ...A.KM }; Object.assign(A.KM, km || {});
+    const c = I.cpuCanvas(2206, 946), g = c.getContext("2d"); if (A.DBG.layers !== "over") { g.fillStyle = "#000"; g.fillRect(0, 0, 2206, 946); }
+    A.drawA(g, f); Object.assign(A.DBG, { layers: "all", noFeet: false, feet: null }); Object.assign(A.KM, km0);
+    return c.toDataURL("image/png");
+  };
+  document.title = "READY";
+} catch (e) { console.error(String(e && e.stack || e)); document.title = "FAIL"; }
+</script></body></html>

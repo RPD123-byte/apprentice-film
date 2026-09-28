@@ -1,0 +1,1 @@
+{"t": 130.24, "area": [[[-6, 824], [2212, 824], [2212, 952], [-6, 952]]], "exclude": [], "fill_hidden": [], "merge": 0, "scale": 30, "min_size": 30, "sp": 6, "sr": 6, "min_area": 10, "ink": [{"lmax": 0.55, "contrast": 0.14, "eps": 0.8, "min_area": 5}, {"lmax": 0.28, "eps": 0.7, "min_area": 4}]}

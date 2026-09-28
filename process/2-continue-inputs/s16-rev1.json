@@ -1,0 +1,74 @@
+{
+ "fidelity": "close",
+ "defects": [
+  {
+   "severity": "medium",
+   "at": "flying owl, 1143-1161 (45.72-46.44); worst at 1143-1150",
+   "what": "The flying owl reads as airbrushed plastic, not the source's matte, fluffy ink print. Its plumage is smooth grey isophote gradients with hard steps; on the 1144/1145 jolt frames the body is a flat clipped white (255 against the source's 251 with texture). The black notches between feathers are soft dark gradient wedges, not crisp feather separations. The raised wing's silhouette is lumpy and wavy (1150 at about x1000-1040, y160-330; 1153 at about x790-900, y170-330). The headphone band's top edge is stair-stepped (1153, about x610-700, y230-250). At 1143 the wing over his face (x1300-1480, y220-400) has faint, broken feather outlines, so it reads ghostly: mean 225 against 218, and the dark separations are missing. The interior tone matches (mean within 1-2 levels), so this is purely a line-quality problem.",
+   "fix": "Stop drawing plumage as filled L-level rings. Paint a flat near-white base (about 0.93) and add fine tapered feather strokes along each wing's feather axes: 1-1.5 px dark lines at 0.35-0.5 value, one per primary, plus stipple fluff (seeded rng, 0.6-1 px dots, density rising toward the shaded underside). Draw the notches between feathers as tapered ink strokes of 2-3 px that fade at the tip, not as D-level fills. Smooth every wing silhouette ring with a 3-point moving average before filling, and redraw the headphone band as one stroked arc. For 1143-1146, draw the near wing's feather outlines as continuous 1.5-2 px dark strokes at value 0.3."
+  },
+  {
+   "severity": "medium",
+   "at": "T-shirt, x1440-1560 y560-830, whole segment",
+   "what": "The knit T-shirt is an irregular, mottled grey diamond mesh with leftover black smudges from the value study, so at 1x it reads as a leopard or camouflage patch. A stray traced zig-zag polyline crosses it at about (1487,745) to (1555,767), and there is a scribble tangle at about x1543-1563, y780-813. The source is a regular, darker hexagonal knit, about 7-8 px cells, with a clear curved neckline under the headphones. The neck skin above the collar (x1380-1455, y532-601) shows concentric-arc engraving rings, and there is a stray horizontal white bar at the chin (x1399-1430, y473-476).",
+   "fix": "Replace engraving style 6 with a procedural hex lattice clipped to the shirt polygon: cell pitch about 7.5 px, dark walls 1.2-1.6 px on white cells, cells shrinking toward black at the collar and at the right-hand fold. Delete the roomfix cells inside the shirt that produce the black smudges, and remove the zig-zag and tangle fragments from the DARK/PALE line lists in that box. Hatch the neck with 3-4 short diagonal strokes instead of the ring fill, and remove the chin bar."
+  },
+  {
+   "severity": "medium",
+   "at": "jacket lit areas: left shoulder x1082-1207 y514-632; right shoulder x1640-1802 y480-717; lapel x1560-1640 y600-700",
+   "what": "Mechanical engraving in the jacket's lit areas. The left shoulder is filled with nested concentric triangular line rings, and the right shoulder is a patchwork of straight parallel-line fields with hard polygon boundaries (the value-study rings show through as facets). The lapel has tangles of short, fragmented dark strokes. In the source these areas are clean white with sparse, tapered hatch strokes and a cross-hatch mesh only in the shadowed fold. High-frequency energy in the lit jacket is 11-15 against 5-10 in the source.",
+   "fix": "Where the plate value is at or above 0.85 in the jacket, paint flat white (style 2) and lay only the traced major folds plus 6-12 hand-placed tapered hatch strokes per fold. Use one fixed stroke direction per fold region, not per value ring. On the right shoulder, confine the cross-hatch (spacing about 4 px, two families at 60 degrees) to the shadow band. Drop the fragment strokes on the lapel."
+  },
+  {
+   "severity": "medium",
+   "at": "designer's head: beanie, hair, face skin, irises (whole segment)",
+   "what": "Beanie: horizontal comb and zipper aliasing along its left edge (x1192-1274, y126-170), and a flat grey hard-edged bar under the cuff across the forehead (x1349-1449, y98-107). The cuff fold band and the cuff's cross-hatched knit are missing: the source has a distinct turned-up cuff. Hair: the fine strands hanging past the beanie on his right (x1545-1625, y140-330) are almost entirely lost to black or blocky vertical streaks, and hair on both sides shows sawtooth comb artifacts. Face: the lit skin has a vertical pinstripe or moiré of hairlines (x1330-1480, y150-330), where the source is smooth white with fine stipple. The eye bags are smooth airbrushed grey, where the source has crisp dark hatched shadow. Irises on the hold frames (about (1300-1330, 205-230) and (1460-1500, 200-230)) are flat black D-shapes with jagged edges, where the source has round dark irises with a soft rim and a catchlight.",
+   "fix": "Beanie: paint the ribbed crown as vertical ribs (style 0, spacing 5 px, angle pi/2) and the cuff as its own band (y about 92-125 at the brim), with a 3 px dark fold line on top and cross-hatch inside. Remove the flat grey forehead bar and antialias the left silhouette. Hair: add 20-30 tapered strand strokes (1-2.5 px, lit tips about 0.6) on his right, from the brim down to y330, and replace the blocky engraving in the hair with strands. Face: where value is at or above 0.85, use flat tone (style 2) plus seeded 0.7 px stipple, and draw the eye-bag shadow as 3-5 curved hatch strokes. Irises: draw each as a filled circle (r about 11-12 px) with a 1.5 px darker rim, clipped by the lid polygon, and a white catchlight disc of about 3 px."
+  },
+  {
+   "severity": "low",
+   "at": "mug, x730-915 y705-835, whole segment",
+   "what": "The mug's measured tone grid (MUGG, 4x10 px cells) shows as rectangular blocks and horizontal banding. A grey band under the rim across the lit side reads about 125 where the source is 238 (x780-870, y712-722). The rim is jagged; the source has a clean top ellipse. The mug is softer than the source on the jolt frames (1150 is visibly blurred where the source is crisp). The handle's lower loop runs about 10-15 px too low: at y820 the render's handle is still at x900-906, while the source's loop has already returned to x879-897. The source's crisp white specks in the dark glaze and its column of tick dashes are missing.",
+   "fix": "Resample MUGG bicubically or blur it at sigma 3 before painting. Clamp the top two grid rows to 0.92 on the lit half (x at or above 775). Draw the rim as a stroked ellipse (centre about (805,714), rx about 70, ry about 5, 2 px). Move the handle's bottom attachment up to about y818 at x880. Keep the mug outside the jolt blur, or give it half the BLUR sigma. Add 150-250 seeded 1-1.5 px white specks in the left dark third and a column of 8-10 dark dashes at x about 858-864."
+  },
+  {
+   "severity": "low",
+   "at": "steam, x730-850 y410-690 (every frame, most noticeable 1162-1192)",
+   "what": "The steam is drawn as thin, crisp, doubled hairlines. It carries about 20% less light than the source (summed brightness 239 against 298 at 47.0), covers about 25% fewer pixels, and ends about 11 px short of the mug (lowest lit pixel y677 against y688 on every hold frame). The source's steam is soft 3-5 px ribbons with a glow and thick-thin variation.",
+   "fix": "In steam.js, scale the centre-line widths by about 1.6. Add an additive glow pass under the stroke (the same path, blur 2 px, alpha 0.35). Extend each drawing's last segment by 10-12 px down toward the mug top (y about 688)."
+  },
+  {
+   "severity": "low",
+   "at": "seated owl, 1162-1192 (46.48-47.68), about 1.2 s on screen",
+   "what": "Good shape and eyes, but the plumage is sparse and smooth: fine texture at the chest is 4.9 against 5.9, and the facial-disc and chest feather lines are missing. The outline is a uniform, heavy line of about 2.4 px, where the source's is thinner and varies. The far wing's feather lines are too heavy, and there is a wider-than-source dark gap between head and wing.",
+   "fix": "Taper the outline from 1.2 to 2.2 px according to the lighting (thicker on the underside). Add about 40 short curved feather strokes (0.8-1.2 px, value 0.55) around the facial disc and chest, and 0.6 px stipple. Thin the far wing's lines to 1-1.3 px and narrow the head-wing gap to the source's width."
+  },
+  {
+   "severity": "low",
+   "at": "desk: front plank x560-2206 y850-935, and top under the owl x560-980 y820-890",
+   "what": "The front plank has sparse, thicker dark grain lines on a smooth grey base (high-frequency energy 11.5 against 17.6), where the source has many fine pale grain lines. The desk top under the owl is a smooth grey gradient with dark smudge marks (about x890-945, y885), where the source has fine wood grain.",
+   "fix": "Add a second grain family: pale 0.8-1.2 px lines at 3-4 px pitch, following the plank's edge curve with seeded wobble, drawn over BASE at alpha 0.5. Remove the smudge marks, and give the top under the owl 12-20 faint grain lines."
+  },
+  {
+   "severity": "low",
+   "at": "black background, whole frame",
+   "what": "The render's blacks carry a static blotchy fleck texture: frame-to-frame correlation 0.35, against 0.10 in the source's pure grain. There is also faint horizontal row banding (row-mean std 0.59 against 0.07). Both sit at only 1-5/255 and are visible only when the image is brightened. The row banding may come from the global post pass rather than s16.",
+   "fix": "Clamp the room plate's value study to 0 wherever it is below about 0.02 before engraving, so the empty dark cuts no specks. If the banding persists with a black plate, report it to the post.js owner."
+  },
+  {
+   "severity": "low",
+   "at": "cut into the segment, 1142 to 1143 (45.68 to 45.72); owned by s15",
+   "what": "In the source, 1141-1142 show the room dimmer and at about 0.93/0.91 scale, offset (70,40), so the cut to 1143 has a visible framing and brightness jump. s15 draws that room at identity (1142: blurred-difference score (σ2) 11.8), so the render's cut has no framing jump. s16's own first frame, 1143, matches (σ2 4.2, σ8 2.8).",
+   "fix": "Owner s15: draw 1140-1142 with an affine of about [0.930, 0, 70; 0, 0.913, 40] and match their dimmer tone. No change needed in s16."
+  },
+  {
+   "severity": "high",
+   "at": "rules compliance (not a visual defect): src/shots/s16/data/cel.js, owl.js, room.js, mug.js, roomfix.js",
+   "what": "Much of the drawing is an automatic vectorised trace of the source's pixels, not a drawing made by code. cel.js holds 652 isophote rings (about 13,900 points) at sigma 0.9 for just the two headphone cups. owl.js (2.5 MB) holds per-source-frame multi-level isophote fills (L: 17 levels, D: dark levels at sigma 1.2; the seated owl has 11 fine levels at sigma 0.9). room.js LEVELS are 22-level isophotes of the blurred source, and mug.js and roomfix.js are per-cell source tone grids. At sigma 0.9 with 11-12 levels this is effectively a posterised copy of the source crop. It risks breaking the hard rule 'never load or embed any frame/crop/pixel of the source', even though no image file is loaded.",
+   "fix": "Orchestrator or user decision needed. If it is not acceptable: replace the sigma 0.9 cel traces (cel.js and the seated owl's fine levels) with authored shapes (ellipses, arcs, tapered strokes placed from measured landmarks), and keep only coarse value studies (at least sigma 3, 8 levels or fewer) as measurement."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "s16 matches the source very closely in framing, timing, motion and tone, but it is visibly re-cut in line quality at 1:1. I rate it close, a rating that holds at full-frame viewing only.\n\n**What I measured**\n- **Coverage:** 24 compare times across 45.74–47.82 (`snapshots/s16-rev1-a`), 9 boundary and repeat times (`snapshots/s16-rev1-bnd`), and a 10 fps side-by-side of the whole segment (`snapshots/s16-rev1-motion/sheet.jpg`). `compare.sh` renders at t = floor(T·30)/30, so it can never show 1143 and is off by one frame at times off the 25 fps grid (46.25 and 47.82 are artifacts of that). I therefore also rendered every frame from 1142 to 1165 and from 1188 to 1194, plus 1175, exactly at n/25 through the real grade, using my own harness (`snapshots/s16-rev1-tools`, pairs in `snapshots/s16-rev1-exact/pair*.jpg`). I compared them with source frames taken by frame index.\n- **Timing:** every rendered frame's best-matching source frame is its own (jolt 1143–1150, eyes open at 1148, landing 1158–1161, seated pose at 1162, pull-back 1188–1192, flash 1193–1194, handover to s17 at 1195). The only mismatches are the tool's own rounding.\n- **Camera:** the room is fitted per frame (affine) against the source to within 0.6 px on every frame (scale 0.999–1.000).\n- **Tone:** mean luminance is within 0.2–1.0 levels of the source on every frame. Blurred error is σ2 3.5–4.2 and σ8 1.8–2.8. The flash scores σ8 0.57, and the hold is as steady as the source's.\n- **Determinism:** 47.0 and 46.2 rendered in two separate compare runs are bit-identical (max diff 0).\n- **Errors:** no placeholder text, no red error bars and no console errors.\n\n**What differs (ranked in the defects list)**\n- The flying owl's plumage is airbrushed and isophote-stepped, where the source is a feathered ink print.\n- The T-shirt is a blotchy diamond mesh with a stray zig-zag line, where the source is a clean hex knit.\n- The jacket's lit areas show concentric and faceted mechanical engraving.\n- Beanie, hair, face and irises: zipper aliasing, a grey forehead bar, lost hair strands, pinstripes on the skin, and flat jagged irises.\n- The mug shows its tone-grid blocks and a grey band under the rim, and its handle loop sits about 12 px low.\n- The steam is about 20% dim and too thin, and ends 11 px short of the mug.\n- Smaller gaps: the seated owl's texture and outline, the desk grain, faint flecks in the blacks, and the cut from s15 (s15's side).\n\n**Compliance flag:** `data/cel.js`, `owl.js` and the other data files are dense automatic isophote traces of source pixels (for example 652 rings for the two headphone cups). This may break the rule against embedding source pixels and needs a decision from you or the user.\n\n**Housekeeping:** following the user's instruction, I deleted only files I created in this run: the extracted source frames, the full-resolution frame and reference PNGs, and the harness bundle. The report's JPG evidence is still in `snapshots/s16-rev1-*` and `snapshots/s16-rev1-crops/`. Nothing else was touched."
+}

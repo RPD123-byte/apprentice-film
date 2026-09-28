@@ -1,0 +1,11 @@
+import { OWL_B } from "/Users/computer/rootline/apprentice-film/src/shots/s18/data/owlB.js";
+import { decodeInk, ringsBBox } from "/Users/computer/rootline/apprentice-film/src/shots/s18/inkdraw.js";
+const area=(r)=>{let a=0;for(let i=0,n=r.length;i<n;i+=2){const j=(i+2)%n;a+=r[i]*r[j+1]-r[j]*r[i+1];}return Math.abs(a/2);};
+console.log(Object.keys(OWL_B));
+const key=process.argv[2]||"belly", sub=process.argv[3];
+let raw=OWL_B[key]; if(sub) raw=raw[sub];
+const D=decodeInk(raw);
+const [X0,Y0,X1,Y1]=(process.argv[4]||"-1e9,-1e9,1e9,1e9").split(",").map(Number);
+const inb=(bb)=>bb[2]>=X0&&bb[0]<=X1&&bb[3]>=Y0&&bb[1]<=Y1;
+for (const L of ["base","m","s"]) D[L].forEach((M,i)=>{ const bb=ringsBBox(M.rings); if(!inb(bb))return; console.log(L,i, "area", area(M.rings[0]).toFixed(0), "holes", M.rings.length-1, "bb", bb.map(v=>v.toFixed(0)).join(" "), "f", JSON.stringify(M.f).slice(0,70)); });
+for (const L of ["d","b"]) D[L].forEach((s,i)=>{ let bb=[Math.min(...s.x),Math.min(...s.y),Math.max(...s.x),Math.max(...s.y)]; if(!inb(bb))return; console.log(L,i,"tone",s.tone,"n",s.x.length,"bb",bb.map(v=>v.toFixed(0)).join(" "),"wmax",Math.max(...s.w).toFixed(1)); });

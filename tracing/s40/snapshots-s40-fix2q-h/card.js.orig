@@ -1,0 +1,570 @@
+// The end card, drawn in code: warm sky, two folded retro ribbons, cloud banks, sparkles, the extruded "rapport"
+// wordmark, the tagline and the owl on the full stop. Everything static is baked once into one canvas (with its print
+// grain); only the owl is redrawn per frame. Colours are pre-grade values: the global grade (post.js) adds halation,
+// the S-curve and the vignette on top, and they were chosen so the graded result matches the source.
+import { W, H } from "../../config.js";
+import { rng, clamp } from "../../lib/rng.js";
+import { GLYPHS } from "./glyphs.js";
+import { RIBBONS, CLOUDS_BACK, CLOUDS_FRONT, SPARKLES, TAG_WORDS, TAG_BASELINE, SKY_DOTS, SKY_CORR, RIB_GRAD } from "./data.js";
+import { drawOwl } from "./owl.js";
+import { CLOUD_TONE, CLOUD_SHADING } from "./cloudshade.js";
+
+// The card dissolves in over the sleeping room from 135.76 to 136.96, 0.21 in at the 136.0 cut. Fix pass 3: measured per
+// source frame (least squares of each frame against the room at 135.68 and the card at 137.12, owl masked out), it is
+// not quite a straight line: ~0.86/s to 136.0, ~0.92/s to 136.52, a held frame at 136.56, then ~0.8/s. The straight
+// line 135.75-136.96 was up to 0.05 low from 136.2 to 136.5; this is the measured curve, interpolated between frames.
+const CARD_CURVE = [[135.72, 0], [135.76, 0.002], [135.8, 0.034], [135.84, 0.068], [135.88, 0.105], [135.92, 0.139], [135.96, 0.173],
+  [136.0, 0.206], [136.04, 0.242], [136.08, 0.279], [136.12, 0.316], [136.16, 0.355], [136.2, 0.395], [136.24, 0.435], [136.28, 0.473],
+  [136.32, 0.509], [136.36, 0.545], [136.4, 0.581], [136.44, 0.617], [136.48, 0.652], [136.52, 0.688], [136.56, 0.689], [136.6, 0.722],
+  [136.64, 0.757], [136.68, 0.789], [136.72, 0.82], [136.76, 0.851], [136.8, 0.883], [136.84, 0.913], [136.88, 0.944], [136.92, 0.974],
+  [136.96, 1]];
+// The curve is the graded result; the card is blended before the grade, and through the grade's S-curve and halation a
+// pre-grade alpha a reads as a + GRADE_LIFT(a) afterwards (measured the same way on the render), so it is taken off.
+const GRADE_LIFT = [[0, 0], [0.2, 0.003], [0.3, 0.008], [0.4, 0.019], [0.5, 0.031], [0.6, 0.032], [0.7, 0.032], [0.8, 0.028], [0.9, 0.02], [0.97, 0.01], [1, 0]];
+const lookup = (T, x) => {
+  if (x <= T[0][0]) return T[0][1];
+  let i = 1; while (i < T.length - 1 && T[i][0] < x) i++;
+  const [xa, a] = T[i - 1], [xb, b] = T[i];
+  return a + (b - a) * Math.min(1, (x - xa) / (xb - xa));
+};
+export const CARD_IN = 135.72, CARD_FULL = 136.96;
+export const cardAlpha = (t) => {
+  if (t <= CARD_IN) return 0;
+  if (t >= CARD_FULL) return 1;
+  const a = lookup(CARD_CURVE, t);
+  return clamp(a - lookup(GRADE_LIFT, a));
+};
+
+const C = {
+  dark: "#63303e", ribCream: "#f4e5cd", ribPeach: "#e88f5b", ribRed: "#d7481e",
+  cloudLight: "#f1ddbd", cloudTan: "#d8b98f", cloudLine: "#5e3a44",
+  face: "#f6f1e8", key: "#500b1f", ext1: "#d23a1c", ext2: "#a6250f", extDark: "#3a0e2c", stop: "#eb6235",
+  tagMaroon: "#4a122b", tagCream: "#f5e8d2", sparkle: "#f3e4c6",
+};
+
+// ---------- sky ----------
+function sky(g) {
+  // one elliptical gradient fitted to the source (centre above the frame), stops in pre-grade colour
+  g.save();
+  g.setTransform(1536 / 1000, 0, 0, 1713 / 1000, 1173, -872);
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, 1000);
+  gr.addColorStop(0, "#f0ca75"); gr.addColorStop(0.5, "#f0ca75"); gr.addColorStop(0.625, "#efa152");
+  gr.addColorStop(0.75, "#eb7d3c"); gr.addColorStop(0.875, "#e35d2b"); gr.addColorStop(1, "#ca4423");
+  g.fillStyle = gr;
+  g.fillRect(-2000, -2000, 6000, 6000);
+  g.restore();
+  // low in the middle, between the cloud banks, the sky lifts again to a warmer orange (measured along x 900-1400)
+  g.save();
+  g.setTransform(760 / 1000, 0, 0, 330 / 1000, 1130, 1075);
+  const lg = g.createRadialGradient(0, 0, 0, 0, 0, 1000);
+  lg.addColorStop(0, "rgba(232,122,52,1)"); lg.addColorStop(0.43, "rgba(229,120,50,1)"); lg.addColorStop(1, "rgba(229,120,50,0)");
+  g.fillStyle = lg; g.fillRect(-2000, -2000, 4000, 4000);
+  g.restore();
+}
+
+// the measured per-cell sky correction (data.js), bilinear between cell centres: added where positive, subtracted where
+// negative (invert, add, invert back -- canvas has no subtractive blend)
+function skyCorrection(g) {
+  const { cs, nx, ny, rgb } = SKY_CORR;
+  const mk = (sign) => {
+    const c = document.createElement("canvas"); c.width = nx; c.height = ny;
+    const x = c.getContext("2d"), im = x.createImageData(nx, ny), d = im.data;
+    for (let i = 0; i < nx * ny; i++) { for (let k = 0; k < 3; k++) d[i * 4 + k] = Math.max(0, sign * rgb[k][i]); d[i * 4 + 3] = 255; }
+    x.putImageData(im, 0, 0);
+    return c;
+  };
+  const pos = mk(1), neg = mk(-1);
+  g.save();
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+  g.globalCompositeOperation = "lighter"; g.drawImage(pos, 0, 0, nx * cs, ny * cs);
+  g.fillStyle = "#fff"; g.globalCompositeOperation = "difference"; g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = "lighter"; g.drawImage(neg, 0, 0, nx * cs, ny * cs);
+  g.globalCompositeOperation = "difference"; g.fillRect(0, 0, W, H);
+  g.restore();
+}
+
+// ---------- ribbons ----------
+// Catmull-Rom through a list of values (uniform parameter), sampled `per` times per segment.
+function crSample(vals, per) {
+  const n = vals.length, out = [];
+  const V = (i) => vals[Math.max(0, Math.min(n - 1, i))];
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = V(i - 1), p1 = V(i), p2 = V(i + 1), p3 = V(i + 2);
+    for (let j = 0; j < per; j++) {
+      const t = j / per, t2 = t * t, t3 = t2 * t;
+      out.push(0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3));
+    }
+  }
+  out.push(vals[n - 1]);
+  return out;
+}
+const STRIPE_COLS = () => [C.dark, C.ribRed, C.ribPeach, C.ribCream, C.ribPeach, C.ribRed, C.dark];
+// fix pass 4: per-band stripe colours [dark, red, peach, cream, peach2, red2, dark2] (pre-grade). Each stripe's mean over
+// its visible interior (20-frame means at 137.6-138.36) was put on the source's through the grade's local slope: the lower
+// left band's red and peach were ~10 levels dark and blue-poor, the upper left band's cream and peach too blue and light,
+// the lower right band's red too light (source a deeper crimson), the upper right band's reds and dark a touch blue-poor.
+const BAND_COLS = {
+  leftB: [[92, 48, 62], [219, 82, 36], [237, 148, 101], [243, 227, 201], [237, 148, 101], [219, 82, 36], [92, 48, 62]],
+  leftA: [[99, 48, 62], [219, 68, 34], [236, 132, 81], [242, 218, 181], [236, 132, 81], [219, 68, 34], [90, 44, 59]],
+  rightB: [[90, 46, 60], [191, 61, 38], [231, 139, 96], [243, 225, 202], [231, 139, 96], [191, 61, 38], [89, 46, 63]],
+  rightA: [[95, 49, 70], [222, 75, 40], [238, 140, 92], [245, 229, 201], [232, 143, 98], [220, 74, 39], [94, 44, 60]],
+};
+// a stripe's fill: its band colour, or a vertical gradient through the measured along-band offsets (RIB_GRAD)
+function stripeFill(g, name, k, y0, y1) {
+  const base = BAND_COLS[name][k], G = RIB_GRAD[name] && RIB_GRAD[name][k];
+  const css = (c) => `rgb(${c.map((v) => Math.round(Math.max(0, Math.min(255, v)))).join(",")})`;
+  if (!G) return css(base);
+  const gr = g.createLinearGradient(0, y0, 0, y1);
+  for (const [y, dr, dg, db] of G) gr.addColorStop(Math.max(0, Math.min(1, (y - y0) / (y1 - y0))), css([base[0] + dr, base[1] + dg, base[2] + db]));
+  return gr;
+}
+
+// Gaussian-smooth a polyline along its arc length (ends pinned), so the measured cross-sections join up without kinks.
+function smoothLine(pts, sigma) {
+  const n = pts.length, cum = [0];
+  for (let i = 1; i < n; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const out = [];
+  let lo = 0;
+  for (let i = 0; i < n; i++) {
+    const w0 = Math.min(1, Math.min(cum[i], cum[n - 1] - cum[i]) / (2 * sigma));
+    let sx = 0, sy = 0, sw = 0;
+    while (cum[lo] < cum[i] - 3 * sigma) lo++;
+    for (let j = lo; j < n && cum[j] <= cum[i] + 3 * sigma; j++) {
+      const d = cum[j] - cum[i], w = Math.exp(-0.5 * (d * d) / (sigma * sigma));
+      sx += pts[j][0] * w; sy += pts[j][1] * w; sw += w;
+    }
+    out.push([pts[i][0] + (sx / sw - pts[i][0]) * w0, pts[i][1] + (sy / sw - pts[i][1]) * w0]);
+  }
+  return out;
+}
+function band(g, rows, opts = {}) {
+  const per = 12;
+  const ys = crSample(rows.map((r) => r[0]), per);
+  const xs = [];
+  for (let k = 1; k <= 8; k++) xs.push(crSample(rows.map((r) => r[k]), per));
+  const n = ys.length;
+  for (let i = 0; i < n; i++) for (let k = 1; k < 8; k++) if (xs[k][i] < xs[k - 1][i]) xs[k][i] = xs[k - 1][i];
+  const cols = opts.name ? [0, 1, 2, 3, 4, 5, 6].map((k) => stripeFill(g, opts.name, k, rows[0][0], rows[rows.length - 1][0])) : STRIPE_COLS();
+  const E = [];
+  for (let k = 0; k < 8; k++) E.push(smoothLine(ys.map((y, i) => [xs[k][i], y]), 7));
+  const edge = (k, rev) => (rev ? E[k].slice().reverse() : E[k]);
+  const poly = (a, b) => { g.beginPath(); a.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); b.forEach(([x, y]) => g.lineTo(x, y)); g.closePath(); };
+  // stroke boundary k only where the stripes on both sides of it are really there
+  const stroke = (k) => {
+    g.beginPath();
+    let on = false;
+    for (let i = 0; i < n; i++) {
+      const ok = xs[k][i] - xs[k - 1][i] > 3 && xs[k + 1][i] - xs[k][i] > 3;
+      const [x, y] = E[k][i];
+      if (ok) { if (on) g.lineTo(x, y); else g.moveTo(x, y); }
+      on = ok;
+    }
+    g.stroke();
+  };
+  // each stripe covers from its left boundary to the band's right edge, so neighbours never leave a seam
+  for (let k = 0; k < 7; k++) {
+    poly(edge(k, false), edge(7, true));
+    g.fillStyle = cols[k]; g.fill();
+  }
+  // airbrushed transitions between the light stripes; the red deepens next to the dark edges
+  g.save();
+  poly(edge(0, false), edge(7, true)); g.clip();
+  g.filter = "blur(4px)"; g.lineCap = "round"; g.lineJoin = "round";
+  g.globalAlpha = 0.55; g.lineWidth = 9;
+  // (fix pass 4: the red/peach edge is crisp in the source -- a 3 px step at y 480, where this airbrush made a 15 px ramp that
+  // darkened the peach -- so it is only a trace now)
+  g.globalAlpha = 0.12;
+  for (const k of [2, 5]) { g.strokeStyle = "#e06a3a"; stroke(k); }
+  g.globalAlpha = 0.55;
+  for (const k of [3, 4]) { g.strokeStyle = "#eeb58a"; stroke(k); }
+  g.globalAlpha = 0.14; g.lineWidth = 10; g.strokeStyle = "#a82c18";
+  for (const k of [1, 6]) stroke(k);
+  g.restore();
+  // fix pass 4: a rose airbrush along both sides of this band's maroon edge (left upper band only), spilling over onto the
+  // lower band's red: in the source the red within ~8 px of that edge carries +20-40 blue and +10-25 green (y 320-600)
+  if (opts.rose) {
+    const { y0, y1, clip } = opts.rose;
+    g.save();
+    if (clip) g.clip(clip);
+    g.beginPath(); g.rect(-100, y0, 800, y1 - y0); g.clip();
+    g.filter = "blur(5px)"; g.lineCap = "round"; g.lineJoin = "round"; g.lineWidth = 13;
+    for (const k of [6, 7]) {
+      const gr = g.createLinearGradient(0, y0, 0, y1);
+      gr.addColorStop(0, "rgba(235,120,120,0)"); gr.addColorStop(0.12, "rgba(235,120,120,0.34)"); gr.addColorStop(0.45, "rgba(235,120,120,0.38)");
+      gr.addColorStop(0.8, "rgba(235,120,120,0.24)"); gr.addColorStop(1, "rgba(235,120,120,0.1)");
+      g.strokeStyle = gr; g.beginPath();
+      E[k].forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+      g.stroke();
+    }
+    g.restore();
+  }
+  // crisp dark edges back on top
+  poly(edge(0, false), edge(1, true)); g.fillStyle = cols[0]; g.fill();
+  poly(edge(6, false), edge(7, true)); g.fillStyle = cols[6]; g.fill();
+}
+
+// ---------- clouds ----------
+// cloud colour on the measured cream -> tan scale (see cloudshade.js), extrapolated linearly past the end stops
+function cloudTone(a) {
+  const T = CLOUD_TONE;
+  const k = a < T[1][0] ? 0 : 1, [a0, c0] = T[k], [a1, c1] = T[k + 1], u = (a - a0) / (a1 - a0);
+  return `rgb(${c0.map((v, j) => Math.round(Math.max(0, Math.min(255, v + (c1[j] - v) * u)))).join(",")})`;
+}
+function cloudLayer(g, puffs, li) {
+  // the fitted circles run down the middle of the source keylines (~5 px), so the cream stops 2.5 px inside them
+  const circ = (x, y, r) => { g.beginPath(); g.arc(x, y, r - 2.5, 0, Math.PI * 2); };
+  const S = CLOUD_SHADING[li];
+  // keyline round the outside of the union: stroke every puff, then fill every puff over it
+  g.lineWidth = 10; g.strokeStyle = C.cloudLine;
+  for (const [x, y, r] of puffs) { circ(x, y, r); g.stroke(); }
+  g.fillStyle = cloudTone(S.cream);
+  for (const [x, y, r] of puffs) { circ(x, y, r); g.fill(); }
+  // the airbrushed tan shapes inside the layer, soft-edged, deepening across it
+  g.save();
+  g.beginPath(); for (const [x, y, r] of puffs) { g.moveTo(x + r - 2.5, y); g.arc(x, y, r - 2.5, 0, Math.PI * 2); } g.clip();
+  const [c0, c1, c2] = S.tan, gx = c1 / 1103, gy = c2 / 473, gn = Math.hypot(gx, gy);
+  let cx = 0, cy = 0; for (const [x, y] of S.tanShapes) { cx += x; cy += y; } cx /= S.tanShapes.length || 1; cy /= S.tanShapes.length || 1;
+  const aq = c0 + c1 * (cx - 1103) / 1103 + c2 * (cy - 473) / 473;
+  if (gn > 1e-5) {
+    const ux = gx / gn, uy = gy / gn, t0 = (0.3 - aq) / gn, t1 = (0.75 - aq) / gn;
+    const gr = g.createLinearGradient(cx + ux * t0, cy + uy * t0, cx + ux * t1, cy + uy * t1);
+    for (let k = 0; k <= 6; k++) gr.addColorStop(k / 6, cloudTone(0.3 + (0.45 * k) / 6));
+    g.fillStyle = gr;
+  } else g.fillStyle = cloudTone(Math.max(0.3, Math.min(0.75, aq)));
+  g.filter = "blur(3.5px)";
+  g.beginPath(); for (const [x, y, r] of S.tanShapes) { g.moveTo(x + r, y); g.arc(x, y, r, 0, Math.PI * 2); } g.fill();
+  g.filter = "none";
+  g.restore();
+}
+
+// ---------- sparkles ----------
+function sparkle(g, x, y, rx, ry) {
+  // (fix pass 4: slightly more pinched in the middle of each ray and softened: the source's rays are narrower 8-12 px out and
+  // softer, so wider at half maximum, near the tips)
+  const k = 0.035;
+  g.save(); g.filter = "blur(0.9px)";
+  g.beginPath();
+  g.moveTo(x, y - ry);
+  g.quadraticCurveTo(x + rx * k, y - ry * k, x + rx, y);
+  g.quadraticCurveTo(x + rx * k, y + ry * k, x, y + ry);
+  g.quadraticCurveTo(x - rx * k, y + ry * k, x - rx, y);
+  g.quadraticCurveTo(x - rx * k, y - ry * k, x, y - ry);
+  g.closePath();
+  g.fillStyle = C.sparkle; g.fill();
+  g.restore();
+}
+
+// ---------- wordmark ----------
+const glyphPaths = () => {
+  const out = {};
+  for (const [k, contours] of Object.entries(GLYPHS)) {
+    const p = new Path2D(), outer = new Path2D(), counters = new Path2D();
+    contours.forEach((flat, ci) => {
+      const pts = [];
+      for (let i = 0; i < flat.length; i += 2) pts.push([flat[i], flat[i + 1]]);
+      const n = pts.length;
+      const P = (i) => pts[(i + n) % n];
+      for (const q of [p, ci ? counters : outer]) {
+        q.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 0; i < n; i++) {
+          const p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2), s = 1 / 6;
+          q.bezierCurveTo(p1[0] + (p2[0] - p0[0]) * s, p1[1] + (p2[1] - p0[1]) * s, p2[0] - (p3[0] - p1[0]) * s, p2[1] - (p3[1] - p1[1]) * s, p2[0], p2[1]);
+        }
+        q.closePath();
+      }
+    });
+    out[k] = p;
+    if (contours.length > 1) { out[k + ":o"] = outer; out[k + ":c"] = counters; }
+  }
+  // (fix pass 4: circle re-fitted to the source's keyline, 36 radial samples: centre 1.7 px right and 2.6 px lower, radius 49.1)
+  const stop = new Path2D(); stop.arc(STOP_C[0], STOP_C[1], STOP_C[2], 0, Math.PI * 2);
+  out.stop = stop;
+  return out;
+};
+// the stacked extrusion, fitted to the source outlines (IoU of the dark lines): a light red band to (21,25), a red band
+// to (29,43), a dark edge to (46,54) -- the same offsets for every letter
+const EXT = [[46, 54, "extDark"], [29, 43, "ext2"], [21, 25, "ext1"]];
+
+// fix pass 4: the full stop's own extrusion, fitted to its band edges on the 137.6-138.36 mean. It is not a translated copy
+// of the stop: each band's far end is a circle of its own (fitted to the band's outer edge, lower right), so the bands widen
+// as they recede. [offset of the far circle's centre, its radius, keyline width]: the dark band ends at (+32, +41.6) with
+// r 59.7 and a ~1.5 px outer keyline, the red band at (+16.7, +28.3) r 57.8 with no keyline against the dark, the light red
+// band at (+18.3, +22.2) r 48.1 with a ~3 px keyline.
+const STOP_C = [1575.7, 455.6, 49.1];
+const EXT_STOP = [[32, 41.6, 59.7, "extDark", 3], [16.7, 28.3, 57.8, "ext2", 0], [18.3, 22.2, 48.1, "ext1", 6]];
+function stopExtrusion(g) {
+  const [cx, cy, r0] = STOP_C, N = 48;
+  for (const [ox, oy, r1, key, kw] of EXT_STOP) {
+    const circ = (t) => { g.beginPath(); g.arc(cx + ox * t, cy + oy * t, r0 + (r1 - r0) * t, 0, Math.PI * 2); };
+    if (kw > 0) { g.lineWidth = kw; g.strokeStyle = C.key; for (let s = 1; s <= N; s++) { circ(s / N); g.stroke(); } }
+    g.fillStyle = C[key];
+    for (let s = 1; s <= N; s++) { circ(s / N); g.fill(); }
+  }
+}
+function extrudeOne(g, path, faceCol, outer, counters, crescent, part = "both") {
+  if (part !== "face") for (const [ex, ey, key, kw = 10] of EXT) {
+    const steps = Math.ceil(Math.hypot(ex, ey) / 1.5);
+    g.lineWidth = kw; g.strokeStyle = C.key; g.lineJoin = "round";
+    if (kw > 0) for (let s = 1; s <= steps; s++) { g.save(); g.translate((ex * s) / steps, (ey * s) / steps); g.stroke(path); g.restore(); }
+    g.fillStyle = C[key];
+    for (let s = 1; s <= steps; s++) { g.save(); g.translate((ex * s) / steps, (ey * s) / steps); g.fill(path, "evenodd"); g.restore(); }
+  }
+  if (part === "ext") return;
+  g.fillStyle = faceCol; g.fill(path, "evenodd");
+  if (counters && crescent) {
+    // through the counters (a, p, p, o) the extrusion's inner wall shows as a dark crescent on the lower right: the counter
+    // minus itself shifted up-left
+    const sh = new Path2D(); sh.rect(0, 0, W, H); sh.addPath(counters, new DOMMatrix([1, 0, 0, 1, -8, -9]));
+    g.save(); g.clip(counters); g.clip(sh, "evenodd");
+    g.fillStyle = C.extDark; g.fill(counters);
+    g.restore();
+  }
+  g.strokeStyle = C.key;
+  // (fix pass 3: the face outline is 4.2 px, not 5.5: the source keyline measures 6.0 px across on the top edges against 6.75,
+  // and its inner edge sat 0.65 px too far into the face)
+  if (counters) { g.lineWidth = 4.2; g.stroke(outer); g.lineWidth = 4; g.stroke(counters); }
+  else { g.lineWidth = 4.2; g.stroke(path); }
+}
+
+const SHADOW_BLUR = 14, SHADOW_A = 0.6;
+function wordmark(g) {
+  const P = glyphPaths();
+  // soft shadow round the whole extruded wordmark, heaviest below it. Fix pass 3: measured against the distance from the
+  // wordmark's edge, the source's sky is 21 / 14 / 7 / 3 levels darker at 0 / 8 / 16 / 24 px below it, ~12 at the sides
+  // and ~6 above; the old shadow sat under the extrusion and barely showed. The silhouette (faces plus extrusion) is
+  // dropped 10 px, blurred and laid on at 0.3.
+  const sil = document.createElement("canvas"); sil.width = W; sil.height = H;
+  const sg = sil.getContext("2d");
+  sg.fillStyle = sg.strokeStyle = "#5a1612"; sg.lineWidth = 10; sg.lineJoin = "round";
+  for (const k of ["r", "a", "p", "p2", "o", "r2", "t", "stop"]) for (let s = 0; s <= 24; s++) {
+    sg.save(); sg.translate((46 * s) / 24, (54 * s) / 24); sg.fill(P[k]); sg.stroke(P[k]); sg.restore();
+  }
+  g.save();
+  g.filter = `blur(${SHADOW_BLUR}px)`; g.globalAlpha = SHADOW_A;
+  g.drawImage(sil, 2, 12);
+  g.restore();
+  for (const k of ["r", "a", "p", "p2", "o", "r2"]) extrudeOne(g, P[k], C.face, P[k + ":o"], P[k + ":c"], true);
+  // the t's hook lies in front of the full stop (its white face runs to x 1527 over the stop's left edge at y 420-460),
+  // so the stop goes in between the t's extrusion and the t's face
+  extrudeOne(g, P.t, C.face, undefined, undefined, true, "ext");
+  stopExtrusion(g);
+  extrudeOne(g, P.stop, C.stop, undefined, undefined, false, "face");
+  extrudeOne(g, P.t, C.face, undefined, undefined, true, "face");
+}
+
+// ---------- tagline ----------
+function tagline(g) {
+  g.save();
+  g.textBaseline = "alphabetic";
+  // size from the measured cap height (658 -> 697), then each word stretched to its measured ink width
+  g.font = "900 100px Satoshi";
+  const capH = g.measureText("R").actualBoundingBoxAscent;
+  const size = (39.5 / capH) * 100;
+  g.font = `900 ${size.toFixed(2)}px Satoshi`;
+  for (let i = 0; i < TAG_WORDS.length; i++) {
+    const [word, x0, x1] = TAG_WORDS[i];
+    const m = g.measureText(word);
+    const inkW = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+    const sx = (x1 - x0 + 1) / inkW;
+    g.save();
+    // (fix pass 2: the maroon words sat ~0.8 px high and printed ~12% light against the source)
+    // (fix pass 4: the cream stems measure ~1 px wider than they were, mostly on the right edge, and every edge in the source
+    // rises over ~2.9 px against 2.0: the cream words are stroked 0.8 px wider and nudged 0.3 px right, all words softened)
+    g.translate(x0 + (i < 4 ? 0 : 0.3), TAG_BASELINE + (i < 4 ? 0.8 : 0)); g.scale(sx, 1);
+    g.fillStyle = g.strokeStyle = i < 4 ? C.tagMaroon : C.tagCream;
+    g.filter = "blur(0.7px)";
+    // the source face is a touch heavier than Satoshi Black: thicken the strokes slightly
+    g.lineWidth = i < 4 ? 2.4 : 1.8; g.lineJoin = "round";
+    g.strokeText(word, m.actualBoundingBoxLeft, 0);
+    g.fillText(word, m.actualBoundingBoxLeft, 0);
+    g.restore();
+  }
+  g.restore();
+}
+
+// ---------- print grain ----------
+// Two octaves of smooth value noise (blotches of ~4 and ~13 px), fine speckle, and the printed halftone: dark dots on a
+// ~7.5 px screen at 30 deg, jittered: soft and faint in the shaded parts of the clouds, faint on the ribbons, faint and
+// patchy on the sky. Fix pass 2: the static texture was weakened (it measured ~1.5x the source's fine and mid-scale
+// variation once post.js's moving grain is added) and highlights print cleaner than mid-tones.
+function lattice(w, h, seed) {
+  const r = rng(seed), a = new Float32Array(w * h);
+  for (let i = 0; i < a.length; i++) a[i] = r() * 2 - 1;
+  return a;
+}
+function grain(g, mask) {
+  const img = g.getImageData(0, 0, W, H), d = img.data;
+  const md = mask.getContext("2d").getImageData(0, 0, W, H).data;
+  const s1 = 3.8, s2 = 13;
+  const dims = (s) => [Math.ceil(W / s) + 3, Math.ceil(H / s) + 3];
+  const [w1, h1] = dims(s1), [w2, h2] = dims(s2);
+  const L1 = lattice(w1, h1, 4011), L2 = lattice(w2, h2, 4012), r = rng(4013);
+  const fade = (t) => t * t * (3 - 2 * t);
+  const sample = (L, w, x, y) => {
+    const ix = x | 0, iy = y | 0, fx = fade(x - ix), fy = fade(y - iy);
+    const a = L[iy * w + ix], b = L[iy * w + ix + 1], c = L[(iy + 1) * w + ix], e = L[(iy + 1) * w + ix + 1];
+    return a + (b - a) * fx + (c - a) * fy + (a - b - c + e) * fx * fy;
+  };
+  // halftone screen: ~7.8 px at 30 deg, each dot displaced up to 0.3 of a cell and sized +-25% (the source's screen is
+  // irregular: nearest-neighbour spacing 6.1-6.3 px, dots 3-5 px across with crisp edges)
+  const P = 7.8, ca = Math.cos(Math.PI / 6) / P, sa = Math.sin(Math.PI / 6) / P;
+  const h01 = (i, j, k) => { let h = Math.imul(i * 73856093 ^ j * 19349663 ^ k * 83492791, 0x5bd1e995); h ^= h >>> 15; return (h >>> 0) / 4294967296; };
+  const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+  // measured sky dot strength (data.js), bilinear on its 25 x 12 grid
+  const skyDots = (x, y) => {
+    const gx = x / (2205 / 24), gy = y / (945 / 11), ix = Math.min(23, gx | 0), iy = Math.min(10, gy | 0), fx = gx - ix, fy = gy - iy, G = SKY_DOTS;
+    return G[iy][ix] * (1 - fx) * (1 - fy) + G[iy][ix + 1] * fx * (1 - fy) + G[iy + 1][ix] * (1 - fx) * fy + G[iy + 1][ix + 1] * fx * fy;
+  };
+  const SKYK = 0.095;
+  // cloud shade measured against the airbrush colours (cloudshade.js)
+  const lightL = 0.299 * 245 + 0.587 * 231 + 0.114 * 207, tanL = 0.299 * 226 + 0.587 * 199 + 0.114 * 166;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      const cloud = md[i] / 255, rib = md[i + 2] / 255;
+      const Lp = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      // the fine blotches are strongest in the mid-tones; highlights (letter faces, cream stripes) print cleaner
+      const hiCut = 1 - 0.7 * Math.min(1, Math.max(0, (Lp - 170) / 60));
+      // fix pass 3: the sky and the letter faces carry no fine static texture in the source (a 12-frame mean is as flat
+      // as the leftover moving grain), so the fine blotches and speckle are kept to the clouds and ribbons
+      const paper = Math.max(cloud, 0.6 * rib);
+      let n = 0.045 * hiCut * paper * sample(L1, w1, x / s1 + 1, y / s1 + 1) + 0.02 * hiCut * sample(L2, w2, x / s2 + 1, y / s2 + 1);
+      const sp = r();
+      if (sp < 0.01) n += 0.05 * hiCut * paper; else if (sp > 0.992) n -= 0.05 * hiCut * paper;
+      n += (r() - 0.5) * 0.012 * paper;
+      let dot = 0;
+      const sky = 1 - md[i + 1] / 255, sd = sky > 0.01 ? skyDots(x, y) : 0;
+      if (cloud > 0.01 || rib > 0.01 || sd > 0.05) {
+        const u = x * ca + y * sa, v = -x * sa + y * ca, iu0 = Math.round(u), iv0 = Math.round(v);
+        let best = 1e9, bs = 1;
+        for (let a2 = -1; a2 <= 1; a2++) for (let b2 = -1; b2 <= 1; b2++) {
+          const iu = iu0 + a2, iv = iv0 + b2;
+          const du = (u - iu - 0.6 * (h01(iu, iv, 1) - 0.5)) * P, dv = (v - iv - 0.6 * (h01(iu, iv, 2) - 0.5)) * P;
+          const dd = du * du + dv * dv;
+          if (dd < best) { best = dd; bs = 0.75 + 0.5 * h01(iu, iv, 3); }
+        }
+        const dist = Math.sqrt(best);
+        if (cloud > 0.01) {
+          // crisp dots where the airbrush has shaded the cloud, growing with the shade
+          const shade = Math.min(1.2, Math.max(0, (lightL - Lp) / (lightL - tanL)));
+          const k = clamp01((shade - 0.25) / 0.5);
+          const rd = (0.8 + 1.6 * Math.min(1, shade)) * bs;
+          dot += cloud * 0.14 * k * k * (3 - 2 * k) * clamp01((rd + 0.6 - dist) / 1.2);
+        }
+        if (rib > 0.01) dot += rib * 0.075 * (1 - 0.7 * clamp01((Lp - 140) / 80)) * clamp01((2.2 * bs - dist) / 1.6);
+        if (sd > 0.05) dot += sky * SKYK * sd * clamp01((1.5 * bs + 0.6 - dist) / 1.2);
+      }
+      const m = (1 + n) * (1 - dot);
+      d[i] = d[i] * m; d[i + 1] = d[i + 1] * m; d[i + 2] = d[i + 2] * m;
+    }
+  }
+  g.putImageData(img, 0, 0);
+}
+
+// ---------- the static plate ----------
+let plate = null;
+function bandOutline(g, rows) {
+  const per = 12, ys = crSample(rows.map((r) => r[0]), per), x0 = crSample(rows.map((r) => r[1]), per), x7 = crSample(rows.map((r) => r[8]), per);
+  g.beginPath();
+  for (let i = 0; i < ys.length; i++) (i ? g.lineTo(x0[i], ys[i]) : g.moveTo(x0[i], ys[i]));
+  for (let i = ys.length - 1; i >= 0; i--) g.lineTo(x7[i], ys[i]);
+  g.closePath(); g.fill();
+}
+function outlinePath(rows) {
+  const per = 12, ys = crSample(rows.map((r) => r[0]), per), x0 = crSample(rows.map((r) => r[1]), per), x7 = crSample(rows.map((r) => r[8]), per);
+  const p = new Path2D();
+  for (let i = 0; i < ys.length; i++) (i ? p.lineTo(x0[i], ys[i]) : p.moveTo(x0[i], ys[i]));
+  for (let i = ys.length - 1; i >= 0; i--) p.lineTo(x7[i], ys[i]);
+  p.closePath();
+  return p;
+}
+export function buildMask() {
+  // red = cloud, green = anything that is not sky, blue = ribbon; painted in the plate's own stacking order
+  const m = document.createElement("canvas"); m.width = W; m.height = H;
+  const g = m.getContext("2d");
+  g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+  const clouds = (layers) => { g.fillStyle = "#ff0"; for (const L of layers) for (const [x, y, r] of L) { g.beginPath(); g.arc(x, y, r + 3, 0, Math.PI * 2); g.fill(); } };
+  clouds(CLOUDS_BACK);
+  g.fillStyle = "#0ff";
+  for (const k of ["leftB", "leftA", "rightB", "rightA"]) bandOutline(g, RIBBONS[k]);
+  clouds(CLOUDS_FRONT);
+  g.fillStyle = "#0f0";
+  const P = glyphPaths();
+  for (const k of Object.keys(P)) for (let s = 0; s <= 12; s++) { g.save(); g.translate(s * 3.2, s * 4.7); g.lineWidth = 12; g.strokeStyle = "#0f0"; g.stroke(P[k]); g.fill(P[k]); g.restore(); }
+  g.fillRect(540, 650, 1090, 65);
+  for (const [x, y, rx, ry] of SPARKLES) g.fillRect(x - rx, y - ry, 2 * rx, 2 * ry);
+  g.fillRect(1490, 190, 210, 270);
+  return m;
+}
+function buildPlate() {
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const g = c.getContext("2d");
+  sky(g);
+  skyCorrection(g);
+  CLOUDS_BACK.forEach((L, i) => cloudLayer(g, L, i));
+  band(g, RIBBONS.leftB, { name: "leftB" });
+  const ribL = new Path2D(); for (const k of ["leftB", "leftA"]) ribL.addPath(outlinePath(RIBBONS[k]));
+  band(g, RIBBONS.leftA, { name: "leftA", rose: { y0: 300, y1: 620, clip: ribL } });
+  band(g, RIBBONS.rightB, { name: "rightB" }); band(g, RIBBONS.rightA, { name: "rightA" });
+  CLOUDS_FRONT.forEach((L, i) => cloudLayer(g, L, CLOUDS_BACK.length + i));
+  for (const [x, y, rx, ry] of SPARKLES) sparkle(g, x, y, rx, ry);
+  wordmark(g);
+  tagline(g);
+  grain(g, buildMask());
+  return c;
+}
+
+// A soft dark halo round the owl (fix pass 3): the source's sky is ~6-8 / 4-5 / 2-3 levels darker at 4 / 7 / 10 px from
+// the owl's outline. Drawn per frame from the owl's own silhouette (it blinks and tilts), blurred.
+const HALO_X = 1440, HALO_Y = 150, HALO_W = 320, HALO_H = 350;
+let halo = null;
+function owlHalo(ctx, t) {
+  if (!halo) { halo = document.createElement("canvas"); halo.width = HALO_W; halo.height = HALO_H; }
+  const g = halo.getContext("2d");
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; g.filter = "none";
+  g.clearRect(0, 0, HALO_W, HALO_H);
+  g.translate(-HALO_X, -HALO_Y); drawOwl(g, t); g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = "source-in"; g.fillStyle = "#4a1010"; g.fillRect(0, 0, HALO_W, HALO_H);
+  g.globalCompositeOperation = "source-over";
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.filter = "blur(7px)"; ctx.globalAlpha = 0.25; ctx.drawImage(halo, HALO_X, HALO_Y);
+  ctx.restore();
+}
+
+// Paint the full card at film time t (opaque). The plate is built once (~1 s); a frame is one blit plus the owl.
+export function paintCard(ctx, t) {
+  if (!plate) plate = buildPlate();
+  ctx.drawImage(plate, 0, 0);
+  owlHalo(ctx, t);
+  drawOwl(ctx, t);
+}
+
+// For the previous shot's owner: the card fading in over whatever is already on ctx. The dissolve starts at 135.78, inside
+// s28's time (PLAN cuts to s40 at 136.0); s40 composites the rest itself, so this only draws before 136.0.
+let layer = null;
+export function overlayEndCard(ctx, t) {
+  const a = cardAlpha(t);
+  if (a <= 0 || t >= 136.0) return;
+  if (!layer) { layer = document.createElement("canvas"); layer.width = W; layer.height = H; }
+  const g = layer.getContext("2d");
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  paintCard(g, t);
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = a;
+  ctx.drawImage(layer, 0, 0);
+  ctx.restore();
+}
+
+// The static card with the owl in its resting pose: what the moving grain's gain map is measured on (grain.js).
+export function grainBase() {
+  if (!plate) plate = buildPlate();
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d");
+  g.drawImage(plate, 0, 0);
+  drawOwl(g, 138.0);
+  return c;
+}
+
+export function releaseCard() { plate = null; layer = null; halo = null; }

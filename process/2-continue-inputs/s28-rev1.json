@@ -1,0 +1,86 @@
+{
+ "fidelity": "approx",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "129.28 -> 129.32 (s27/s28 boundary)",
+   "what": "The source has no cut here. It is one continuous orbit (source blurred step 12.3 at σ4, the same as its neighbouring frames). The render pops hard: the step is 26.2, against 6–8 for the render's own neighbouring frames. s27's last frame shows a full-body owl in headphones at about (1180–1330, 520–800), a round face, a pencil on the desk and the mug at x≈1720–1880. s28's first frame changes all of it at once: the owl becomes a small peek at (1252–1310, 540–643); the hair, hood and face are redrawn (torn black hair mass); a left-edge plant, window stripes and a sun shaft appear; and the mug jumps about 70 px right. The fidelity log calls this a 'cut in', but the source is continuous.",
+   "fix": "Make the two drawings agree at the seam. Draw s28's key A (figK.js 'A', 129.32–129.60) and its 129.32 room layers so they equal s27's 129.28 drawing moved on by one camera frame: reuse s27's figure/owl/mug drawing (read-only import, as s28 already does with s40/card.js) and warp it with s28's trackMap, or agree a single shared key with the s27 owner. Acceptance: render step 129.28→129.32 of 13 or less at σ4, owl eye at (1269,575) and beak at (1244,610) in both frames, the same mug position, the same left-edge props."
+  },
+  {
+   "severity": "high",
+   "at": "130.32 (B→L hand-over, figKeys 130.28–130.36)",
+   "what": "For one frame the whole designer is about 50% transparent: window stripes and the wall show through the hood and beanie. The L 'clip' underlay leaves a hard rectangle, with a vertical edge at x≈469 and a horizontal edge at y≈425, and a horizontal seam cuts through the face. The cause: B is drawn at alpha 1−r and L at alpha r, each straight onto the room, so where the lid-quad clip does not cover, the figure never reaches full opacity. The fidelity log calls this 'soft ghosting'; in the render it reads as a half-transparent figure.",
+   "fix": "Composite the keys into one offscreen canvas first: draw B at full opacity, then L at alpha r on top, then blit that canvas at alpha 1. Or hard-switch B→L on a single frame (130.32); on a moving camera that reads better than a 50% ghost. Replace the hard lid-quad+70 px clip with a feathered mask (≥20 px blur)."
+  },
+  {
+   "severity": "high",
+   "at": "129.64–130.28 (A→B hand-over and lid fill-in)",
+   "what": "At 129.64–129.68 the image doubles: the left shoulder contour appears twice, 40–60 px apart, and there is a translucent chair ghost at x≈200–330 and a doubled beanie edge. From 129.64 to 130.28 a straight horizontal seam crosses the face and hair at y≈415–425, just above the lid's top edge. Above it is key B's blotchy hair; below it is key A/L's flat skin. It is clearly visible at 129.76 (x≈770 to the lid), 129.92, 130.00 and 130.24. The log calls it a vertical seam from 129.72 to 129.97; it is a horizontal seam and lasts much longer.",
+   "fix": "Use the same single offscreen composite as for 130.32, so the older key is fully covered wherever the newer key is opaque. Feather the fill-in region by ≥20 px, or redraw the strip above the lid from one key only. Check every frame from 129.60 to 130.40 with compare.sh."
+  },
+  {
+   "severity": "high",
+   "at": "129.32–130.36 orbit keys A/B (figK.js, keysData.js)",
+   "what": "The designer does not look like the source during the orbit. His face is the focus for about 1 s here.\n- **Hair:** a black mass cut from colour-class regions, with beige 'leopard-spot' holes and torn, jagged edges. The source has inked strands with highlights.\n- **Face:** a flat pink blob with hardly any features.\n- **Beanie:** merges into the hood with a ragged top edge; there is no ribbed cuff band.\n- **Right hand:** entirely missing. The source shows fingers draped over the forearm at about (1180–1330, 560–690) from 129.32 to 129.9, and resting on the keyboard at about (1230–1290, 330–400 in panel space) from 130.0 to 130.3. The render shows a pale plank forearm covered in red-brown dash hatching instead.\n- **Rolled sleeve cuff:** missing.",
+   "fix": "Draw the hair as tapered strand strokes (ink.js taper, 3–12 px wide, black with 2–3 lighter highlight strands per lock) inside the measured hair outline; drop the skin-gap rings. Give the beanie a distinct cuff band with vertical rib hatching and a dark lower contour. Add the right hand at its measured place: 4 fingers, knuckle creases, nails, and a dark contour of 3–4 px. Add the rolled green cuff at the wrist. Remove the uniform dash hatching on the forearm."
+  },
+  {
+   "severity": "medium",
+   "at": "131.36–136.00 locked figure (figL.js), about 69% of the segment",
+   "what": "The likeness is weak even though placement is good; head and hand are within 0–4 px of the source.\n- **Face:** too round, wide and flat; the jaw and chin dissolve into the forearm.\n- **Open eyes:** large anime almonds with white catchlights. The source's are heavy-lidded sleepy slits with lower-lash hatching and a thick dark upper-lid line.\n- **Mouth:** a cat-like ':3' curve with pink fill; the source's is a subtle closed smile.\n- **Hair:** flat black with notched, barcode-like strand cuts.\n- **Mechanical hatching:** cheek and forearm carry uniform short dashes (stubble/hairy-arm look); the hoodie is covered in uniform vertical 'rain' dashes.\n- **Hand:** fingers are a pale blob with white nail dots.\n- **Detail:** fine-detail energy is well below the source (high-pass std 14 vs 22, −36%).",
+   "fix": "Redraw the face on the measured lines:\n- a longer face with a defined jaw to the chin at about (1230,540) and neck shadow into the black T-shirt;\n- open eyes as narrow slits (≈0.4 of the current aperture), with a 4–5 px dark upper lid and a hatched lower lid, and no catchlight;\n- the mouth as one 2 px line plus a short lower-lip shadow, no pink fill;\n- blush as 6–10 diagonal hatch strokes per cheek instead of a gradient blob.\nReplace the uniform dash textures on the hoodie, cheek and forearm with fold-following strokes placed only in shadow areas. Give each finger an outline and a knuckle crease."
+  },
+  {
+   "severity": "medium",
+   "at": "whole segment: light and tone",
+   "what": "The source's main sunbeam is missing. It is a wide warm diagonal band from the upper centre-right across the window, the wainscot and the right cabinet, with dust specks drifting slowly down; the render only hints at it with thin pink stripes. In the locked view the wainscot under the beam is 10 levels too dark (σ10 mean 142 vs 152) and the cabinet face 11 too bright (189 vs 178), so the beam's gradient is lost. In the orbit, the left third lacks the yellow sun glow (b* 3–7 lower at 129.75–130.25). The left cabinet zone is 18–25 L too bright at 130.25–130.5, and the bottom-right desk 7–19 L too bright through the whole orbit. Saturation is 5–9 lower overall.",
+   "fix": "Paint the beam as a screen-blended layer with measured falloff: its core runs roughly from (1500,0) to (2150,760), about 250 px wide, peaking at +25 L, and it should fill the wainscot at (1950–2150, 450–700) to about 152. Add 15–25 seeded dust motes that drift slowly as a function of t. In the orbit, add a yellow screen glow over the left third, warm and darken the left drawer cabinet, and darken the bottom-right desk by about 12 L."
+  },
+  {
+   "severity": "medium",
+   "at": "room props (roomL.js / roomX.js)",
+   "what": "Several props are the wrong shape or missing:\n- **Locked right plant:** a broad 7-leaf rosette at about (1683–1863, 387–493). The source has a tall narrow-leaf plant at (1714–1841, 333–473): wrong species and about 60 px too short.\n- **Purple canister** at (1634–1701, 433–553): a flat rectangle; the source's is a rounded thermos with a lid band and highlight.\n- **Left drawer cabinet (130.25–130.75):** drawn as a narrow pale single column, about half the width of the source's two-column, six-drawer hatched cabinet.\n- **Left edge at 129.32–129.6:** the plant is 2.2× too wide and its pot about 40 px low; the canister is clipped off the frame; the yellow cubby with pink/purple books at (4–121, 521–829) is missing.\n- **Missing entirely:** the book lying on the desk and the black charging cable at lower left in the locked view (about 0–250, 780–946), and the cable across the desk front in the orbit.\n- **Bookshelf jars and glassware:** reduced to plain blocks.",
+   "fix": "Redraw the right plant as about 12 narrow lanceolate leaves on a 140 px tall clump over the existing white pot. Give the canister a rounded top, a darker lid band and a specular stripe. In roomX, widen the left cabinet to two drawer columns at its measured position. Fix the 129.32 left-edge plant's size and pot position, and add the cubby with books. Add the desk book and cable."
+  },
+  {
+   "severity": "medium",
+   "at": "figLdata.js / keysData.js (compliance and quality)",
+   "what": "The hair 'rings (outer + gaps)' and the skinF/dark polygons are automatic colour-class segmentations of source frames, vectorised at 1–5 px vertex spacing (for example [1060,292],[1066,294],[1070,299]…; about 2,000 vertices in total). That amounts to a posterised trace of source pixels, which is close to the source-derived embedding this rebuild was meant to remove. It is also the direct cause of the blotchy, leopard-spot hair.",
+   "fix": "Keep only coarse measured outlines (≤40 vertices per region; silhouette, beanie and face boundary). Draw all inner hair structure by hand as strands, not from traced gap masks."
+  },
+  {
+   "severity": "low",
+   "at": "131.36–135.8 breathing (shot.js CPS/breath)",
+   "what": "The timing is right, but the displacement is spread over the wrong parts. Measured against 131.8 on the plateau at 133.0 (render vs source):\n- beanie +4.5 px vs +7.5\n- fingers +2.1 vs +3.9\n- forearm under the head, at (1000–1350, 640–760): +5.5 vs +2.2 (the head CP, σ140, bleeds into the arm)\n- left shoulder +1.2 px (dx +1.1) vs +0.5\nThe chin/mouth is correct (+6.9 vs +6.8).",
+   "fix": "Shrink the head CP (1200,540) to σ≈100. Add a beanie CP at about (1480,170), σ120, driven to 1.25× BREATH beanie dy. Add a forearm CP at (1150,710), σ100, at 0.3× head dy. Set the hand CP to about 1.8× its current dy. Pin the shoulder with a zero-displacement CP at (720,330)."
+  },
+  {
+   "severity": "low",
+   "at": "orbit→lock 131.32 -> 131.36",
+   "what": "The shaft layer (S.shaft, screen) is only composited in the locked branch, and the orbit's desk and shelf layers differ slightly from S.room. The switch pops for one frame: the render step is 2.9 against the source's 1.4. The changes are concentrated in the upper-left diagonal wall band and the bottom-left desk and shelf (x 0–330, y 330–946).",
+   "fix": "Also apply the shaft in the orbit, warped by Hplane(REF, tf, BACK), and fade the orbit room layers into S.room over 131.24–131.36 instead of switching on one frame."
+  },
+  {
+   "severity": "low",
+   "at": "eye close/open (eyeK)",
+   "what": "The source eye narrows from 133.08 and is fully shut by 133.28; it reopens from about 135.10 and is open by 135.22. The render ramps 133.04–133.40, reaching full shut about 3 frames late, and opens 134.96–135.16, starting 3–4 frames early.",
+   "fix": "eyeK: close linearly over 133.08→133.28 and open over 135.08→135.22."
+  },
+  {
+   "severity": "low",
+   "at": "129.72–129.82 key A/B silhouette",
+   "what": "The left shoulder contour sits about 25–35 px left of the source's (edge overlay). The lid, beanie top, mug, shelves, speakers and window lines otherwise align within a few px, so the camera and lid measurements hold up well.",
+   "fix": "Nudge key B's silhouette by about +30 px in x along the shoulder from (330,400) to (420,560) in key-frame coordinates, or add a correction point to that key's track residual grid."
+  },
+  {
+   "severity": "low",
+   "at": "global, not s28",
+   "what": "On flat areas (for example the laptop lid) there is a regular row banding and grid with a period of about 5.2 px. It is not in the source. s27 and s40 render frames have the same banding, so it comes from the global grade or pipeline, not from s28.",
+   "fix": "Report to the post.js owner; no s28 change is needed."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "s28 rates approx, and only just. The camera, lid and timing are measured well, but the drawing is weak and three hand-over artifacts are clearly visible.\n\n**What works:**\n- The staging is right. The orbit camera, lid corners and figure placement track the source closely: in edge overlays the lid, silhouette, mug, shelves and speakers mostly overlap, and in the locked view head and hand are within 0–4 px.\n- The locked view's zone colours are within about 10 L of the source.\n- The end-card dissolve and the hand-over into s40 at 136.0 are smooth.\n- The beat timing is correct: the orbit settles at 131.36 and the eyes close and reopen at about the right times (within 3–4 frames).\n\n**Numbers** (blurred mean abs diff, 8-bit):\n- Orbit: about 13.4 at σ12 and 16.2 at σ4.\n- Locked: about 11.0 at σ12 and 14.1 at σ4.\n- Fine-detail energy is 30–36% below the source; saturation is 5–9 lower.\n\n**What fails, most visible first:**\n1. **Boundary pop at 129.28→129.32.** The source is one continuous orbit with no cut. The render's step there is 26 against 12 in the source: the owl, figure, mug and props are all redrawn at once.\n2. **130.32 hand-over.** The whole figure is half-transparent for one frame, with a rectangular clip box.\n3. **129.64–130.28.** The image doubles at 129.64–129.68, and a horizontal seam cuts across the face until 130.28.\n4. **Orbit keys, about 1 s.** The hair is a blotchy traced mass, the face a pink blob, and the right hand is missing entirely.\n5. **Locked view.** The face is too round, with anime eyes and a ':3' mouth. Mechanical dash hatching covers the hoodie, cheek and forearm.\n6. **Light.** The main sunbeam and its dust are missing.\n7. **Room props.** The plant and canister are the wrong shape, the left cabinet is half width, and the book and cable are missing.\n8. **Breathing.** The motion is spread over the wrong parts: the beanie moves too little and the forearm too much.\n\n**Fidelity log.** It understates the problems. It calls the 130.32 frame 'soft ghosting' and the seam 'vertical, 129.72–129.97'. It does not mention the boundary pop or the missing orbit hand.\n\n**Determinism.** The same timestamps (129.32, 129.75, 133.25, 135.75) rendered in separate compare runs are bit-identical: 0 differing pixels. The render logs showed no errors, placeholders or red bars.\n\n**Hard rules.** The auto-traced hair and skin gap polygons in figLdata.js and keysData.js are a compliance risk: they are close to the source-derived tracing this rebuild was meant to remove.\n\n**Clean-up.** I deleted the outputs this run created: the snapshots/s28-rev1-{dense,bound,det,mo1,mo2,hand,src} folders and my new logs. I also restored the older snapshots/s28-rev1-det.log, which my run had overwritten, to its original 95 bytes and timestamp. The older s28-rev1*.log files were not touched. Every finding above can be re-rendered with tools/compare.sh at the listed times."
+}

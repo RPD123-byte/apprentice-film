@@ -1,0 +1,13 @@
+<!doctype html><html><body><canvas id="c" width="1400" height="700"></canvas><script type="module">
+const c = document.getElementById("c"), g = c.getContext("2d");
+g.fillStyle = "#222"; g.fillRect(0, 0, 1400, 700);
+const buf = await (await fetch("/assets/fonts/Fraunces-Variable.ttf")).arrayBuffer();
+const tries = [["FA", "'SOFT' 0, 'WONK' 1, 'opsz' 144"], ["FB", "'SOFT' 100, 'WONK' 1, 'opsz' 9"], ["FC", "'SOFT' 100, 'WONK' 0, 'opsz' 40"], ["FD", "'SOFT' 50, 'WONK' 1, 'opsz' 20"]];
+let info = [];
+for (const [fam, vs] of tries) {
+  try { const f = new FontFace(fam, buf, { weight: "100 900", variationSettings: vs }); await f.load(); document.fonts.add(f); info.push(fam + " ok " + (f.variationSettings || "?")); } catch (e) { info.push(fam + " err " + e.message); }
+}
+g.fillStyle = "#eee";
+tries.forEach(([fam], i) => { g.font = `900 120px ${fam}`; g.fillText("Imagination", 20, 140 + i * 160); });
+window.__info = info.join(" | "); window.__done = true;
+</script></body></html>

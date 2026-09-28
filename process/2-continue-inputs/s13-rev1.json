@@ -1,0 +1,80 @@
+{
+ "fidelity": "close",
+ "defects": [
+  {
+   "severity": "high",
+   "at": "src/shots/s13/celHP.js (1.69 MB) plus strokesC/strokesD/silC/silD/feetC/farC/headE/chestC/sheenC, i.e. the whole shot",
+   "what": "This is a rules problem, not something you can see in the frame. Most of the drawing is an automatic vector trace of the source frames. celHP.js holds about 111,000 polygon vertices: 35 zones posterised to 7-8 levels from the source's own frames, each group filled with the median source value run back through the grade. Those frames are the pixel median of 891-898 for pose C, the mean of 901-902 for pose D, and frame 912 for pose E. The zones cover the headphones, beaks, bandages, eyes, talons, tail, flank, crown, wing root and the A/B overlays. On top of that, the ink strokes, silhouettes and wing sheen are ridge-traces and threshold contours of the same frames. The data holds no raw pixels, but it is a lossy vector copy of the source image. That breaks the spirit of 'everything drawn by code, never embed any frame/crop/pixel of the source'. The builder's own log flags this under 'Method caveat' and leaves the decision to someone else.",
+   "fix": "Get an explicit ruling from whoever owns the rule before counting this shot as done. If traces are not allowed, rebuild the celHP zones as authored parametric parts: the owlInk.js headphone, beak and bandage kit, and the F4 kit plumage and softShade. Fit them to a few dozen measured control points per part (ellipse centres and axes for cup, shell and plate; beak tip and gape points; bandage corners). Place them with the per-frame affine fits PLACE/FIX, which are fine to keep because they are low-DOF measurements. Redraw the plumage strokes from authored feather-row rules rather than ridge traces. Expect sigma-8 MAE to rise from about 1.65 toward 2.5-3."
+  },
+  {
+   "severity": "medium",
+   "at": "Pose D, frames 901-911 (36.04-36.47 s); fur tuft left of the left cup at x 806-845, y 290-395",
+   "what": "The pale cheek tuft sticking out beside the left headphone cup renders as a white outline around a dark-grey core, with a dark curved inner stroke at x≈815-830, y≈300-380. In the source it is a solid pale tuft with fine hairlines. Box mean render vs source: 901 102.7/117.0, 905 101.5/114.8, 907 93.6/112.1, 909 91.3/124.4, 910 92.1/124.6, 911 95.6/113.6. It is the worst block in the whole segment: sigma-3 MAE 20.6 on block (810-870, 330-390), signed -17. The outline itself sits within 1-4 px of the source, so this is a fill/tone error, not a placement error.",
+   "fix": "In the headF/sideD layer (the hpD/lfD cel zones), fill the tuft polygon (≈ 806-845 x 290-395) with plumage value ≈0.85 pre-grade (target ≈205-215 after the grade at its centre). Delete the dark inner stroke. Add 3-4 thin grey hairlines along the tuft's long axis (about -60°). The source brightens the tuft further at 909-910 (124 against 113-117), so add about +10 levels for those two frames."
+  },
+  {
+   "severity": "medium",
+   "at": "Headphones in every pose: 3/4 cup plate and shell (1380-1500, 160-330), headband (1180-1300, 0-60), D/E cups and cushions",
+   "what": "The chrome and cushions read as a posterised cel: 7-8 flat grey steps with hard boundaries where the source has smooth chrome gradients and pale crumpled streaks on the leather. The speaker mesh and headband mesh are a soft, low-contrast checker lattice on a 9 px tile (period 4.5 px). The source has a crisp, high-contrast ±45° diamond cross-hatch at about 3 px pitch. This is obvious at 1:1 and at 3x.",
+   "fix": "In cel.js meshTile/latticeTile, set the lattice period to 3.0-3.2 px (tile 6 or 9 with k = 2π/3.1), draw 1 px dark lines at lo≈0.2 and hi≈0.75 pre-grade, and add no extra blur. Replace the chrome ring's stepped levels with a linear gradient along each band's normal, or feather the cel level boundaries by 1-1.5 px. Add 6-10 pale (0.55-0.65) crumple streaks on each cushion."
+  },
+  {
+   "severity": "low",
+   "at": "Near-wing tip primaries (1980-2070, 500-620); poses C, E and return (890-898, 912-922)",
+   "what": "The dark separation line between the outer primaries is about 70 px short. In the source it runs from about (1990,520) to (2060,620); in the render it stops at about (2013,540). The block reads +10 to +11 levels too bright at sigma 3 (blocks at 1980/2010, 540). This is the largest steady error in the C hold.",
+   "fix": "Extend that wing stroke along (1990,520) → (2030,570) → (2060,620), 2-3 px wide, value ≈0.3, tapering at the tip."
+  },
+  {
+   "severity": "low",
+   "at": "Turn frames 899-900 (35.96-36.03 s); lower-left belly contour from (1000,600) to (1300,860)",
+   "what": "The render keeps pose C's belly contour, but the source redraws it 3-5 px inward. That leaves a continuous lit band where the source is black: 223 px lit in the render and black in the source (C frames have only 7-13), and sigma-3 blocks at +9 to +13 around (1050-1260, 660-870). It lasts 2 frames.",
+   "fix": "For fi 899-900, clip the body layer with the C contour inset by 4 px along that arc. Or blit the belly-edge region with its own measured shift of (+1.5, -2.75) instead of the whole-body fit."
+  },
+  {
+   "severity": "low",
+   "at": "Silhouette edge and glow, all frames; worst on the left chest/belly edge (1020-1110, 560-720) and down to (1300, 880)",
+   "what": "The render's left chest edge is a hard, saw-toothed cut-out with angular white chips pointing into the black. The source edge is softer, with a 1-3 px grey falloff and fewer spikes. The glow is also shaped differently. Just outside the silhouette the source is brighter: +0.7 at 1-3 px, +4.3 at 3-6 px, +2.7 at 6-10 px, +1.4 at 10-15 px (frame 890). Further out the render is brighter: +1.1 at 40-80 px, +0.9 at 80-160 px, +0.9 at 160-300 px. As a result the render's frame mean runs 0.3-0.9 levels high through 890-922.",
+   "fix": "Feather the body and head silhouette masks by about 1.2 px. Remove or round the 4-6 angular chips at x 1035-1090, y 570-720. For the glow, either lower grade().halo from 0.42 to about 0.3 and add an in-shot rim light (a 6-8 px soft white stroke outside the silhouette at about 3% alpha), or raise it with the post.js owner. This is not a re-grade inside the shot."
+  },
+  {
+   "severity": "low",
+   "at": "Pose A, frames 884-885 (35.36-35.43 s)",
+   "what": "There are two problems. First, a scratchy grey patch with dark hatch lines at (948-998, 483-541), where the raised far wing meets the chest; in the source that spot is white fur with a single dark fringe. Second, the top covert tip of the near wing at (1650-1760, 240-290) has a dark hook or notch and a longer, flatter white spike than the source; block (1680-1740, 240-390) reads +7 to +11 levels.",
+   "fix": "Mask the ovA cel traces out of the box (948-998, 483-541) and let the plumage show through with one fringe stroke. Reshape the covert tip to end at about x=1740 and remove the dark hook stroke near (1700, 260)."
+  },
+  {
+   "severity": "low",
+   "at": "Pose E, frame 912 (36.48 s); right eye",
+   "what": "The upper-right arc of the right eye rim, (1258-1353, 250-300), sits about 5 px inside the source's rim. In this in-between drawing the source's right eye is opening wider, so the render's eye reads slightly small. It lasts one frame.",
+   "fix": "Scale E's right-eye ring by about 1.06 about its centre (≈1290, 300), or push the upper-right arc 5 px outward."
+  },
+  {
+   "severity": "low",
+   "at": "Pose B, frames 886-887 (35.44-35.51 s); wing root and leading edge",
+   "what": "The bulk wing placement is within 1-3 px, but the edge spikes along the leading edge (1783-1972, 289-439) and the shoulder beside the cup (1539-1572, 278-355) don't match the source's redrawn B wing. The dark gap between the cup and the wing root reads -12 to -14 levels (blocks at 1530, 270-360), and block (1620, 600-690) reads -12.",
+   "fix": "Lighten or narrow the cup-wing gap in B by about 5 px, and add B-specific edge spikes, or ease the C spikes toward the B outline."
+  },
+  {
+   "severity": "low",
+   "at": "Flat whites (chest 1180-1330 x 540-680, belly) against detailed areas (face strokes, wing)",
+   "what": "The seeded paper mottle (MOTTLE=12) is too strong on near-white plumage: sigma-1.5 high-pass std on the chest is 1.8 in the render against 0.7 in the source, and grey blotches show at 1:1. Detailed areas are softer than the source instead: face high-pass 6.9 vs 9.6, wing 10.0 vs 14.0, forehead in D 9.8 vs 14.1. That comes from the 0.4 px blur baked into every layer on top of the posterisation. The chest is also missing faint hairlines, for example around (1204-1241, 543-567) and (1277-1304, 627-680).",
+   "fix": "Multiply the mottle by (1 - smooth(0.85, 0.95, L0)) so it fades out on near-white. Cut the baked layer blur from 0.4 to about 0.25 px on the stroke and ink layers. Add 4-6 authored faint chest hairlines, 0.8-1.2 px wide, value ≈0.75."
+  },
+  {
+   "severity": "low",
+   "at": "Talons (1080-1700, 760-946), all poses",
+   "what": "Still the largest error of any region, at 10+ sigma-3 MAE on the right foot (1450-1700). The belly-hem strokes above the toes are wispy and scattered where the source's are darker and cleaner. The gaps between the toes are blacker than the source. The claw tip near (1560-1575, 920-946) is misregistered.",
+   "fix": "Thicken the hem strokes over the toes to about 1.3x at value ≈0.35, lift the black between the toes to about 0.08-0.1 pre-grade, and shift that claw about 3-4 px to match."
+  },
+  {
+   "severity": "low",
+   "at": "Tone per region (sigma-8 signed, render minus source)",
+   "what": "The face is slightly dark in A (-3.0), B (-2.3) and on the return (-2.2), and the chest is -1.6 in D and -1.7 on the return. Everything else is within ±1.4 levels.",
+   "fix": "Add about +0.01 pre-grade to the face tone in poses A/B and on the return, and +0.006 to the chest in D."
+  }
+ ],
+ "deterministic": true,
+ "errors_seen": false,
+ "verdict": "I checked the numbers against the exact source frames rather than taking them from the builder's log. Every render frame from 881 to 925 was paired with its exact source frame, plus compare.sh at 35.38-36.90 s, the boundary frames 35.30/35.34/36.94/36.98, and sidebyside at 10 fps.\n\n**Timing and placement are frame-exact.**\n- The cut in lands on frame 884 and the cut out on 923, the same as the source.\n- For all 39 frames, the best-matching source frame (sigma-3 blur) is the frame's own index or an identical held neighbour.\n- The wing's leading edge is within 1-3 px in every pose, and the D-pose left cup edge within 1-4 px (11 px at one row in 911).\n- sigma-8 MAE is 1.54-1.79 per frame and lit-silhouette IoU 0.984-0.991, which reproduces the builder's log.\n\n**No boiling, and deterministic.**\n- The held frames 891-898 are exactly static cached layers; the only change between them is the grade's grain.\n- Rendering 35.40, 36.20 and 36.50 in two separate compare runs gave pixel-identical frames (max diff 0).\n- There were no placeholders, red bars or load errors.\n\n**Tool artifacts, not shot defects.**\n- compare.sh takes its reference frame as ceil(t·25) but renders at the 30 fps tick below. So at 36.90 it pairs render frame 922 with source frame 923, which is already s14.\n- Two snapshot captures came back as the film's t≈0 desk frame (s01), pixel-identical at the requested times 35.268 and 35.36. That is a capture race. A non-first re-render of 35.36 gave s12's frame 883, because the snapshot tool snaps to 30 fps ticks. The film itself runs at 25 fps, so frame 884 is correct.\n\n**Visible gaps are all small and local.** In order of visibility:\n1. In pose D the tuft beside the left cup is hollow and dark, 13-33 levels under the source.\n2. The headphone chrome is posterised and the mesh is a soft lattice instead of the source's crisp ~3 px cross-hatch.\n3. A primary separation line on the wing tip is about 70 px short.\n4. The belly contour is 3-5 px too far out in the turn frames 899-900.\n5. The silhouette edge is harder than the source's, and the glow is too wide and not tight enough.\n6. Small redraw mismatches in A, B and E, too much mottle on the whites, and the talons.\n\nVisually I rate this **close**.\n\n**The overriding issue is compliance.** Nearly the whole drawing is an automatic trace of the source frames: posterised polygons (celHP.js, about 111k vertices) plus ridge-traced strokes and silhouettes. That is likely against the \"drawn by code, never embed the source\" rule and needs a ruling before this shot is accepted. If traces are not allowed, the shot should be marked \"approx\" at best until the traced zones are redrawn as authored parts.\n\n**Cleanup.** As the user asked, I removed only the outputs this run created. The snapshot dirs s13-rev1-cmpA/cmpB/cmpC/motion/exact/src/zoom, their four .log files and my two scratch scripts are now in /Users/computer/.Trash/s13-rev1-review-223229. I did not touch the older s13-rev1-det1.log or s13-rev1-p3-*.log, which were there before this run. No source files were edited and I published no claude.ai artifacts."
+}

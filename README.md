@@ -146,7 +146,7 @@ export const shot = {
 **`draw` is a pure function of time.** The same `t` always gives the same pixels, whatever was drawn before, because
 renders may seek in any order. So there is no `Math.random`, `Date`, `performance.now`, network access or state
 carried from one frame to the next. Randomness comes from seeded generators (`src/lib/rng.js`), and expensive
-drawings are cached on the first call, never at module load.
+drawings are cached on the first call, never at module load. (One known exception: the end of s25; see [Known gaps](#known-gaps).)
 
 ### Shared libraries (`src/lib/`)
 
@@ -309,10 +309,12 @@ workflow scripts are exactly what each agent was asked to do.
 - **Gate every render** with `npm run verify` (`tools/verify_render.py`). It checks for 3,520 frames, no black frames
   and no red error bars from a failing shot. With `APPRENTICE_SOURCE` it also prints the per-shot distance to the
   original, and given an older render it fails if any shot got worse by more than 0.5.
-- **Deterministic.** A render from a fresh clone was byte-identical to the published video: SHA-256
-  `1da041d11ac4c935b89458c441fb7ca9b5afe19cb3c2200ae3a4d6f33bd51b8e` (check yours with
-  `shasum -a 256 renders/film.mp4`). The "diff" numbers above were measured on a render of the same code. Other GPUs
-  and drivers may give slightly different pixels.
+- **Reproducible, with one exception.** A render from a fresh clone matched the published video exactly (same
+  pixels, same audio) in every frame except 48: s25's last 1.9 s (108.60–110.48), which vary a little from run to run
+  (scattered pixels, 0.6 levels on average, invisible at viewing size; see [Known gaps](#known-gaps)). So two renders
+  are usually not byte-identical: check yours with `npm run verify` rather than by hash. For reference, the published
+  render's SHA-256 is `3ae17f85a09588baf4a5a6c72153c3490ed3a2377e9c033c85f37cbee27bbc21`. The distance numbers above
+  were measured on it. Other GPUs and drivers may give slightly different pixels.
 - **Stills.** `node tools/harness/shoot.mjs OUTDIR 12.5,60,120` renders exact frames without HyperFrames' per-seek
   timeout. `tools/compare.sh` (render|original pairs) uses `hyperframes snapshot`, which can time out while all the
   shots load.
@@ -328,10 +330,9 @@ workflow scripts are exactly what each agent was asked to do.
 - **Weakest shots** by measured distance from the original: s20 (21.8), s15 (21.4), s19 (14.2), s05 (12.9) and
   s25 (12.9). s15's corridor is shader drawing over measured tone, not the original's charcoal texture. The owls in
   s19, s20 and s25 are simpler drawings than the original's painterly bird.
-- **Render-order effect in s25.** Its last 1.9 s (108.60–110.48) depend very slightly on what was rendered before
-  them: two full renders of different code upstream differed there by up to 41 levels on scattered pixels (0.6
-  levels on average, invisible at viewing size). A full render of the same code is byte-reproducible; drawing
-  those frames one at a time, out of order, can differ a little from the published video.
+- **s25 is not a pure function of time at its end.** Its last 1.9 s (108.60–110.48) carry some drawing state from
+  earlier frames, so they vary slightly between full renders of the same code (up to 41 levels on scattered pixels,
+  0.6 on average, invisible at viewing size) and when drawn out of order. Every other frame is reproducible.
 - The colour ending (s26–s28) is close, at 4.4–6.5, because it is traced.
 - 17 of 26 shots are **approx**: same staging, timing and camera, with visibly simpler drawing. Each log in
   `docs/fidelity/` lists that shot's gaps. For example, the s01→s02 cut lands one frame late, and the owl visibly

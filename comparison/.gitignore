@@ -1,0 +1,5 @@
+media/
+renders/
+snapshots/
+node_modules/
+.DS_Store

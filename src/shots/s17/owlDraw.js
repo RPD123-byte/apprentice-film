@@ -831,9 +831,14 @@ export function owlS17Layer(P, canvas) {
   x0 = Math.floor(x0 - m); y0 = Math.floor(y0 - m); x1 = Math.ceil(x1 + m); y1 = Math.ceil(y1 + m);
   const cw = Math.max(1, Math.round((x1 - x0) * res)), ch = Math.max(1, Math.round((y1 - y0) * res));
   const cv = canvas || document.createElement("canvas");
-  if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+  // (purity) the canvas is reused from draw to draw: setting its size (even to the same size) resets its context
+  // state, so no style is carried in from the previous drawing (drawBandS leaves lineJoin "round", which rounded the
+  // dash's strokes drawn before the band whenever two drawings in a row had the same box). P.joins: the starting line
+  // join, set by the shot only for 53.04, which repeats 53.00's drawing and was always rendered with its round joins.
+  cv.width = cw; cv.height = ch;
   const g = cv.getContext("2d", { willReadFrequently: true });
   g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, ch);
+  if (P.joins) g.lineJoin = P.joins;
   g.setTransform(res * s * fl * ca, res * s * fl * sa, -res * s * sa, res * s * ca, res * (P.x - x0), res * (P.y - y0));
   PPU = s * res; setPPU(PPU); SPX = s;
   IG = lerpN(0.85, 1.45, clamp(P.ink ?? 0.5));
@@ -1099,7 +1104,8 @@ export function owlS17Layer(P, canvas) {
 }
 
 let SCR = null, SCR2 = null, KSCR = null;
-function keyScratch(w, h) { if (!KSCR) KSCR = document.createElement("canvas"); if (KSCR.width !== w || KSCR.height !== h) { KSCR.width = w; KSCR.height = h; } return KSCR; }
+// (purity) scratch canvases are resized on every use, which also resets their context state (see owlS17Layer)
+function keyScratch(w, h) { if (!KSCR) KSCR = document.createElement("canvas"); KSCR.width = w; KSCR.height = h; return KSCR; }
 const SOFT_PX = 0.35;
 // Draw into ctx (frame coordinates). blur: [dx, dy] frame px — a motion smear: shifted copies averaged additively
 // in an offscreen canvas (weights sum to 1, so the bird stays opaque), then drawn over.
@@ -1110,7 +1116,7 @@ export function drawOwlS17(ctx, P) {
   if (bl > 1) {
     if (!SCR2) SCR2 = document.createElement("canvas");
     const pad = Math.ceil(bl / 2) + 2, w = L.canvas.width + 2 * pad, h = L.canvas.height + 2 * pad;
-    if (SCR2.width !== w || SCR2.height !== h) { SCR2.width = w; SCR2.height = h; }
+    SCR2.width = w; SCR2.height = h;
     const g = SCR2.getContext("2d");
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; g.clearRect(0, 0, w, h);
     g.globalCompositeOperation = "lighter";

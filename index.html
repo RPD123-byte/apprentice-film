@@ -28,6 +28,19 @@
       <!-- Score: synthesized in code by tools/sound/score.py (see docs/audio.md); 48 kHz, exactly 140.8 s. -->
       <audio id="score" src="audio/score.wav" data-start="0" data-duration="140.8" data-track-index="1"></audio>
     </div>
+    <script>
+      // Determinism: rasterize every 2D canvas on the CPU from the start. Chrome otherwise draws a 2D canvas on the GPU
+      // and silently moves it to the CPU after repeated getImageData readbacks; the two paths anti-alias and blend
+      // slightly differently, so the pixels depended on draw history and varied between page loads
+      // (tools/harness/purity.mjs). Runs before any film code creates a canvas.
+      for (const C of [globalThis.HTMLCanvasElement, globalThis.OffscreenCanvas]) {
+        if (!C) continue;
+        const getContext = C.prototype.getContext;
+        C.prototype.getContext = function (type, attrs) {
+          return getContext.call(this, type, type === "2d" ? { ...(attrs || {}), willReadFrequently: true } : attrs);
+        };
+      }
+    </script>
     <script type="module">
       import { tl } from "./src/main.js";
       window.__timelines = window.__timelines || {};

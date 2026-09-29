@@ -3,6 +3,13 @@
 // with premultiplied alpha. Everything drawn here is a texture made by our own Canvas2D painting code.
 //   const G = getGL(W, H);  G.begin();  G.quadH(tex, H, {alpha});  G.mesh(tex, xy, uv, idx, {alpha});  G.end() -> canvas
 // Optional post passes: G.beginFBO() ... G.endFBO() then G.zoomBlur(center, amount, {mix, flash}) to the canvas.
+// Purity (purity-fix-s27): inside one render pass the GPU (Apple silicon under ANGLE/Metal) blends overlapping draws at more
+// than 8 bits and rounds only when the pass ends, and ANGLE ends a pass wherever a texture is built or re-uploaded between
+// draws, or a vertex buffer is re-filled while the GPU may still be using it (depending on whether earlier GPU work has
+// completed). So which textures the caches already held, and timing, moved 1-4 levels on the lid's and the designer's
+// edges (127.80, 128.48-128.68, 129.08, 129.20 ...). A shot frame therefore runs through frame(fn): a dry pass does every
+// texture build, eviction and upload; a second pass records the draws; then all their vertex data goes up in one upload
+// and the draws are replayed back to back, nothing between them, whatever the caches held and however fast the GPU was.
 
 const VS2 = `#version 300 es
 in vec3 aPos; in vec2 aUV; uniform vec2 uRes; out vec2 vUV;
@@ -64,6 +71,46 @@ class GLComp {
     this.uint = this.v2 || !!gl.getExtension("OES_element_index_uint");
     this.texes = new Map();
     this.fbo = null;
+    this.prep = false; this.upl = null; this.rec = null;
+  }
+  // (purity-fix-s27) one frame in three steps: fn() runs first as a dry run (prep: textures are built, evicted and
+  // uploaded, nothing is drawn); then again with every draw recorded instead of issued; then the frame's vertex data goes
+  // up in one upload and the recorded draws are replayed with nothing between them. See the purity note at the top.
+  frame(fn) {
+    const rec = this.uint ? [] : null;   // (no 32-bit indices on a WebGL1 fallback: it draws directly)
+    try {
+      this.prep = true; this.upl = new Set();
+      fn();
+      this.prep = false; this.rec = rec;
+      fn();
+    } finally { this.prep = false; this.upl = null; this.rec = null; }
+    if (rec) { this.gl.flush(); this._replay(rec); }
+  }
+  _replay(rec) {
+    const gl = this.gl;
+    let nv = 0, ni = 0;
+    for (const d of rec) if (d.k === "draw") { d.vb = nv; d.ib = ni; nv += d.pos.length / 3; ni += d.idx.length; }
+    const P = new Float32Array(nv * 3), U = new Float32Array(nv * 2), I = new Uint32Array(ni);
+    for (const d of rec) if (d.k === "draw") { P.set(d.pos, d.vb * 3); U.set(d.uv, d.vb * 2); for (let i = 0; i < d.idx.length; i++) I[d.ib + i] = d.idx[i]; }
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vb); gl.bufferData(gl.ARRAY_BUFFER, P, gl.STREAM_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.ub); gl.bufferData(gl.ARRAY_BUFFER, U, gl.STREAM_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, I, gl.STREAM_DRAW);
+    for (const d of rec) {
+      if (d.k === "begin") { this._target = d.target; this.begin(); continue; }
+      if (d.k === "zb") { this.zoomBlur(...d.a); continue; }
+      gl.useProgram(this.p);
+      gl.uniform2f(this.u.res, this.W, this.H);
+      gl.uniform1f(this.u.alpha, d.alpha);
+      const T = d.tint || [0, 0, 0, 0];
+      gl.uniform4f(this.u.tint, T[0], T[1], T[2], T[3]);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, d.tex); gl.uniform1i(this.u.tex, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.vb); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, d.vb * 12);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.ub); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, d.vb * 8);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ib);
+      if (d.mul) gl.blendFunc(gl.DST_COLOR, gl.SRC_COLOR);
+      gl.drawElements(gl.TRIANGLES, d.idx.length, gl.UNSIGNED_INT, d.ib * 4);
+      if (d.mul) gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    }
   }
   // texture from a canvas (built once per key by paint(); pass a canvas-returning function)
   tex(key, make, { mip = true } = {}) {
@@ -96,14 +143,18 @@ class GLComp {
   // re-upload a dynamic texture (same key) from a canvas every frame
   dyn(key, src, { mip = false } = {}) {
     let r = this.texes.get(key);
+    if (r && this.upl && !this.prep && this.upl.has(key)) return r;   // already uploaded by this frame's prep pass
     r = this._upload(src, mip, r || null);
     this.texes.set(key, r);
+    if (this.upl) this.upl.add(key);
     return r;
   }
   release(prefix = "") {
     for (const [k, r] of this.texes) if (!prefix || k.startsWith(prefix)) { this.gl.deleteTexture(r.tex); this.texes.delete(k); }
   }
   begin() {
+    if (this.prep) return;
+    if (this.rec) { this.rec.push({ k: "begin", target: this._target || null }); return; }
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._target || null);
     gl.viewport(0, 0, this.W, this.H);
@@ -122,14 +173,17 @@ class GLComp {
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
       this.fbo = { f, t };
     }
+    if (this.prep) return;
     this._target = this.fbo.f;
     this.begin();
   }
   // zoom blur the FBO onto the canvas. c: centre in frame px; amt: fraction of the radius smeared toward the centre
   // (end-s27-tfix) ramp = [r0, width]: the blur grows from `floor` at radius r0 to full over `width` (normalised units)
   zoomBlur(cx, cy, amt, flash = [1, 1, 1, 0], rot = 0, floor = 0, sym = 0, ramp = [0.05, 0.45]) {
-    const gl = this.gl;
+    if (this.prep) return;
     this._target = null;
+    if (this.rec) { this.rec.push({ k: "zb", a: [cx, cy, amt, flash, rot, floor, sym, ramp] }); return; }
+    const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this.W, this.H);
     gl.disable(gl.BLEND);
@@ -145,7 +199,9 @@ class GLComp {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.enable(gl.BLEND);
   }
-  _draw(r, pos, uv, idx, alpha = 1, tint = null) {
+  _draw(r, pos, uv, idx, alpha = 1, tint = null, mul = false) {
+    if (this.prep) return;
+    if (this.rec) { this.rec.push({ k: "draw", tex: r.tex, pos, uv, idx, alpha, tint, mul }); return; }
     const gl = this.gl;
     gl.useProgram(this.p);
     gl.uniform2f(this.u.res, this.W, this.H);
@@ -166,6 +222,7 @@ class GLComp {
   // Draw texture rect (sx,sy,sw,sh in texture px; default whole) through homography H (texture px -> frame px),
   // perspective-correct. H: [h11,h12,h13,h21,h22,h23,h31,h32,h33].
   quadH(r, H, { alpha = 1, src = null, tint = null, mul = false } = {}) {
+    if (this.prep) return;
     const [sx, sy, sw, sh] = src || [0, 0, r.w, r.h];
     const P = [[sx, sy], [sx + sw, sy], [sx + sw, sy + sh], [sx, sy + sh]];
     const pos = new Float32Array(12), uv = new Float32Array(8);
@@ -175,12 +232,14 @@ class GLComp {
       uv[i * 2] = u / r.w; uv[i * 2 + 1] = v / r.h;
     });
     // mul: 2x multiply (dst *= 2 * texture), for gain fields painted at gain / 2
+    if (this.rec) { this._draw(r, pos, uv, [0, 1, 2, 0, 2, 3], alpha, tint, mul); return; }
     if (mul) this.gl.blendFunc(this.gl.DST_COLOR, this.gl.SRC_COLOR);
     this._draw(r, pos, uv, [0, 1, 2, 0, 2, 3], alpha, tint);
     if (mul) this.gl.blendFunc(this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA);
   }
   // Draw a texture through an arbitrary mesh: xy = frame positions [x0,y0,x1,y1,...], uv = texture px, idx = triangles.
   mesh(r, xy, uv, idx, { alpha = 1, tint = null } = {}) {
+    if (this.prep) return;
     const n = xy.length / 2, pos = new Float32Array(n * 3), tuv = new Float32Array(n * 2);
     for (let i = 0; i < n; i++) { pos[i * 3] = xy[i * 2]; pos[i * 3 + 1] = xy[i * 2 + 1]; pos[i * 3 + 2] = 1; tuv[i * 2] = uv[i * 2] / r.w; tuv[i * 2 + 1] = uv[i * 2 + 1] / r.h; }
     this._draw(r, pos, tuv, idx, alpha, tint);

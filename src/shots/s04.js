@@ -6,8 +6,8 @@
 // study of simplified region outlines, the solid blacks and white-ink highlights, and the traced ink lines redrawn as
 // tapered strokes; tone calibrated per key against its frame), carried to the frames round it by the measured motion
 // (optical flow on a 24 px grid). Every source frame 19.12–23.08 is covered by exactly one key; keys switch on frame
-// boundaries. The laptop's page (22.44–23.12) is s05's own page drawing (src/shots/s05/screen.js), mapped through the
-// screen's measured homography per frame (s04/screen04.js). Scripts: snapshots/s04-k2/tr/.
+// boundaries. The laptop's page (22.44–23.12) is s05's own page drawing (src/shots/s05/screen.js's sōko page, copied
+// into s04/screen04.js), mapped through the screen's measured homography per frame. Scripts: snapshots/s04-k2/tr/.
 //
 // Measured beats (snapshots/s04-study, snapshots/s04-fix1-study, snapshots/s04-k2):
 //   19.12–19.56  the camera pans (content +157, −121 px, ease-out); the owl glides in, eyes shut, wings spread

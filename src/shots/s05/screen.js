@@ -246,16 +246,21 @@ function laptopCanvas(overlay) {
   return base;
 }
 
-let COMP = null;
-export function screenCanvas(t, sites, pure) {
-  if (!COMP) { COMP = document.createElement("canvas"); COMP.width = PW; COMP.height = PH; }
-  const g = COMP.getContext("2d");
-  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.filter = "none";
-  const f = Math.round(t * 25 + 1e-6) / 25;      // the screen changes on source frames
-  if (f < 23.72 - 1e-6) {
-    g.drawImage(sokoCanvas(sites), 0, 0);
-  } else if (f < 24.0 - 1e-6) {
-    g.drawImage(sokoCanvas(sites), 0, 0);
+// Purity: the sōko page's canvas has part-transparent edges (its soften), and the composite used to be painted over
+// the previous frame's, so from the page's first frame in the published render (22.44, frame 561: s04 then drew its
+// laptop page through this composite) its edges built up frame by frame (to a fixed point after ~11 frames) and, while
+// the file window zooms open (23.72-23.96), the previous frame's window showed through them. That history is rebuilt
+// from t: the composite of frame fi (< 600, where the opaque Pure page replaces it) is frame 561's page, laid over
+// again once per frame up to fi, exactly as the in-order render built it. In order that is one step per frame; any
+// other order replays from frame 561 (at most 39 steps; the cursor only saves steps, its state at a frame is the same
+// however it got there).
+let COMP = null, COMP_F = null;
+const F_PAGE0 = 561, F_PURE = 600;
+function compStep(g, fi, sites) {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.filter = "none"; g.globalCompositeOperation = "source-over";
+  const f = fi / 25;
+  g.drawImage(sokoCanvas(sites), 0, 0);
+  if (f >= 23.72 - 1e-6) {
     let z = ZOOM[ZOOM.length - 1];
     for (const row of ZOOM) if (f >= row[0] - 1e-6) z = row;
     const [, x0, y0, x1, y1, bl] = z;
@@ -284,7 +289,24 @@ export function screenCanvas(t, sites, pure) {
       for (let i = 0; i < N; i++) { a.globalAlpha = 1 / N; a.drawImage(W, (i / (N - 1) - 0.5) * L, 0); }
       g.drawImage(A, 0, 0);
     }
-  } else {
+  }
+}
+export function screenCanvas(t, sites, pure) {
+  if (!COMP) { COMP = document.createElement("canvas"); COMP.width = PW; COMP.height = PH; COMP_F = null; }
+  const g = COMP.getContext("2d");
+  const fi = Math.round(t * 25 + 1e-6), f = fi / 25;      // the screen changes on source frames
+  if (fi < F_PURE) {
+    const k = Math.max(F_PAGE0, fi);
+    if (COMP_F !== k) {
+      if (COMP_F !== k - 1) { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, PW, PH); for (let j = F_PAGE0; j < k; j++) compStep(g, j, sites); }
+      compStep(g, k, sites); COMP_F = k;
+    }
+    return COMP;
+  }
+  // from 24.00 the page is opaque and replaces the composite: no history
+  COMP_F = null;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.filter = "none"; g.globalCompositeOperation = "source-over"; g.clearRect(0, 0, PW, PH);
+  {
     let a = 0;
     for (const [tt, v] of FADE) if (f >= tt - 1e-6) a = v;
     if (pure && LAPTOP_PAGE) {
@@ -305,16 +327,32 @@ export function screenCanvas(t, sites, pure) {
 
 // Map the composite onto the screen quad (ctx in settled frame coordinates), as a grid of affine triangles.
 const SCREEN_CLIP = T.SCREEN;
-let SOFT = null;
+// Purity: the softened copy was likewise laid over the previous frame's, and until 24.00 the composite under it is not
+// quite opaque at its edges (alpha 254 at best), so it too carried history, from s05's first frame (23.12: frame 578,
+// where the published render first made it). Rebuilt from t the same way: frame 578's copy, laid over again per frame.
+let SOFT = null, SOFT_F = null;
+const F_SOFT0 = 578;
+function softStep(s, img, soft) {
+  s.setTransform(1, 0, 0, 1, 0, 0); s.globalCompositeOperation = "source-over"; s.globalAlpha = 1; s.filter = "brightness(1.07)"; s.drawImage(img, 0, 0);
+  s.filter = `blur(${soft}px) brightness(1.07)`; s.globalAlpha = 0.6; s.drawImage(img, 0, 0); s.globalAlpha = 1; s.filter = "none";
+}
 export function drawScreen(ctx, t, sites, pure, { dim = 1, soft = 0.6 } = {}) {
-  let img = screenCanvas(t, sites, pure);
+  let img;
   if (soft > 0) {
-    if (!SOFT) { SOFT = document.createElement("canvas"); SOFT.width = PW; SOFT.height = PH; }
-    const s = SOFT.getContext("2d");
-    s.setTransform(1, 0, 0, 1, 0, 0); s.filter = "brightness(1.07)"; s.drawImage(img, 0, 0);
-    s.filter = `blur(${soft}px) brightness(1.07)`; s.globalAlpha = 0.6; s.drawImage(img, 0, 0); s.globalAlpha = 1; s.filter = "none";
+    if (!SOFT) { SOFT = document.createElement("canvas"); SOFT.width = PW; SOFT.height = PH; SOFT_F = null; }
+    const s = SOFT.getContext("2d"), fi = Math.round(t * 25 + 1e-6);
+    if (fi >= F_PURE) {
+      SOFT_F = null;
+      s.setTransform(1, 0, 0, 1, 0, 0); s.clearRect(0, 0, PW, PH); softStep(s, screenCanvas(t, sites, pure), soft);
+    } else {
+      const k = Math.max(F_SOFT0, fi), key = `${k}|${soft}`;
+      if (SOFT_F !== key) {
+        if (SOFT_F !== `${k - 1}|${soft}`) { s.setTransform(1, 0, 0, 1, 0, 0); s.clearRect(0, 0, PW, PH); for (let j = F_SOFT0; j < k; j++) softStep(s, screenCanvas(j / 25, sites, pure), soft); }
+        softStep(s, screenCanvas(k / 25, sites, pure), soft); SOFT_F = key;
+      }
+    }
     img = SOFT;
-  }
+  } else img = screenCanvas(t, sites, pure);
   ctx.save();
   ctx.beginPath(); SCREEN_CLIP.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.clip();
   ctx.fillStyle = "#000"; ctx.fill();
@@ -356,7 +394,7 @@ function tri(ctx, img, s, d) {
   ctx.restore();
 }
 
-export function releaseScreen() { FILES = null; SOKO = null; COMP = null; SOFT = null; PLUT = null; LP_SRC = null; LP.clear(); }
+export function releaseScreen() { FILES = null; SOKO = null; COMP = null; COMP_F = null; SOFT = null; SOFT_F = null; PLUT = null; LP_SRC = null; LP.clear(); }
 
 // The glass's lit rim: a thin bright line along the screen's inner top and right edges (the screen lights its own bezel
 // edge). Measured on the un-graded source (perpendicular profiles every 0.1 of each edge, 23.60, 23.88, 24.40, 25.00,

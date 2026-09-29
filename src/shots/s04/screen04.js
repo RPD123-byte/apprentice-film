@@ -5,8 +5,8 @@
 // 22.52-22.56 and sat 50-70 px too far left): an ECC affine of the page sliver from 22.52 to 22.48 (correlation 0.77)
 // and on to 22.44 (0.95); the same step 22.56 -> 22.52 reproduces the measured 22.52 quad to within 1-10 px.
 // (snapshots/s04-fix1w/tools/entryquad.py)
-// The page itself is s05's (screenCanvas: his site, MIXING DOWN), mapped through each frame's homography.
-import * as S5 from "../s05/screen.js";
+// The page itself is s05's (his site, MIXING DOWN: s05/screen.js's sokoCanvas, copied below), mapped through each
+// frame's homography.
 import * as SITES from "../../lib/sites.js";
 
 // [t, x0,y0 (page top-left), x1,y1 (top-right), x2,y2 (bottom-right), x3,y3 (bottom-left)] in frame px
@@ -61,18 +61,95 @@ function tri(ctx, img, s, d) {
   ctx.drawImage(img, 0, 0);
   ctx.restore();
 }
-let SOFT = null;
+// ---- the page (purity fix): s05/screen.js's sokoCanvas as of the published render, copied (s04 no longer draws
+// into s05's module state). The laptop view of the sōko page: stretched to the 16:10 screen, re-fitted, toned, soft.
+const PW = 800, PH = 500, K = PW / 1600;
+const knots = (K, x) => { const f = Math.max(0, Math.min(1, x)) * (K.length - 1), i = Math.min(K.length - 2, Math.floor(f)); return K[i] + (K[i + 1] - K[i]) * (f - i); };
+let SOKO = null;
+function sokoCanvas(sites) {
+  if (SOKO) return SOKO;
+  const c = document.createElement("canvas"); c.width = PW; c.height = PH;
+  const g = c.getContext("2d");
+  g.fillStyle = "#030303"; g.fillRect(0, 0, PW, PH);
+  let page = null;
+  try { page = sites && sites.sokoPageCanvas({ gaze: "down", scale: 1 }); } catch (e) { page = null; }
+  g.imageSmoothingQuality = "high";
+  // the page stretched to the screen, then the small affine fitted on the rectified source at 23.60
+  // (page units: x' = 0.9957x - 0.0132y + 21.4, y' = 0.0037x + 1.0194y + 3.1)
+  g.setTransform(K * 0.9957, K * 0.0037, K * -0.0132, K * 1.0194, K * 21.36, K * 3.14);
+  g.filter = "brightness(0.92)";
+  if (page) g.drawImage(page, 0, 0, page.width, page.height, 0, 6, 1600, 994);
+  g.filter = "none"; g.setTransform(1, 0, 0, 1, 0, 0);
+  if (!page) { g.fillStyle = "#f1f0ec"; g.font = "900 40px Archivo"; g.fillText("MIXING DOWN,", 30, 70); g.fillText("LATE AT NIGHT.", 30, 110); }
+  if (!page) return c;
+  // pass 3: the page as the source shows it at 23.56-23.68 (camera at rest), re-fitted to F1's current page: a
+  // homography of the shown page, source page units -> this canvas's page units (ECC on the rectified screen, coarse to
+  // fine, sigma 6/3/1.5; blurred error on the rectified page 22.6 -> 15.6, the headline and nav within 1-2 units).
+  // The source page sits ~2.5 % larger and 10-15 units further left than the stretched page, a dark strip at the right.
+  const c2 = document.createElement("canvas"); c2.width = PW; c2.height = PH;
+  const q = c2.getContext("2d");
+  q.fillStyle = "#030303"; q.fillRect(0, 0, PW, PH); q.imageSmoothingEnabled = true; q.imageSmoothingQuality = "high";
+  const [[a, b, cc], [d, e, f], [gx, gy]] = SOKO_H;
+  const Hs = (u, v) => { const w = gx * u + gy * v + 1; return [(a * u + b * v + cc) / w, (d * u + e * v + f) / w]; };
+  const NX = 16, NY = 10;
+  for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) {
+    const u0 = (i / NX) * 1600, u1 = ((i + 1) / NX) * 1600, v0 = (j / NY) * 1000, v1 = ((j + 1) / NY) * 1000;
+    const S = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(([u, v]) => Hs(u, v).map((z) => z * K));
+    const D = [[u0 * K, v0 * K], [u1 * K, v0 * K], [u1 * K, v1 * K], [u0 * K, v1 * K]];
+    tri(q, c, [S[0], S[1], S[2]], [D[0], D[1], D[2]]);
+    tri(q, c, [S[0], S[2], S[3]], [D[0], D[2], D[3]]);
+  }
+  // ... and its tone as the laptop shows it (pass 3): lifted darks, dimmer lit parts (quantile match of the rectified
+  // screen at 23.56-23.68, render vs source, taken back through the grade to this canvas's values; 17 knots)
+  { const id = q.getImageData(0, 0, PW, PH), d = id.data, T = new Uint8ClampedArray(256);
+    for (let v = 0; v < 256; v++) T[v] = Math.round(knots(SOKO_TONE, v / 255));
+    for (let i = 0; i < d.length; i += 4) { d[i] = T[d[i]]; d[i + 1] = T[d[i + 1]]; d[i + 2] = T[d[i + 2]]; }
+    q.putImageData(id, 0, 0); }
+  // fix pass 1d: the laptop shows the page soft and dim, the figure glowing in its screen's light (rectified source,
+  // 23.56-23.68): a 1.5 px soften and a warm radial glow round the figure at page (0.52, 0.55), ~40 screen px across
+  { const c3 = document.createElement("canvas"); c3.width = PW; c3.height = PH; const q3 = c3.getContext("2d");
+    q3.filter = "blur(1.5px)"; q3.drawImage(c2, 0, 0); q3.filter = "none";
+    q.globalCompositeOperation = "copy"; q.drawImage(c3, 0, 0); q.globalCompositeOperation = "source-over";
+    const cx = 0.52 * PW, cy = 0.55 * PH, R = 62, gl = q.createRadialGradient(cx, cy, 0, cx, cy, R);
+    gl.addColorStop(0, "rgba(40,40,38,1)"); gl.addColorStop(0.5, "rgba(22,22,21,1)"); gl.addColorStop(1, "rgba(0,0,0,1)");
+    q.globalCompositeOperation = "lighter"; q.fillStyle = gl; q.fillRect(cx - R, cy - R, 2 * R, 2 * R); q.globalCompositeOperation = "source-over"; }
+  SOKO = c2;
+  return c2;
+}
+const SOKO_TONE = [1.5, 22.0, 36.2, 48.1, 61.0, 74.8, 88.4, 102.6, 117.3, 134.1, 154.1, 174.6, 193.8, 209.1, 222, 236, 250];
+const SOKO_H = [[0.975366, -0.010991, 15.03], [-0.0035, 0.971431, 4.7676], [-2.0987e-5, -3.391e-6]];
+
+// The page as the published render shows it, a pure function of the frame. It used to be built in two canvases that
+// were never cleared: s05's composite (the sōko page drawn over it with source-over every frame) and this module's
+// SOFT (the composite, lifted, drawn over it twice). The page's blurred border is semi-transparent, so it built up
+// with every screen frame drawn since those canvases were made, and a frame's pixels depended on how many screen
+// frames came before it (22.44-22.56 in order; any screen frame drawn first after s05's release). The film render
+// draws every frame in order from a fresh page, so the screen's k-th frame (22.44 + (k - 1) / 25) showed the page built
+// up k times: that is rebuilt here from k alone (the chain from empty canvases; the cursor only saves repeating the
+// steps it has already done, and its state at step k is the same however it got there).
+const FIRST = Math.round(SCREEN_Q[0][0] * 25);
+let PAGE = null;
+function pageAt(k, soft, blur) {
+  if (!PAGE || PAGE.k > k || PAGE.soft !== soft || PAGE.blur !== blur) {
+    const mk = () => { const c = document.createElement("canvas"); c.width = PW; c.height = PH; return c; };
+    PAGE = { k: 0, soft, blur, comp: mk(), out: mk() };
+  }
+  const img = sokoCanvas(SITES), g = PAGE.comp.getContext("2d"), s = PAGE.out.getContext("2d");
+  while (PAGE.k < k) {
+    // (as s05's screenCanvas drew it for a time before 23.72) ...
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.filter = "none"; g.drawImage(img, 0, 0);
+    // ... and as this module then lifted it
+    s.setTransform(1, 0, 0, 1, 0, 0); s.globalAlpha = 1; s.filter = "brightness(1.07)"; s.drawImage(PAGE.comp, 0, 0);
+    s.filter = `blur(${soft + blur}px) brightness(1.07)`; s.globalAlpha = blur > 0 ? 1 : 0.6; s.drawImage(PAGE.comp, 0, 0); s.globalAlpha = 1; s.filter = "none";
+    PAGE.k++;
+  }
+  return PAGE.out;
+}
 // the page on the screen at frame t (false when the screen is not in frame / not measured)
 export function drawScreen04(ctx, t, { soft = 0.6, blur = 0, dim = 1 } = {}) {
   const q = screenQuadAt(t);
-  if (!q || typeof S5.screenCanvas !== "function") return false;
-  let img = S5.screenCanvas(t, SITES, null);
-  const PW = img.width, PH = img.height;
-  if (!SOFT) { SOFT = document.createElement("canvas"); SOFT.width = PW; SOFT.height = PH; }
-  const s = SOFT.getContext("2d");
-  s.setTransform(1, 0, 0, 1, 0, 0); s.globalAlpha = 1; s.filter = "brightness(1.07)"; s.drawImage(img, 0, 0);
-  s.filter = `blur(${soft + blur}px) brightness(1.07)`; s.globalAlpha = blur > 0 ? 1 : 0.6; s.drawImage(img, 0, 0); s.globalAlpha = 1; s.filter = "none";
-  img = SOFT;
+  if (!q) return false;
+  const img = pageAt(Math.round(t * 25) - FIRST + 1, soft, blur);
   const HP = homog(q);
   ctx.save();
   ctx.beginPath(); q.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.clip();
@@ -89,4 +166,4 @@ export function drawScreen04(ctx, t, { soft = 0.6, blur = 0, dim = 1 } = {}) {
   ctx.restore();
   return true;
 }
-export function releaseScreen04() { SOFT = null; }
+export function releaseScreen04() { PAGE = null; SOKO = null; }

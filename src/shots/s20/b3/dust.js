@@ -49,6 +49,10 @@ export function drawDust(g, t) {
   const c = C.getContext("2d");
   c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, C.width, C.height);
   c.setTransform(HS, 0, 0, HS, -X0 * HS, -Y0 * HS);
+  // purity fix: the burst lines set lineCap "round" on this reused scratch context and nothing reset it, so the puff
+  // outlines were stroked with whatever cap the previous frame left. Set it every frame, as the published render drew
+  // it: butt (a fresh context's default) on the first dust frame (64.52), round from then on.
+  c.lineCap = t < 64.54 ? "butt" : "round";
   const after = clamp((t - 65.56) / 1.0);          // 0 while beating, 1 at 66.56
   const lift = smooth(clamp((t - 65.5) / 0.5));   // the column rises over 65.5–66.0
   const fade = t < 65.6 ? 1 : Math.max(0, 1 - smooth((t - 65.6) / 1.0)) * 0.78 + (t < 66.84 ? 0.02 : 0);

@@ -653,6 +653,9 @@ function speaker(R) {
 
 // Build the whole room (x >= x0) and return it as a 1x canvas of width W - x0.
 export function buildRoom(x0) {
+  // wobbly() numbers its default seeds from this counter: restart it so every build (after a release) draws the same
+  // room as the first one did
+  WOBSEED = 1;
   const R = makeRoom(x0);
   farBack(R);
   column(R);

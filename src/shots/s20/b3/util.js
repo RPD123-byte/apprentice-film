@@ -74,18 +74,30 @@ export function homography(src, dst) {
 export const hmap = (H, [x, y]) => { const w = H[6] * x + H[7] * y + H[8]; return [(H[0] * x + H[1] * y + H[2]) / w, (H[3] * x + H[4] * y + H[5]) / w]; };
 
 // draw image `img` (source rect sx0,sy0,sw,sh in image px) through a map f(u,v) -> frame, u,v in 0..1, with an
-// n x m triangle mesh (affine per triangle, slightly grown to hide seams)
-export function warpImage(g, img, f, { sx = 0, sy = 0, sw = img.width, sh = img.height, n = 8, m = 10, alpha = 1 } = {}) {
+// n x m triangle mesh (affine per triangle, slightly grown to hide seams). mip (optional): a half-size copy of img;
+// each triangle whose scale asks Chrome's decode cache for mip level >= 1 is then drawn from it (see card.js)
+export function warpImage(g, img, f, { sx = 0, sy = 0, sw = img.width, sh = img.height, n = 8, m = 10, alpha = 1, mip = null } = {}) {
   g.save(); g.globalAlpha *= alpha;
   for (let j = 0; j < m; j++) for (let i = 0; i < n; i++) {
     const u0 = i / n, u1 = (i + 1) / n, v0 = j / m, v1 = (j + 1) / m;
     const P00 = f(u0, v0), P10 = f(u1, v0), P01 = f(u0, v1), P11 = f(u1, v1);
-    tri(g, img, [sx + u0 * sw, sy + v0 * sh], [sx + u1 * sw, sy + v0 * sh], [sx + u0 * sw, sy + v1 * sh], P00, P10, P01);
-    tri(g, img, [sx + u1 * sw, sy + v0 * sh], [sx + u1 * sw, sy + v1 * sh], [sx + u0 * sw, sy + v1 * sh], P10, P11, P01);
+    tri(g, img, [sx + u0 * sw, sy + v0 * sh], [sx + u1 * sw, sy + v0 * sh], [sx + u0 * sw, sy + v1 * sh], P00, P10, P01, mip);
+    tri(g, img, [sx + u1 * sw, sy + v0 * sh], [sx + u1 * sw, sy + v1 * sh], [sx + u0 * sw, sy + v1 * sh], P10, P11, P01, mip);
   }
   g.restore();
 }
-function tri(g, img, s0, s1, s2, d0, d1, d2) {
+// the mip level Chrome's GPU image decode cache picks for drawing an image of w x h px under the 2x2 part (a b c d)
+// of the current transform (cc: DrawImage ExtractScale -> scale = column lengths, ceiled target size,
+// MipMapUtil::GetLevelForSize with mip axes ceil(size / 2^level))
+const mipAxis = (s, L) => (L === 0 ? s : Math.max(1, (s + (1 << L) - 1) >> L));
+export function mipLevel(w, h, a, b, c, d) {
+  const tw = Math.ceil(w * Math.hypot(a, b)), th = Math.ceil(h * Math.hypot(c, d));
+  for (let L = 0; ; L++) {
+    if (mipAxis(h, L + 1) < th || mipAxis(w, L + 1) < tw) return L;
+    if (mipAxis(w, L) === 1 && mipAxis(h, L) === 1) return L;
+  }
+}
+function tri(g, img, s0, s1, s2, d0, d1, d2, mip = null) {
   // grow the destination triangle ~0.6 px about its centroid to hide the seams
   const cx = (d0[0] + d1[0] + d2[0]) / 3, cy = (d0[1] + d1[1] + d2[1]) / 3;
   const gr = (p) => { const dx = p[0] - cx, dy = p[1] - cy, l = Math.hypot(dx, dy) || 1; return [p[0] + (dx / l) * 0.6, p[1] + (dy / l) * 0.6]; };
@@ -103,6 +115,10 @@ function tri(g, img, s0, s1, s2, d0, d1, d2) {
   const e = (u0 * (x1 * y2 - x2 * y1) + u1 * (x2 * y0 - x0 * y2) + u2 * (x0 * y1 - x1 * y0)) / den;
   const f = (v0 * (x1 * y2 - x2 * y1) + v1 * (x2 * y0 - x0 * y2) + v2 * (x0 * y1 - x1 * y0)) / den;
   g.transform(a, b, c, d, e, f);
+  if (mip) {
+    const M = g.getTransform();
+    if (mipLevel(img.width, img.height, M.a, M.b, M.c, M.d) >= 1) { g.scale(img.width / mip.width, img.height / mip.height); g.drawImage(mip, 0, 0); g.restore(); return; }
+  }
   g.drawImage(img, 0, 0);
   g.restore();
 }

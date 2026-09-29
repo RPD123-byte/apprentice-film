@@ -261,14 +261,30 @@ export function drawPageFramedExact(ctx, src, [px0, py0, px1, py1] = [0, 0, PAGE
   }
 }
 
+// (purity) Chrome rasterizes a 2D canvas on the CPU (index.html asks for that) until something drawn into it comes from
+// the GPU, and then moves it to the GPU for good; the two resample and blend differently. The glow's working canvases
+// used to take the raster of the first canvas addScreenGlow read: in the film that is s21's first frame (69.44), which
+// reads the film's own (GPU-backed) canvas, so the published glow was always computed on the GPU; but a page whose first
+// glow read a CPU canvas computed every later glow on the CPU (1–4 levels different) until a GPU canvas came along.
+// Each working canvas is now moved to the GPU when it is made (one pixel of the film's WebGL canvas drawn in, then
+// cleared), so the glow no longer depends on which canvas it was fed first. glowMask stays on the CPU, as it always was.
+function onGpu(c) {
+  const src = document.getElementById("film");
+  if (!src) return c;
+  const g = c.getContext("2d");
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
+  g.drawImage(src, 0, 0, 1, 1, 0, 0, 1, 1); g.clearRect(0, 0, c.width, c.height);
+  g.restore();
+  return c;
+}
 // The glow pass on its own (frame coordinates): reads the screen area of ctx and adds its light outside it.
 export function addScreenGlow(ctx, gain = 1) {
   const S = FRAMED.glowRect, W = ctx.canvas.width, H = ctx.canvas.height;
   const sw = Math.floor(W / 8), sh = Math.floor(H / 8);
   if (!glowSmall) {
-    glowSmall = document.createElement("canvas"); glowSmall.width = sw; glowSmall.height = sh;          // GPU: downsample
-    glowTmp = document.createElement("canvas"); glowTmp.width = sw; glowTmp.height = sh;              // CPU: read/write
-    glowFull = document.createElement("canvas"); glowFull.width = W; glowFull.height = H;
+    glowSmall = document.createElement("canvas"); glowSmall.width = sw; glowSmall.height = sh; onGpu(glowSmall);  // downsample
+    glowTmp = document.createElement("canvas"); glowTmp.width = sw; glowTmp.height = sh; onGpu(glowTmp);        // read/write
+    glowFull = document.createElement("canvas"); glowFull.width = W; glowFull.height = H; onGpu(glowFull);
     // outside = 1 - GaussianBlur(inside, sigma 10), built analytically (the blur of a rectangle is separable), at
     // quarter resolution (it is smooth) and scaled up when used
     const MW = Math.ceil(W / 4), MH = Math.ceil(H / 4);
@@ -283,7 +299,7 @@ export function addScreenGlow(ctx, gain = 1) {
     m.putImageData(id, 0, 0);
   }
   // 1) inside-only content, shrunk 8x by three bilinear halvings (cheap on any GPU, close to an area average)
-  if (!glowHalf) { glowHalf = [2, 4].map((k) => { const c = document.createElement("canvas"); c.width = Math.round(W / k); c.height = Math.round(H / k); return c; }); }
+  if (!glowHalf) { glowHalf = [2, 4].map((k) => { const c = document.createElement("canvas"); c.width = Math.round(W / k); c.height = Math.round(H / k); return onGpu(c); }); }
   const [h2, h4] = glowHalf, y1 = Math.min(H, S.y1);
   const g2 = h2.getContext("2d"); g2.setTransform(1, 0, 0, 1, 0, 0); g2.fillStyle = "#000"; g2.fillRect(0, 0, h2.width, h2.height);
   g2.imageSmoothingEnabled = true; g2.imageSmoothingQuality = "low";

@@ -93,6 +93,8 @@ function composite(t, local) {
   const g = COMP.getContext("2d", { willReadFrequently: true });
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
+  // (purity) cleared: the softened page's outermost ~2 px are not opaque, so they took in the previous frame's composite
+  g.clearRect(0, 0, PAGE_W, PAGE_H);
   g.imageSmoothingQuality = "high";
   drawPageOpening(g, t, zoomAt(local));
   drawSteam(g, drawTick(t));
@@ -163,6 +165,9 @@ export const shot = {
     if (p) {
       const q = { ...p, x: FX + z * (p.x - FX), y: FY + z * (p.y - FY), s: p.s * z };
       if (p.blur) q.blur = [p.blur[0] * z, p.blur[1] * z];
+      // (purity) 53.04 repeats 53.00's drawing; the render always drew it over 53.00's owl canvas, whose line join was
+      // left "round" (s17/owlDraw.js now resets that canvas every draw): kept explicitly, so the frame is unchanged
+      if (Math.abs(t - 53.04) < 0.01) q.joins = "round";
       drawOwlS17(ctx, q);
     }
   },

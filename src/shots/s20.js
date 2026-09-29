@@ -131,7 +131,7 @@ export const shot = {
     // cobwebs are gone by 65.68
     const grime = 1 - clamp((fr - 1638) / 11);
     if (fr < 1682) { drawCobwebs(ctx, 1 - clamp((fr - 1637) / 5)); drawScissors(ctx, LEAN, { grime }); }
-    drawCard(ctx, fr);
+    drawCard(ctx, fr, room.back);
     ctx.drawImage(room.front, -M, -M);
     if (!dbg.nodust) drawDust(ctx, fr / 25);
     if (fr >= 1682 && fr <= 1684) drawCarry(ctx, fr);

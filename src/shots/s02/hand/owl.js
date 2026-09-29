@@ -293,7 +293,9 @@ export function owlAt(f) {
       pose.w2 = [[wing2At([-96, -128], [lx, ly - 30], -1, baseL, 0.22, chordAt(f, 0), 21, chordAt(f, 2)), -1], [wing2At([96, -128], [rx, ry - 30], 1, baseR, 0.22, chordAt(f, 1), 23, chordAt(f, 3)), 1]];
     }
     pose.extra = inkExtra(pose, "sit", FLY_FEET, { at: 0.72, size: 58, lean: 0.35 });
-    const dy = CROUCH[f] || 0;
+    // 397 shares the sitting layer's cache key with the frames before it, so the published (in-order) render drew it with
+    // that layer, i.e. without its crouch; pin it so a cold draw of 397 gives the same pixels (purity).
+    const dy = f === 397 ? 0 : CROUCH[f] || 0;
     return { pose, place: { x: SIT.x, y: SIT.y + dy, s: SIT.s, rot: 0 }, key: `sit-${f >= 398 ? f : JSON.stringify(sitEyes(f))}` };
   }
   const [x, y, s, b] = rootAt(f);
@@ -338,8 +340,22 @@ function outlined(src, d, dst) {
 const cache = new Map();
 let C = null;
 const cv = () => document.createElement("canvas");
-// soft = the measured motion softness of the wings (px sigma); the body and head are drawn crisp
-export function owlLayerAt(f, ox, oy, soft = 0) {
+// Purity (snapshots/purity-fix-s02): the reused core and wing canvases used to keep their context from the last frame
+// drawn on them unless their size changed, so a frame inherited that drawing's round line cap (core: set by inkExtra) and
+// round line join (wing: set by paintWing2) whenever the frame drawn before it had the same canvas size, and its pixels
+// depended on draw order. Every draw now starts from a reset context. The published (in-order) render drew these film
+// frames (numbered before the REPEAT hold) with the carried cap / join, because the frame before them had the same canvas
+// size (snapshots/purity-fix-s02/sizes.log); they get it explicitly, so the render does not change.
+const CARRY_CAP = new Set([399, 400, 401, 402, 403, 404, 411, 427, 452, 475, 477]);
+const CARRY_JOIN = new Set([399, 402, 427, 452, 477]);
+function resetCtx(c, attrs) {
+  const g = c.getContext("2d", attrs);
+  if (g.reset) g.reset(); else c.width = c.width;
+  return g;
+}
+// soft = the measured motion softness of the wings (px sigma); the body and head are drawn crisp; n = the film frame
+// (before the REPEAT hold), for the carried line cap / join above
+export function owlLayerAt(f, ox, oy, soft = 0, n = f) {
   const { pose, place, key } = owlAt(f);
   if (key.startsWith("sit-") && !key.startsWith("sit-3") && !key.startsWith("sit-4")) {
     // held sitting pose: cache in hold-frame coords and shift
@@ -357,7 +373,10 @@ export function owlLayerAt(f, ox, oy, soft = 0) {
   }
   if (!C) C = { core: cv(), wing: cv(), out: cv(), o1: cv(), o2: cv() };
   const P = { ...pose, ...place, x: place.x + ox, y: place.y + oy };
-  const core = owlLayer({ ...P, canvas: C.core });
+  const cg = resetCtx(C.core, { willReadFrequently: true });
+  let core = owlLayer({ ...P, canvas: C.core });
+  // the carried cap: the first draw sized the canvas (a resize resets the context), the second keeps the cap
+  if (CARRY_CAP.has(n)) { resetCtx(C.core, { willReadFrequently: true }); cg.lineCap = "round"; core = owlLayer({ ...P, canvas: C.core }); }
   if (!pose.w2 || !pose.w2.length) { const o = outlined(core.canvas, 1, C.o1); return { canvas: o, x: core.x - 1, y: core.y - 1, w: core.w + 2, h: core.h + 2, anchors: core.anchors }; }
   // the wings (wing2.js) on their own canvas in frame px, outlined and softened; the crisp wingless owl on top
   const sc = P.s, ca = Math.cos(P.rot || 0), sa = Math.sin(P.rot || 0), toF = (u) => [P.x + sc * (ca * u[0] - sa * u[1]), P.y + sc * (sa * u[0] + ca * u[1])];
@@ -367,8 +386,8 @@ export function owlLayerAt(f, ox, oy, soft = 0) {
   x0 = Math.floor(x0) - pad; y0 = Math.floor(y0) - pad; x1 = Math.ceil(x1) + pad; y1 = Math.ceil(y1) + pad;
   const W = x1 - x0, Hh = y1 - y0;
   const wg = C.wing; if (wg.width !== W || wg.height !== Hh) { wg.width = W; wg.height = Hh; }
-  const g = wg.getContext("2d");
-  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; g.filter = "none"; g.clearRect(0, 0, W, Hh);
+  const g = resetCtx(wg);
+  if (CARRY_JOIN.has(n)) g.lineJoin = "round";
   g.setTransform(sc * ca, sc * sa, -sc * sa, sc * ca, P.x - x0, P.y - y0);
   for (const [G, side] of pose.w2) paintWing2(g, G, side, sc);
   g.setTransform(1, 0, 0, 1, 0, 0);

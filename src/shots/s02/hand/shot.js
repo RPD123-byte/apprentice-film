@@ -171,7 +171,8 @@ let OWL_SOFT0 = 0, OWL_SOFTK = 1;
 export const __lab = { only: null, gain: null, bookK: null, desbK: null, desLift: null, wt(o) { Object.assign(WT, o); }, soft(a, k) { OWL_SOFT0 = a; OWL_SOFTK = k; }, des(look) { layers(); return L.des[look === "soft" ? "soft" : look ? "look" : "stare"]; } };
 export const shot = {
   draw(ctx, local, t) {
-    let f = frameOf(t);
+    const n = frameOf(t);
+    let f = n;
     if (REPEAT.has(f)) f -= 1;
     layers();
     const [ox, oy] = camAt(f), dir = panDir(f);
@@ -180,12 +181,12 @@ export const shot = {
     const only = __lab.only;
     if (!only || only.room) { layer(ctx, rb[0], rb[1], dir, (g, a, b) => paintRoom(g, ox + a, oy + b, f)); if (!only || !only.nogain) applyGain(ctx, __lab.gain ?? tabF(GAIN, f) * (__lab.gainK ?? 1)); applyRegionGain(ctx, __lab.bookK ?? tabF(BOOK_GAIN, f), ox, oy); }
     if (only && !only.chars) return;
-    if (only && only.owlOnly) { const O = f < 405 ? owlLayerAt(f, BOX_OFF[0] + ox, BOX_OFF[1] + oy) : owlLayerAt(f, 0, 0, OWL_SOFT0 + OWL_SOFT[Math.max(0, Math.min(OWL_SOFT.length - 1, f - 397))] * OWL_SOFTK); ctx.drawImage(O.canvas, O.x, O.y, O.w, O.h); return; }
+    if (only && only.owlOnly) { const O = f < 405 ? owlLayerAt(f, BOX_OFF[0] + ox, BOX_OFF[1] + oy, 0, n) : owlLayerAt(f, 0, 0, OWL_SOFT0 + OWL_SOFT[Math.max(0, Math.min(OWL_SOFT.length - 1, f - 397))] * OWL_SOFTK, n); ctx.drawImage(O.canvas, O.x, O.y, O.w, O.h); return; }
     if (only && only.desOnly) { layer(ctx, db[0], db[1], dir, (g, a, b) => paintDesigner(g, f, ox + a, oy + b)); return; }
     // the owl sitting on the cartons (hold-frame placement), with the room's pan blur on the arrival
     if (f >= 330 && f < 405) {
       layer(ctx, obl[0], obl[1], dir, (g, a, b) => {
-        const O = owlLayerAt(f, BOX_OFF[0] + ox + a, BOX_OFF[1] + oy + b);
+        const O = owlLayerAt(f, BOX_OFF[0] + ox + a, BOX_OFF[1] + oy + b, 0, n);
         if (onScreen(O.x, O.y, O.w, O.h)) g.drawImage(O.canvas, O.x, O.y, O.w, O.h);
       });
     }
@@ -196,7 +197,7 @@ export const shot = {
       // the source's flying owl: the wings are motion-soft (edge blur measured along the wing outlines per frame, previous
       // pass), the body and head crisp and inked. owlLayerAt softens only its wing pass.
       const sg = OWL_SOFT0 + OWL_SOFT[Math.max(0, Math.min(OWL_SOFT.length - 1, f - 397))] * OWL_SOFTK;
-      const O = owlLayerAt(f, 0, 0, sg);
+      const O = owlLayerAt(f, 0, 0, sg, n);
       if (onScreen(O.x, O.y, O.w, O.h)) ctx.drawImage(O.canvas, O.x, O.y, O.w, O.h);
     }
     tint(ctx, f);

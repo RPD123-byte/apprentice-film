@@ -8,7 +8,7 @@ import { paintFigure, paintPencil, paintLips } from "./figure.js";
 import { paintOwl } from "./owl.js";
 import { paintLeftHand, paintRightHand, paintArm } from "./hands.js";
 import { toneLayer } from "./tone.js";
-import { blurCanvas } from "./kit.js";
+import { blurCanvas, freeScratch } from "./kit.js";
 
 // [x0, y0, x1, y1] frame px (settled), the painter, the final softening (px, exact gaussian)
 const DEFS = {
@@ -26,9 +26,19 @@ const DEFS = {
 };
 export const LAYER_BOX = Object.fromEntries(Object.entries(DEFS).map(([k, v]) => [k, v.box]));
 
+// Purity: kit.js's scratch canvases are reused (grown, never shrunk), and blurDraw's reduced-resolution blurs (blur
+// > 5 px: lh, rh/arm, owl) are drawn back scaled up from a sub-rectangle of one, so their edges sample a pixel or two of
+// whatever an earlier drawing left beside that rectangle. A layer's pixels therefore depended on which layers had been
+// built before it since the page loaded (lh and owl differed between a first build and a rebuild). All layers are now
+// built together from fresh scratch canvases, in the order the published render first built them (the first frame
+// draws room, desk, lh, rhB, armB, fig, pencil, lips, owl; rh and arm followed at 23.60), which keeps its pixels.
+const ORDER = ["room", "desk", "lh", "rhB", "armB", "fig", "pencil", "lips", "owl", "rh", "arm"];
 let CACHE = {};
 export function layer(name) {
-  if (CACHE[name]) return CACHE[name];
+  if (!CACHE[name]) { CACHE = {}; freeScratch(); for (const n of ORDER) CACHE[n] = build(n); freeScratch(); }
+  return CACHE[name];
+}
+function build(name) {
   const D = DEFS[name], [x0, y0, x1, y1] = D.box, w = x1 - x0, h = y1 - y0;
   const c = document.createElement("canvas"); c.width = w; c.height = h;
   const g = c.getContext("2d", { willReadFrequently: true });
@@ -38,6 +48,6 @@ export function layer(name) {
   g.setTransform(1, 0, 0, 1, 0, 0);
   toneLayer(name, c, x0, y0);
   if (D.soft) blurCanvas(c, D.soft);
-  return (CACHE[name] = { c, x: x0, y: y0, w, h });
+  return { c, x: x0, y: y0, w, h };
 }
-export function releaseLayers() { CACHE = {}; }
+export function releaseLayers() { CACHE = {}; freeScratch(); }

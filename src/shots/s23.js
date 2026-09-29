@@ -387,8 +387,26 @@ function scene(k) {
 }
 
 // ---------------------------------------------------------------- frame
+// The shaken frames are painted into an offscreen canvas first. Chrome rasterizes a 2D canvas on the GPU or on the CPU
+// (the two anti-alias differently: the thin speed ring differs by up to 70 levels), and it moves a CPU canvas to the
+// GPU for good the first time a GPU-backed canvas is drawn into it. The film's canvas is GPU-backed, so the shared
+// offscreen canvas is made GPU-backed at once, by drawing the film's canvas into it (drawFramedPage's black fill then
+// paints over every pixel); it used to start on the CPU and move over at the first shaken frame's screen glow, so that
+// frame depended on whether the canvas already existed. The published 92.64 (k 2316, the first shaken frame) was painted
+// that way: on the CPU up to and including the screen glow, then on the GPU. It keeps that recipe on a fresh canvas of
+// its own per draw, moved to the GPU explicitly right after the glow (`gpu`), so it no longer depends on what was drawn
+// before (in particular not on sites.js's glow canvases being GPU-backed).
 let buf = null;
-function render(g, k) {
+const SHAKE0 = 2316;
+function frameCanvas(W, H) { const c = document.createElement("canvas"); c.width = W; c.height = H; return c; }
+// move g's canvas to the GPU if `src` is GPU-backed: one pixel drawn under the frame (destination-over; the frame is
+// opaque once painted, and a new canvas is painted over) changes nothing
+function toGpu(g, src) {
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "destination-over";
+  g.drawImage(src, 0, 0, 1, 1, 0, 0, 1, 1);
+  g.restore();
+}
+function render(g, k, gpu = null) {
   const page = k <= 2209 ? holePage() : withBanner();
   const paint = scene(k);
   // the page on the screen; the screen's thin border (F1's stroke, copied) goes UNDER the carried strip / banner / owl.
@@ -398,6 +416,7 @@ function render(g, k) {
   screenBorder(g);
   paint(g);
   addScreenGlow(g, glowGain(k));
+  if (gpu) toGpu(g, gpu);
   roomSides(g, roomGain(k));
   afterSlap(g, k);
   // the source's last three rows are nearly black through the whole film (an edge of its encode: row 943 is ≈ 0.2x
@@ -458,16 +477,25 @@ export const shot = {
     const k = fidx(t);
     const [dx, dy] = shakeAt(k);
     if (!dx && !dy) return render(ctx, k);
-    if (!buf) { buf = document.createElement("canvas"); buf.width = ctx.canvas.width; buf.height = ctx.canvas.height; }
-    const b = buf.getContext("2d");
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    if (!buf || buf.width !== W || buf.height !== H) { buf = frameCanvas(W, H); toGpu(buf.getContext("2d"), ctx.canvas); }
+    let fb = buf;
+    if (k === SHAKE0) {
+      // sites.js's glow canvases take the GPU / CPU state of the first canvas they are fed; a glow pass on the GPU
+      // buffer (repainted in full before its next use) makes sure they are GPU-backed, as they were when 92.64 was
+      // published, even when this frame is the first glow drawn since the page loaded
+      addScreenGlow(buf.getContext("2d"), 1);
+      fb = frameCanvas(W, H);
+    }
+    const b = fb.getContext("2d");
     b.setTransform(1, 0, 0, 1, 0, 0);
-    render(b, k);
+    render(b, k, k === SHAKE0 ? ctx.canvas : null);
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
     // the source has no black bars at the frame edges while it shakes: fill the uncovered edge with the frame itself,
     // enlarged 1.2 % about the centre, then lay the shaken frame over it at its measured offset
-    const W = ctx.canvas.width, H = ctx.canvas.height, z = 1.012;
-    ctx.drawImage(buf, dx + (W - W * z) / 2, dy + (H - H * z) / 2, W * z, H * z);
-    ctx.drawImage(buf, dx, dy);
+    const z = 1.012;
+    ctx.drawImage(fb, dx + (W - W * z) / 2, dy + (H - H * z) / 2, W * z, H * z);
+    ctx.drawImage(fb, dx, dy);
     ctx.restore();
   },
   release() { sideGrads.clear(); stripC = null; bannerPage = null; buf = null; releaseBirds(); releaseFx(); releaseFlames(); releaseFire(); releaseOwlE(); releaseSoko(); releaseHippie(); },

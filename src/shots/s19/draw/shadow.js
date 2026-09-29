@@ -205,12 +205,24 @@ export const PENUMBRA = {
 // The pool is drawn by putting the unlit floor (the room plate) back inside it: the table's rows make a polygon (the
 // last row carried to the bottom edge when it is low enough), softened by a small blur, restored at 0.96 so that
 // about 0.04 of the card's light is left, as measured (graded 4–10 in the pool against 60–75 lit).
-let M = null;
+// Purity: Chrome rasterizes the blurs below one way on a 2D canvas that has never had the room plate (filled from
+// WebGL) drawn into it, and another way once it has (the tails of blur(9px) differ by up to 9 levels): drawing the
+// plate switches the canvas for good. The reused mask used to switch part-way through its first frame, so whichever
+// pool frame was drawn first on it came out different. Now the mask takes the plate once when it is made, so every
+// frame blurs the switched way. The pool's first frame, 57.64, was rendered (and published) on the then-new mask
+// (penumbra blurred before the switch, pool after): it keeps that look by being drawn on a new canvas every time.
+let MASK = null;
 const Y0 = 776, MH = 946 - Y0;
+const FIRST = Math.min(...Object.keys(SHADOW).map(Number), ...Object.keys(PENUMBRA).map(Number));
+const newMask = () => { const c = document.createElement("canvas"); c.width = 2206; c.height = MH; return c; };
+function mask(room) {
+  if (!MASK) { MASK = newMask(); const g = MASK.getContext("2d"); g.drawImage(room, 0, -Y0); g.clearRect(0, 0, MASK.width, MASK.height); }
+  return MASK;
+}
 export function drawShadow(ctx, t, room, fl) {
   if (fl <= 0) return;
   const k = Math.round(t * 25), rows = SHADOW[k], pen = PENUMBRA[k];
-  if (!M) { M = document.createElement("canvas"); M.width = 2206; M.height = MH; }
+  const M = k === FIRST ? newMask() : mask(room);
   const g = M.getContext("2d");
   if (pen) {
     // the penumbra: soft bands along the measured rows, the unlit floor restored at 0.5
@@ -233,4 +245,4 @@ export function drawShadow(ctx, t, room, fl) {
   g.globalCompositeOperation = "source-in"; g.drawImage(room, 0, -Y0);
   ctx.save(); ctx.globalAlpha = 0.96 * fl; ctx.drawImage(M, 0, Y0); ctx.restore();
 }
-export function releaseShadow() { M = null; }
+export function releaseShadow() { MASK = null; }

@@ -12,6 +12,7 @@ import { smoothPath } from "../../lib/paths.js";
 import { rng } from "../../lib/rng.js";
 import { REPAINT, AFTER, finishIll } from "./gear.js";
 import { EYE } from "./designer.js";
+import { freeScratch } from "./kit.js";
 
 const PI = Math.PI;
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
@@ -143,8 +144,13 @@ function smudgeFix(f, scale) {
 // headline + counter + key (the UI) on a separate transparent layer so the opening can fade it in. Both softened by
 // SOKO_SOFT (F1's measured page softness). Scale 1 only (the pull-back upscales it, like the source). Cached.
 let PAGE = null, UI = null, RAW = null, NEAR = null;
+// (purity) s17/kit.js keeps scratch canvases that grow on demand, and a value study painted into one of them is
+// clipped (and its soft fills blurred) to that canvas's current size (kit devBox clamps to g.canvas): the trousers'
+// and the flight case's studies came out different once the scratch was already grown by an earlier build. Each build
+// starts (and ends) with kit's scratch freed, so every build — the first, or one after release() — gives the same page.
 function pageCanvases() {
   if (PAGE) return;
+  freeScratch();
   PAGE = document.createElement("canvas"); PAGE.width = PAGE_W; PAGE.height = PAGE_H;
   const g = PAGE.getContext("2d", { willReadFrequently: true });
   g.fillStyle = SOKO_BG; g.fillRect(0, 0, PAGE_W, PAGE_H);
@@ -156,6 +162,7 @@ function pageCanvases() {
     if (AFTER[name]) { g.save(); AFTER[name](g); g.restore(); }
   }
   g.save(); finishIll(g); g.restore();
+  freeScratch();
   drawSokoRail(g);
   RAW = document.createElement("canvas"); RAW.width = PAGE_W; RAW.height = PAGE_H;
   RAW.getContext("2d", { willReadFrequently: true }).drawImage(PAGE, 0, 0);

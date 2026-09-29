@@ -657,22 +657,27 @@ function drawRoom(G, t, Z) {
   if (owl && !behind) G.quadH(owl, [1, 0, 0, 0, 1, 0, 0, 0, 1]);
 }
 
+function compose(G, t) {
+  const fx = t < 117.92 ? lerpRows(WHIP_FX, t) : [0, 0, 0, 0, 0, 0];
+  const blur = fx[0], flash = fx[1];
+  if (blur > 0) G.beginFBO(); else G.begin();
+  const Z = whipZoom(t) || [1, 0, 0, 0, 1, 0, 0, 0, 1];
+  drawRoom(G, Math.max(118.0, t), Z);
+  const rot = DBG() && DBG().rot !== undefined ? DBG().rot : (fx[2] || 0);
+  const zb = DBG() && DBG().zb ? DBG().zb : null;      // measuring override [cx, cy, amount scale]
+  const sym = zb && zb[5] !== undefined ? zb[5] : 1, ramp = zb && zb[6] !== undefined ? [zb[6], zb[7]] : [0.05, 0.45];
+  if (blur > 0) G.zoomBlur(zb ? zb[0] : fx[4], zb ? zb[1] : fx[5], blur * (zb ? zb[2] : 1), [0.93, 0.935, 0.925, zb && zb[4] !== undefined ? zb[4] : flash], rot, zb && zb[3] !== undefined ? zb[3] : fx[3], sym, ramp);
+  if (t >= 118.0 && !(DBG() && DBG().nodes)) drawDesigner(G, t);
+}
+
 export const shot = {
   draw(ctx, local, tRaw) {
     const t = Math.round(tRaw * 25) / 25;           // the source's frame grid
     const G = getGL(W, H);
     if (DBG() && DBG().des === "only") { G.begin(); drawDesigner(G, t); ctx.drawImage(G.end(), 0, 0); return; }   // measuring hook
     if (DBG() && DBG().owl === "only") { G.begin(); const o = owlTexture(G, t); if (o) G.quadH(o, [1, 0, 0, 0, 1, 0, 0, 0, 1], { tint: [1, 1, 1, 1] }); ctx.drawImage(G.end(), 0, 0); return; }
-    const fx = t < 117.92 ? lerpRows(WHIP_FX, t) : [0, 0, 0, 0, 0, 0];
-    const blur = fx[0], flash = fx[1];
-    if (blur > 0) G.beginFBO(); else G.begin();
-    const Z = whipZoom(t) || [1, 0, 0, 0, 1, 0, 0, 0, 1];
-    drawRoom(G, Math.max(118.0, t), Z);
-    const rot = DBG() && DBG().rot !== undefined ? DBG().rot : (fx[2] || 0);
-    const zb = DBG() && DBG().zb ? DBG().zb : null;      // measuring override [cx, cy, amount scale]
-    const sym = zb && zb[5] !== undefined ? zb[5] : 1, ramp = zb && zb[6] !== undefined ? [zb[6], zb[7]] : [0.05, 0.45];
-    if (blur > 0) G.zoomBlur(zb ? zb[0] : fx[4], zb ? zb[1] : fx[5], blur * (zb ? zb[2] : 1), [0.93, 0.935, 0.925, zb && zb[4] !== undefined ? zb[4] : flash], rot, zb && zb[3] !== undefined ? zb[3] : fx[3], sym, ramp);
-    if (t >= 118.0 && !(DBG() && DBG().nodes)) drawDesigner(G, t);
+    // (purity-fix-s27) a dry pass builds and uploads every texture, then the draws run uninterrupted (gl.js frame())
+    G.frame(() => compose(G, t));
     ctx.drawImage(G.end(), 0, 0);
   },
   // (end-s27-tfix) the source's grain is coarser and stronger here than the film's fine grain (flat-area residual std, luma

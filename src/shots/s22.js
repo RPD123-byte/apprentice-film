@@ -603,33 +603,63 @@ const LATE_LINE_GAIN = 2;
 const LATE_BLUR = 0.45, LATE_LINE_SOFT = 0.35;
 const lateLines = (name) => (name === "walk" ? walkLines(LINES.walk, DBG.walkEye) : LINES[name]);
 const SPR = new Map();
+const buildLate = (name) => tracedSprite(TRACED[name], { res: 2, blur: DBG.lateBlur ?? LATE_BLUR, gain: LATE_GAIN[name] ?? 1, lines: DBG.noLines ? null : lateLines(name),
+  lineGain: DBG.lateLineGain ?? (name === "walk" ? 1 : LATE_LINE_GAIN), lineSoft: DBG.lateLineSoft ?? LATE_LINE_SOFT,
+  lines2: DBG.noLines2 || DBG.noLines ? null : LINES2[name],
+  ...(name === "f8396" && !DBG.noHaulFix ? { extra: haulExtra(DBG.haul || {}), padExtra: 24 } : {}) });
 function lateSprite(name) {
   const key = name + (DBG.lateKey || "");
   let S = SPR.get(key);
-  if (!S) {
-    S = tracedSprite(TRACED[name], { res: 2, blur: DBG.lateBlur ?? LATE_BLUR, gain: LATE_GAIN[name] ?? 1, lines: DBG.noLines ? null : lateLines(name),
-      lineGain: DBG.lateLineGain ?? (name === "walk" ? 1 : LATE_LINE_GAIN), lineSoft: DBG.lateLineSoft ?? LATE_LINE_SOFT,
-      lines2: DBG.noLines2 || DBG.noLines ? null : LINES2[name],
-      ...(name === "f8396" && !DBG.noHaulFix ? { extra: haulExtra(DBG.haul || {}), padExtra: 24 } : {}) });
-    SPR.set(key, S);
-  }
+  if (!S) { S = buildLate(name); SPR.set(key, S); }
   return S;
 }
 function lateState(T) {
   const name = hold(LATE, T)[0];
   if (name === "walk") {
     const [a, b, c, d, e, f] = hold(WALK_T, T);
-    return { kind: "late", name, anchor: [e, f], m: [a, b, c, d] };
+    // (purity, see primeWalk) a sprite made for the frame
+    return { kind: "late", name, anchor: [e, f], m: [a, b, c, d], T, S: buildLate(name) };
   }
   if (name === "brand") return { kind: "late", name, anchor: [0, T < 80.4 ? hold(BRAND_DY, T)[0] : 0], m: [1, 0, 0, 1] };
   return { kind: "late", name, anchor: [0, 0], m: [1, 0, 0, 1] };
 }
 function paintLate(g, st) {
-  drawSprite(g, lateSprite(st.name), st.anchor[0], st.anchor[1], st.m);
+  drawSprite(g, st.S || lateSprite(st.name), st.anchor[0], st.anchor[1], st.m);
 }
 function paintOwl(g, st) {
   if (st.kind === "edge") paintEdge(g, st);
   else paintLate(g, st);
+}
+// (purity) The frame's canvas is rasterized on the GPU, and a CPU canvas drawn scaled onto it goes through Chrome's GPU
+// image decode cache: the sprite is uploaded at the mip level the draw that first needs it asks for, and that upload
+// is reused (a finer one replaces it when a draw needs more) until it is evicted. The walk sprite (res 2) is drawn at
+// scale 0.5 turned by the pose's small tilt, so some poses ask for the half-size mip (scale 0.4999985) and others for
+// the full size (0.5000011): with one kept sprite, what a frame sampled depended on which walk frames had been drawn
+// since it was made (81.72–82.00 sampled the full size when drawn after a later frame, and the half size in order).
+// The published (in-order) render made the sprite at 81.72: 81.72–82.00 (all half-size poses) sampled the half size,
+// 82.04 asked for the full size, and from there on every frame sampled the full-size upload, made by the walk's own
+// draw. Now every walk frame draws a sprite made for that frame and repeats that: its own draw makes the upload (a
+// full-size pose from 82.04 on: the full size), and a half-size pose from 82.04 on is first drawn once just over its
+// own size under the page (which is opaque there, so no pixel changes), so that its draw finds the full-size upload.
+// (A copy of a kept sprite, or a one-pixel draw of it to prime the cache, sampled differently: ±1–2 levels.)
+const WALK_FULL = 82.02;
+// the pose's draw scale as the cache sees it (float32): at or under 0.5 it asks for the half-size mip
+const halfMip = (m) => Math.fround(0.5 * Math.hypot(m[0], m[1])) <= 0.5;
+function primeWalk(g, st) {
+  if (st.name !== "walk" || st.T < WALK_FULL || !halfMip(st.m)) return;
+  const k = 1 + 1e-5;
+  g.save(); g.globalCompositeOperation = "destination-over";
+  drawSprite(g, st.S, st.anchor[0], st.anchor[1], st.m.map((v) => v * k));
+  g.restore();
+}
+// Chrome keeps a 2D canvas on the CPU until something drawn into it comes from the GPU (the frame's canvas, the room
+// light's canvases), and then moves it to the GPU for good; the two anti-alias and resample differently. This moves c
+// to wherever `like` is rasterized: one pixel of `like` drawn in, then cleared.
+function sameRaster(c, like) {
+  const g = c.getContext("2d");
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
+  g.drawImage(like, 0, 0, 1, 1, 0, 0, 1, 1); g.clearRect(0, 0, c.width, c.height);
+  g.restore();
 }
 
 // ---------------------------------------------------------------- exposure
@@ -757,9 +787,13 @@ function roomGain(k) {
   return C;
 }
 // the screen's light over the frame as it is, scaled by ROOM_G: (content + glow) − content = the glow alone
-function addRoomLight(ctx, T) {
-  if (!GLOWC) { GLOWC = document.createElement("canvas"); GLOWC.width = W; GLOWC.height = H; }
-  const g = GLOWC.getContext("2d");
+function addRoomLight(ctx, T, fresh = false) {
+  // (purity) `fresh`: the shot's first frame (see draw) takes the light through a new canvas of its own, as the
+  // published render did; every other frame through one kept on the frame's raster (where it went after first use)
+  let GC = GLOWC;
+  if (fresh) { GC = document.createElement("canvas"); GC.width = W; GC.height = H; }
+  else if (!GLOWC) { GC = GLOWC = document.createElement("canvas"); GLOWC.width = W; GLOWC.height = H; sameRaster(GLOWC, ctx.canvas); }
+  const g = GC.getContext("2d");
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalCompositeOperation = "copy"; g.drawImage(ctx.canvas, 0, 0);
   g.globalCompositeOperation = "source-over";
@@ -770,7 +804,7 @@ function addRoomLight(ctx, T) {
   g.globalCompositeOperation = "difference"; g.drawImage(ctx.canvas, 0, 0);
   if (!DBG.noGain) { g.globalCompositeOperation = "multiply"; g.drawImage(roomGain(k), 0, 0); }
   g.globalCompositeOperation = "source-over";
-  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = "lighter"; ctx.drawImage(GLOWC, 0, 0); ctx.restore();
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = "lighter"; ctx.drawImage(GC, 0, 0); ctx.restore();
   if (T >= PEEL_T0) { addCardPool(ctx, T); addEndBand(ctx, T); }
 }
 // (fix pass 1) The light pool above the peeled card. Over 82.2–84.0 the source's top margin is up to 10–16 levels
@@ -853,12 +887,13 @@ function addEndBand(ctx, T) {
   ctx.restore();
 }
 
-function scene(ctx, T) {
+function scene(ctx, T, fresh = false) {
   const edge = T < EDGE_END;
   const st = edge ? edgeState(T) : lateState(T);
   const paint = (g) => paintOwl(g, st);
   const page = sokoPageCanvas({ gaze: "down", ui: T < LIFT_T0 });
   drawFramedPage(ctx, page, { glow: 0, border: false, over: (g) => {
+    if (!edge) primeWalk(g, st);
     drawRivet(g);
     if (T < LIFT_T0) drawDashes(g, dashCounts(T));
     else if (T < PEEL_T0) {
@@ -880,7 +915,7 @@ function scene(ctx, T) {
     if (og > 0 || near) owlGlow(ctx, paint, og, ow[0], ow[1], near);
     paint(ctx);
   }
-  addRoomLight(ctx, T);
+  addRoomLight(ctx, T, fresh);
   // (pass 4) the exposure dip goes on the picture before the late drawings: those were traced on the source's own
   // (already dimmed) frames, so dimming them again left them 10–16 levels dark on 80.56–84.0 in every tone
   applyExpo(ctx, T);
@@ -898,17 +933,32 @@ export const shot = {
   draw(ctx, local, t) {
     const T = srcT(t);
     if (T < 74.8) {
-      if (!OFF) { OFF = document.createElement("canvas"); OFF.width = W; OFF.height = H; }
-      const o = OFF.getContext("2d");
+      // (purity) The settle is painted on an offscreen canvas. Chrome rasterized the one kept from frame to frame on
+      // the CPU until the room light (drawn from GPU canvases) moved it to the GPU part-way through its first frame, so
+      // whichever settle frame came first looked different. The kept canvas now starts on the frame's raster (the
+      // GPU), so every frame is painted the way 74.56–74.76 were in the published render; its first frame, 74.52, was
+      // painted (and published) on the then-new canvas and keeps that look by being painted on a new one every time.
+      // The room light's own canvases (sites.js addScreenGlow) likewise take the raster of the first canvas they read:
+      // in the published render s21 had already moved them to the GPU, so 74.52 moves them there first (one glow of an
+      // empty canvas on the frame's raster; the next call rewrites all of them), in case nothing has yet this page.
+      const first = Math.round(T * 25) === Math.round(74.52 * 25);
+      let off = OFF;
+      if (first) {
+        off = document.createElement("canvas"); off.width = W; off.height = H;
+        const warm = document.createElement("canvas"); warm.width = W; warm.height = H; sameRaster(warm, ctx.canvas);
+        addScreenGlow(warm.getContext("2d"), 1);
+      }
+      else if (!OFF) { off = OFF = document.createElement("canvas"); OFF.width = W; OFF.height = H; sameRaster(OFF, ctx.canvas); }
+      const o = off.getContext("2d");
       o.setTransform(1, 0, 0, 1, 0, 0);
-      scene(o, T);
+      scene(o, T, first);
       const [a, tx, d, ty] = interp(BUMP, T);
       ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
       // (fix pass 2) the settle shrinks the frame by up to 1.2 % / 2.5 %: the strip it uncovers along the right and
       // bottom edges (x > ~2180, y > ~920) was left black (x 2190–2206 read 1.5 against the source's 7.0 at 74.60);
       // it shows the unscaled frame's margin there instead
-      ctx.drawImage(OFF, 0, 0);
-      ctx.setTransform(a, 0, 0, d, tx, ty); ctx.drawImage(OFF, 0, 0);
+      ctx.drawImage(off, 0, 0);
+      ctx.setTransform(a, 0, 0, d, tx, ty); ctx.drawImage(off, 0, 0);
       ctx.restore();
       return;
     }

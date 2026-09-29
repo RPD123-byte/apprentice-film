@@ -21,10 +21,59 @@ const THEME = {
   glowR: 1.45, glowStops: [[0, 0.9], [0.4, 0.5], [1, 0]], trashLw: 3,
   area: { x0: 41, y0: 146, x1: 405, y1: 606, btnY: 553, divX: 224, lw: 3.2 },
 };
-let tex = null;
-function cardTex() {
-  if (!tex) tex = noteCardCanvas(930, { theme: THEME, text: "This is really good", smiley: 1 });
+// Purity fix: the card texture lives on the GPU. The film canvas is rasterized on the GPU (drawing the room's plates,
+// which come from the WebGL engraver, moves it there), and a CPU canvas drawn scaled onto a GPU canvas goes through
+// Chrome's GPU image decode cache: each draw asks for the mip level its scale needs, and the cache keeps one upload
+// per image, reused (or replaced, or evicted) according to what was drawn before. So the same frame sampled different
+// uploads depending on draw history: 63.12 drawn first asks for level 1 on 115 of its 120 triangles and got a
+// half-size upload for them; drawn after any other frame it got the full-size upload. A GPU copy of the texture is
+// sampled directly, with no mip choice and no history. `gpu` is a texture-backed image (the room plate): drawing one
+// pixel of it moves the copy's canvas to the GPU; then the texture is copied in 1:1 (exact) and the pixel cleared.
+function toGpu(img, gpu) {
+  const c = document.createElement("canvas"); c.width = img.width; c.height = img.height;
+  const g = c.getContext("2d");
+  g.drawImage(gpu, 0, 0, 1, 1, 0, 0, 1, 1);
+  g.clearRect(0, 0, c.width, c.height);
+  g.drawImage(img, 0, 0);
+  return c;
+}
+const cardSrc = () => noteCardCanvas(930, { theme: THEME, text: "This is really good", smiley: 1 });
+let tex = null, mip = null;
+function cardTex(gpu) {
+  if (tex) return tex;
+  const src = cardSrc();
+  if (!gpu) return src;
+  tex = toGpu(src, gpu); tex.__pad = src.__pad;
   return tex;
+}
+// The published render drew 63.12 (the shot's first frame) with an empty decode cache: triangles asking for mip level
+// 1 were sampled from Chrome's half-size upload, the others from the full-size one; every later frame from the full
+// size. cardMip rebuilds that half-size upload exactly (as the decode cache makes it: a 2x2 box average of the
+// premultiplied pixels, rounded half up) so 63.12 keeps its published pixels, as a function of the frame alone.
+function cardMip(gpu) {
+  if (mip) return mip;
+  const src = cardSrc(), W = src.width, H = src.height, w = (W + 1) >> 1, h = (H + 1) >> 1;
+  const sd = src.getContext("2d").getImageData(0, 0, W, H).data, im = new ImageData(w, h), d = im.data;
+  const mul = (c, a) => { const t = c * a + 128; return (t + (t >> 8)) >> 8; };        // Skia's premultiply
+  const P = new Uint8Array(sd.length);
+  for (let i = 0; i < sd.length; i += 4) { const a = sd[i + 3]; P[i] = mul(sd[i], a); P[i + 1] = mul(sd[i + 1], a); P[i + 2] = mul(sd[i + 2], a); P[i + 3] = a; }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const x1 = Math.min(W - 1, 2 * x + 1), y1 = Math.min(H - 1, 2 * y + 1), o = (y * w + x) * 4;
+    const at = (xx, yy, ch) => P[(yy * W + xx) * 4 + ch];
+    const box = (ch) => (at(2 * x, 2 * y, ch) + at(x1, 2 * y, ch) + at(2 * x, y1, ch) + at(x1, y1, ch) + 2) >> 2;
+    const a = box(3); d[o + 3] = a;
+    // putImageData premultiplies again: store the straight value that premultiplies back to the box average
+    for (let ch = 0; ch < 3; ch++) {
+      if (!a) { d[o + ch] = 0; continue; }
+      const p = box(ch), c0 = Math.min(255, Math.round((p * 255) / a));
+      let c = c0; for (const dc of [0, -1, 1, -2, 2, -3, 3]) if (c0 + dc >= 0 && c0 + dc <= 255 && mul(c0 + dc, a) === p) { c = c0 + dc; break; }
+      d[o + ch] = c;
+    }
+  }
+  const half = document.createElement("canvas"); half.width = w; half.height = h;
+  half.getContext("2d").putImageData(im, 0, 0);
+  mip = toGpu(half, gpu);
+  return mip;
 }
 export function cardQuad(fr) {
   if (fr >= 1586) return CARD_REST;
@@ -32,10 +81,11 @@ export function cardQuad(fr) {
   const q = CARD0.map((p, i) => lerp2(p, CARD_REST[i], e[0]));
   return q.map(([x, y]) => [x, y + e[1]]);
 }
-// draw the card (paper + its dark right-hand thickness) for source frame index fr, under the current transform
-export function drawCard(g, fr) {
+// draw the card (paper + its dark right-hand thickness) for source frame index fr, under the current transform;
+// gpu: a texture-backed image (see cardTex)
+export function drawCard(g, fr, gpu = null) {
   const q = cardQuad(fr);
-  const c = cardTex(), pad = c.__pad, k = 930 / 465;
+  const c = cardTex(gpu), pad = c.__pad, k = 930 / 465;
   const Hm = homography([[0, 0], [465, 0], [465, 648], [0, 648]], q);
   // thickness: a dark sliver along the right edge (seen on the source 8–12 px wide)
   const tr = q[1], br = q[2];
@@ -47,7 +97,8 @@ export function drawCard(g, fr) {
   g.restore();
   // the paper, cropped to the card body (+ a little of the pad for the anti-aliased edge and smiley glow)
   const m = 6 / k;
-  warpImage(g, c, (u, v) => hmap(Hm, [-m + u * (465 + 2 * m), -m + v * (648 + 2 * m)]), { sx: pad - m * k, sy: pad - m * k, sw: (465 + 2 * m) * k, sh: (648 + 2 * m) * k, n: 6, m: 10 });
+  const half = fr === 1578 && gpu ? cardMip(gpu) : null;
+  warpImage(g, c, (u, v) => hmap(Hm, [-m + u * (465 + 2 * m), -m + v * (648 + 2 * m)]), { sx: pad - m * k, sy: pad - m * k, sw: (465 + 2 * m) * k, sh: (648 + 2 * m) * k, n: 6, m: 10, mip: half });
   return q;
 }
-export function releaseCard() { tex = null; }
+export function releaseCard() { tex = null; mip = null; }

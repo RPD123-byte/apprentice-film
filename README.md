@@ -21,16 +21,17 @@ original. The original is not part of this repository; see [The original film](#
 
 ## Requirements
 
-- **Node.js 22.12 or newer** and npm. The renderer is [HyperFrames](https://github.com/heygen-com/hyperframes), run
-  with `npx` at a pinned version (`hyperframes@0.8.69`, which needs Node 22). It downloads its own headless Chrome.
-  `puppeteer-core` 25.12.0, used by `tools/harness/`, needs Node 22.12.
+- **Node.js 22.12 or newer** and npm. The film is a [HyperFrames](https://github.com/heygen-com/hyperframes)
+  composition. HyperFrames runs with `npx` at a pinned version (`hyperframes@0.8.69`, which needs Node 22) for the
+  Studio preview, and it downloads the headless Chrome that everything uses. `npm run render` (`tools/render.mjs`) and
+  `tools/harness/` drive that Chrome with `puppeteer-core` 25.12.0, which needs Node 22.12.
 - **ffmpeg** and ffprobe.
 - **Python 3.11**, for the soundtrack generator and the tools. Rendering does not need it. `tools/requirements.txt`
   pins the packages.
 - curl and unzip, to download the one font that cannot be redistributed (Satoshi, see [License](#license)).
 - Internet access: npm packages, Chrome and Satoshi (from Fontshare) on the first run, and GSAP from jsDelivr on every
   render (see [Rendering notes](#rendering-notes)).
-- Disk: about 2–3 GB for `.venv/`, Chrome and the npx cache, plus about 630 MB for each rendered MP4.
+- Disk: about 2–3 GB for `.venv/`, Chrome and the npx cache, plus about 430 MB for each rendered MP4.
 - Optional: a copy of the original film, passed as `APPRENTICE_SOURCE=/path/to/original.mp4` (see
   [The original film](#the-original-film)). You need it only for the per-shot distance in `npm run verify`, the
   comparison video and the measuring tools. Rendering the recreation does not use it.
@@ -47,8 +48,9 @@ sudo apt install ffmpeg python3.11 python3.11-venv curl unzip   # Ubuntu 24.04: 
 nvm install 22
 ```
 
-The film has been rendered on macOS on Apple silicon (an M4 Max) with the GPU. Other platforms should work through
-HyperFrames' own GPU detection, but they have not been tried.
+The film has been rendered only on macOS on Apple silicon (an M4 Max), with the GPU (ANGLE on Metal). On other
+platforms the renderer uses SwiftShader (software WebGL) unless `HARNESS_GPU=hardware` is set (see
+[`tools/harness/README.md`](tools/harness/README.md)); this has not been tried.
 
 ## The original film
 
@@ -73,14 +75,14 @@ numbers in this README.
 ```sh
 git clone https://github.com/RPD123-byte/apprentice-film.git && cd apprentice-film
 npm run setup      # checks tools; .venv with Python packages; npm install; Chrome; downloads Satoshi
-npm run render     # -> renders/film.mp4   (about 18 min on an M4 Max; one worker, see Rendering notes)
+npm run render     # -> renders/film.mp4   (about 12.5 min on an M4 Max; see Rendering notes)
 npm run verify     # gate: 3,520 frames, no black frames, no error bars
 ```
 
-Rendering needs only Node and ffmpeg, plus the Satoshi font that setup downloads (HyperFrames fetches its own Chrome).
-Python 3.11 is for `npm run score`, `npm run verify`, `npm run fidelity` and the tools in `tools/`. If setup cannot
-set Python up, it prints a warning saying so and finishes the other steps. `bash scripts/setup.sh --help` lists its
-options.
+Rendering needs Node, ffmpeg and three things setup installs: `puppeteer-core` (`npm install`), a headless Chrome
+(`hyperframes browser ensure`) and the Satoshi font. Python 3.11 is for `npm run score`, `npm run verify`,
+`npm run fidelity` and the tools in `tools/`. If setup cannot set Python up, it prints a warning saying so and finishes
+the other steps. `bash scripts/setup.sh --help` lists its options.
 
 More:
 
@@ -90,6 +92,7 @@ npm run dev        # HyperFrames Studio preview in the browser
 npm run lint       # HyperFrames lint (clean)
 npm run check      # lint + runtime checks; the runtime step times out on this page (see Rendering notes)
 npm run fidelity   # rebuild docs/FIDELITY.md from docs/fidelity/*.md
+npm run purity     # determinism audit: every frame drawn in order, scrambled, in order again (see Rendering notes)
 
 export APPRENTICE_SOURCE=/path/to/original.mp4
 npm run verify                         # ... plus the per-shot distance to the original
@@ -111,18 +114,23 @@ index.html ──> src/main.js ──> clock t ──> renderAt(t) ──> shot 
 ```
 
 - **`index.html`** is the HyperFrames composition: one `<canvas id="film">`, the score (`audio/score.wav`) as an
-  `<audio>` element, the `@font-face` rules, and GSAP 3.14.2. HyperFrames renders a video by seeking the paused
-  timeline registered on `window.__timelines` and capturing each frame in headless Chrome.
+  `<audio>` element, the `@font-face` rules, and GSAP 3.14.2. HyperFrames (the Studio preview, `hyperframes snapshot`)
+  seeks the paused timeline registered on `window.__timelines`; `npm run render` calls `renderAt(t)` directly (see
+  [Rendering notes](#rendering-notes)). A short script runs before any film code and creates every 2D canvas
+  (`HTMLCanvasElement` and `OffscreenCanvas`) with `willReadFrequently`, so Chrome rasterizes it on the CPU from the
+  start. Otherwise Chrome draws a 2D canvas on the GPU and silently moves it to the CPU after repeated `getImageData`
+  readbacks; the two anti-alias differently, so pixels depended on draw history and varied between page loads.
 - **`src/main.js`**: the timeline only tweens a clock from 0 to 140.8 s. Setting the clock calls `renderAt(t)`, which:
   1. finds the shot whose span holds `t`;
-  2. clears a 2D canvas to black and calls that shot's `draw`;
-  3. for a shot with `xfade`, paints the previous shot underneath and fades the new one up;
-  4. calls `release()` on shots the timeline has left behind (keeping the one just before, for dissolves);
+  2. calls `release()` on every shot except this one and the one before it (kept for dissolves), so their cached
+     canvases are freed. Before, a forward render released none, and memory grew past 5 GB;
+  3. clears a 2D canvas to black and calls that shot's `draw`;
+  4. for a shot with `xfade`, paints the previous shot underneath and fades the new one up;
   5. runs the grade.
 
   A shot that throws paints a red error bar instead of stopping the film; `tools/verify_render.py` looks for it.
   `main.js` also loads every font before the first frame (canvas text does not trigger `@font-face` loading) and
-  exposes `window.__film.renderAt(t)` for the harnesses in `tools/harness/`.
+  exposes `window.__film.renderAt(t)` for `tools/render.mjs` and the harnesses in `tools/harness/`.
 - **`src/shots/index.js`**: `PLAN` is the shot table: id, start, end, title. The cut times were measured on the
   original. Each shot is its own module, `src/shots/<id>.js` (`s01_birdseye.js` and `s40_endcard.js` keep older
   names). A module that fails to load becomes a labelled placeholder.
@@ -145,8 +153,12 @@ export const shot = {
 
 **`draw` is a pure function of time.** The same `t` always gives the same pixels, whatever was drawn before, because
 renders may seek in any order. So there is no `Math.random`, `Date`, `performance.now`, network access or state
-carried from one frame to the next. Randomness comes from seeded generators (`src/lib/rng.js`), and expensive
-drawings are cached on the first call, never at module load. (One known exception: the end of s25; see [Known gaps](#known-gaps).)
+carried from one frame to the next: no 2D context state (a transform, alpha, composite mode, …) left set, no scratch
+canvas reused without clearing, no cache whose content or raster mode depends on the first frame that built it.
+Randomness comes from seeded generators (`src/lib/rng.js`), and expensive drawings are cached on the first call, never
+at module load. `npm run purity` checks this for every frame. (Exceptions: 3 frames depend on draw order, and a few
+frames of s18 and s25 differ when drawn first after their caches are rebuilt. `npm run render` is not affected; see
+[Known gaps](#known-gaps).)
 
 ### Shared libraries (`src/lib/`)
 
@@ -184,7 +196,7 @@ cue list `audio/CUES.md`. The timings and levels were measured on the original's
 
 ```
 index.html, hyperframes.json, meta.json   the HyperFrames composition (the film)
-package.json, package-lock.json           npm scripts; puppeteer-core for tools/harness
+package.json, package-lock.json           npm scripts; puppeteer-core for tools/render.mjs and tools/harness
 src/                                      everything the render loads: 615 files, 113 MB
   main.js, config.js                      clock, renderAt, dissolves, fonts; frame constants
   shots/index.js                          PLAN, the shot table
@@ -193,8 +205,9 @@ src/                                      everything the render loads: 615 files
 assets/fonts/                             fonts + LICENSES.md (Satoshi is downloaded, not committed)
 audio/score.wav, audio/CUES.md            the synthesized soundtrack and its cue list (generated)
 scripts/                                  setup.sh, fetch-fonts.sh, compare.sh, link-media.sh, py
-tools/                                    runnable tools: sound/ (score generator), verify_render.py,
-                                          harness/ (frame-exact renders), measuring and comparison tools
+tools/                                    runnable tools: render.mjs (the renderer), sound/ (score generator),
+                                          verify_render.py, harness/ (frame-exact stills, purity.mjs audit),
+                                          measuring and comparison tools
 comparison/                               the stacked comparison video (a separate HyperFrames project)
 docs/                                     STYLE.md (the agents' brief), FIDELITY.md + fidelity/ (per-shot logs),
                                           audio.md, soko.md, hippie.md, owl.md, pureimg.md
@@ -217,42 +230,46 @@ the same shot and staging with visibly simpler drawing. The methods:
 The ids come from the project's shot list, so the numbering has gaps.
 
 "Diff" is the mean absolute difference from the original, in 8-bit levels, measured by `tools/verify_render.py` on a
-render of this code (lower is closer). It compares quarter-size frames (552×236) after a Gaussian blur of σ = 1 px,
-which is about σ = 4 px at full size.
+render of this code by `npm run render` (lower is closer). It compares quarter-size frames (552×236) after a Gaussian
+blur of σ = 1 px, which is about σ = 4 px at full size.
 
 | id | time (s) | what happens | method | status | diff | code |
 |---|---|---|---|---|---|---|
-| s01 | 0.00–6.04 | Bird's-eye push-in over the desk | mixed | approx | 11.85 | [`s01_birdseye.js`](src/shots/s01_birdseye.js) + [`s01/`](src/shots/s01/) |
+| s01 | 0.00–6.04 | Bird's-eye push-in over the desk | mixed | approx | 11.84 | [`s01_birdseye.js`](src/shots/s01_birdseye.js) + [`s01/`](src/shots/s01/) |
 | s02 | 6.04–19.12 | The stare; pan off his face into the dark boxes; the owl on the boxes takes off and flies to him | drawn | approx | 10.90 | [`s02.js`](src/shots/s02.js) + [`s02/`](src/shots/s02/) |
-| s04 | 19.12–23.12 | Owl on his shoulder; camera arcs round behind him | traced | approx | 3.73 | [`s04.js`](src/shots/s04.js) + [`s04/`](src/shots/s04/) |
-| s05 | 23.12–26.72 | Over the shoulder: typing; the laptop goes from his site to Pure Imagination | drawn | approx | 12.90 | [`s05.js`](src/shots/s05.js) + [`s05/`](src/shots/s05/) |
-| s06 | 26.72–29.04 | Tired, head on hand, a small smile; owl on his shoulder | traced | close | 2.34 | [`s06.js`](src/shots/s06.js) + [`s06/`](src/shots/s06/) |
-| s07 | 29.04–30.56 | Over the shoulder again on Pure Imagination | traced | close | 3.47 | [`s07.js`](src/shots/s07.js) + [`s07/`](src/shots/s07/) |
-| s08 | 30.56–32.60 | Screen close-up: red selection, the note card types 'This is really good' | traced | close | 5.10* | [`s08.js`](src/shots/s08.js) + [`s08/`](src/shots/s08/) |
-| s09 | 32.60–33.60 | Owl close-up, the room still behind it | mixed | approx | 6.66 | [`s09.js`](src/shots/s09.js) + [`s09/`](src/shots/s09/) |
-| s12 | 33.60–35.36 | The room drops away: the owl stares on black | traced | approx | 2.23 | [`s12.js`](src/shots/s12.js) + [`s12/`](src/shots/s12/) |
-| s13 | 35.36–36.92 | Owl startled | drawn | approx | 4.18 | [`s13.js`](src/shots/s13.js) + [`s13/`](src/shots/s13/) |
+| s04 | 19.12–23.12 | Owl on his shoulder; camera arcs round behind him | traced | approx | 3.79 | [`s04.js`](src/shots/s04.js) + [`s04/`](src/shots/s04/) |
+| s05 | 23.12–26.72 | Over the shoulder: typing; the laptop goes from his site to Pure Imagination | drawn | approx | 12.83 | [`s05.js`](src/shots/s05.js) + [`s05/`](src/shots/s05/) |
+| s06 | 26.72–29.04 | Tired, head on hand, a small smile; owl on his shoulder | traced | close | 2.43 | [`s06.js`](src/shots/s06.js) + [`s06/`](src/shots/s06/) |
+| s07 | 29.04–30.56 | Over the shoulder again on Pure Imagination | traced | close | 3.35 | [`s07.js`](src/shots/s07.js) + [`s07/`](src/shots/s07/) |
+| s08 | 30.56–32.60 | Screen close-up: red selection, the note card types 'This is really good' | traced | close | 4.47* | [`s08.js`](src/shots/s08.js) + [`s08/`](src/shots/s08/) |
+| s09 | 32.60–33.60 | Owl close-up, the room still behind it | mixed | approx | 6.64 | [`s09.js`](src/shots/s09.js) + [`s09/`](src/shots/s09/) |
+| s12 | 33.60–35.36 | The room drops away: the owl stares on black | traced | approx | 2.22 | [`s12.js`](src/shots/s12.js) + [`s12/`](src/shots/s12/) |
+| s13 | 35.36–36.92 | Owl startled | drawn | approx | 4.16 | [`s13.js`](src/shots/s13.js) + [`s13/`](src/shots/s13/) |
 | s14 | 36.92–40.72 | Small owl in the dark heads for a lit gap | mixed | approx | 6.04 | [`s14.js`](src/shots/s14.js) + [`s14/`](src/shots/s14/) |
 | s15 | 40.72–45.72 | Corridor run through boxes and gear | mixed | approx | 21.40 | [`s15.js`](src/shots/s15.js) + [`s15/`](src/shots/s15/) |
-| s16 | 45.72–47.84 | It flies into his face; tumbles by the mug; white flash | traced | close | 2.59 | [`s16.js`](src/shots/s16.js) + [`s16/`](src/shots/s16/) |
-| s17 | 47.84–53.24 | Full-frame: his site, MIXING DOWN, the owl flying inside the illustration | mixed | approx | 11.36 | [`s17.js`](src/shots/s17.js) + [`s17/`](src/shots/s17/) |
-| s18 | 53.24–57.32 | Close on the synth; the owl's feet on the keys | traced | close | 3.46 | [`s18.js`](src/shots/s18.js) + [`s18/`](src/shots/s18/) |
-| s19 | 57.32–63.12 | Low angle: the note card propped up, the owl tumbles, dusts off, lifts it | drawn | approx | 14.23 | [`s19.js`](src/shots/s19.js) + [`s19/`](src/shots/s19/) |
-| s20 | 63.12–69.44 | Wide: scissors against the speaker; the owl takes them; the smirk | drawn | approx | 21.78 | [`s20.js`](src/shots/s20.js) + [`s20/`](src/shots/s20/) |
-| s21 | 69.44–74.52 | The page, framed on the screen: the owl walks in and flies up | drawn | approx | 9.41 | [`s21.js`](src/shots/s21.js) + [`s21/`](src/shots/s21/) |
-| s22 | 74.52–84.04 | It cuts round the header: dashed line, outline, the strip comes loose | traced | approx | 9.27 | [`s22.js`](src/shots/s22.js) + [`s22/`](src/shots/s22/) |
-| s23 | 84.04–97.08 | Carries the strip away, brings the colour banner, slaps it on, glows | drawn | approx | 10.66 | [`s23.js`](src/shots/s23.js) + [`s23/`](src/shots/s23/) |
-| s24 | 97.08–100.48 | Flurry of cuts, white flash, speed lines: the owl with scissors | mixed | approx | 11.59 | [`s24.js`](src/shots/s24.js) + [`s24/`](src/shots/s24/) |
-| s25 | 100.48–110.52 | The page cut into shards; the owl stands in the middle, hands on hips | mixed | approx | 12.87 | [`s25.js`](src/shots/s25.js) + [`s25/`](src/shots/s25/) |
-| s26 | 110.52–117.52 | The shards blow out into colour: the finished site | traced | close | 4.83 | [`s26.js`](src/shots/s26.js) + [`s26/`](src/shots/s26/) |
-| s27 | 117.52–129.30 | Pull back into the morning room; pan to him asleep; the owl on the laptop | traced | close | 6.54 | [`s27.js`](src/shots/s27.js) + [`s27/`](src/shots/s27/) |
-| s28 | 129.30–136.00 | From behind the laptop: asleep, smiling, in the sun | traced | close | 4.35 | [`s28.js`](src/shots/s28.js) + [`s28/`](src/shots/s28/) |
-| s40 | 136.00–140.80 | End card | mixed | close | 6.09 | [`s40_endcard.js`](src/shots/s40_endcard.js) + [`s40/`](src/shots/s40/) |
+| s16 | 45.72–47.84 | It flies into his face; tumbles by the mug; white flash | traced | close | 2.51 | [`s16.js`](src/shots/s16.js) + [`s16/`](src/shots/s16/) |
+| s17 | 47.84–53.24 | Full-frame: his site, MIXING DOWN, the owl flying inside the illustration | mixed | approx | 11.34 | [`s17.js`](src/shots/s17.js) + [`s17/`](src/shots/s17/) |
+| s18 | 53.24–57.32 | Close on the synth; the owl's feet on the keys | traced | close | 3.44 | [`s18.js`](src/shots/s18.js) + [`s18/`](src/shots/s18/) |
+| s19 | 57.32–63.12 | Low angle: the note card propped up, the owl tumbles, dusts off, lifts it | drawn | approx | 14.31 | [`s19.js`](src/shots/s19.js) + [`s19/`](src/shots/s19/) |
+| s20 | 63.12–69.44 | Wide: scissors against the speaker; the owl takes them; the smirk | drawn | approx | 21.80 | [`s20.js`](src/shots/s20.js) + [`s20/`](src/shots/s20/) |
+| s21 | 69.44–74.52 | The page, framed on the screen: the owl walks in and flies up | drawn | approx | 9.37 | [`s21.js`](src/shots/s21.js) + [`s21/`](src/shots/s21/) |
+| s22 | 74.52–84.04 | It cuts round the header: dashed line, outline, the strip comes loose | traced | approx | 9.23 | [`s22.js`](src/shots/s22.js) + [`s22/`](src/shots/s22/) |
+| s23 | 84.04–97.08 | Carries the strip away, brings the colour banner, slaps it on, glows | drawn | approx | 10.68 | [`s23.js`](src/shots/s23.js) + [`s23/`](src/shots/s23/) |
+| s24 | 97.08–100.48 | Flurry of cuts, white flash, speed lines: the owl with scissors | mixed | approx | 11.55 | [`s24.js`](src/shots/s24.js) + [`s24/`](src/shots/s24/) |
+| s25 | 100.48–110.52 | The page cut into shards; the owl stands in the middle, hands on hips | mixed | approx | 12.78 | [`s25.js`](src/shots/s25.js) + [`s25/`](src/shots/s25/) |
+| s26 | 110.52–117.52 | The shards blow out into colour: the finished site | traced | close | 4.88 | [`s26.js`](src/shots/s26.js) + [`s26/`](src/shots/s26/) |
+| s27 | 117.52–129.30 | Pull back into the morning room; pan to him asleep; the owl on the laptop | traced | close | 6.46 | [`s27.js`](src/shots/s27.js) + [`s27/`](src/shots/s27/) |
+| s28 | 129.30–136.00 | From behind the laptop: asleep, smiling, in the sun | traced | close | 4.22 | [`s28.js`](src/shots/s28.js) + [`s28/`](src/shots/s28/) |
+| s40 | 136.00–140.80 | End card | mixed | close | 3.98 | [`s40_endcard.js`](src/shots/s40_endcard.js) + [`s40/`](src/shots/s40/) |
 
 \* On 2026-09-28 the page's date and city line, which showed a real event's details, was replaced with invented
 text ("April 24 - April 26, 2025" / "Linden Hollow"; see [`docs/pureimg.md`](docs/pureimg.md)). The original still
-shows the old text, so s08's distance to it rose from 4.38 to 5.10 on the full render; s05's and s07's changed by
-under 0.01.
+shows the old text, which adds to s08's distance: on the previous render (encoded by HyperFrames) it rose from 4.38 to
+5.10, and s05's and s07's changed by under 0.01. On the current render s08 measures 4.47.
+
+s08 (5.10 → 4.47) and the end card s40 (6.09 → 3.98) moved closer to the original when the renderer changed to
+`tools/render.mjs`: the old HyperFrames encode converted colours with a different matrix from the BT.709 its files were
+tagged with (the end card's red channel was about 6 levels too high). Every other shot changed by 0.13 or less.
 
 Totals: 9 shots (42.4 s) close and 17 shots (98.4 s) approx; by method, 11 traced (52.8 s), 8 mixed (39.5 s) and
 7 drawn (48.5 s). The first 110 s are black and white, in the style of hand-inked manga (white line on deep black); the
@@ -297,27 +314,39 @@ workflow scripts are exactly what each agent was asked to do.
 
 ## Rendering notes
 
-- **Render with one worker.** `npm run render` passes `--workers 1`. With several Chrome workers sharing the GPU, the
-  heavier shots of the ending made workers lose their WebGL contexts part-way through, and the rest of each worker's
-  chunk rendered black: two renders had about 2,000 black frames. One page renders the whole film cleanly.
-  `node tools/harness/probe.mjs 0 140.76` checks for context loss frame by frame.
-- **Time.** A render from a clean clone took 18 min 22 s on an Apple M4 Max (48 GB) with one worker, most of it frame
-  capture. The generous timeouts in the render script are there because loading every shot module (over 100 MB of
-  JavaScript, mostly the ending's traced data) takes a while.
-- **Disk.** About 2–3 GB for `.venv/`, Chrome and the npx cache, plus about 630 MB for each rendered MP4.
+- **The renderer.** `npm run render` runs `node tools/render.mjs renders/film.mp4` (pass another path to write
+  elsewhere). It opens the film in one headless Chrome page, draws every frame in order with the same `renderAt` the
+  composition uses, reads the graded WebGL canvas back and streams the raw frames into ffmpeg with
+  `audio/score.wav`: H.264 (libx264, CRF 16, yuv420p), BT.709 matrix and tags, AAC at 192 kbit/s, bitexact flags, no
+  metadata.
+- **Why not `hyperframes render`.** HyperFrames is still the composition format, the Studio preview (`npm run dev`)
+  and the renderer for [`comparison/`](comparison/README.md), but it no longer renders the film. With every 2D canvas
+  on the CPU (see [How it works](#how-it-works)), its frame capture slowed to about 1 fps and stalled for over 60 s on
+  one frame near 100 s (two attempts). Before that it rendered with one worker, because several workers sharing the
+  GPU lost their WebGL contexts and rendered black frames; `node tools/harness/probe.mjs 0 140.76` checks a page for
+  context loss frame by frame.
+- **Time.** About 12.5 minutes on an Apple M4 Max. Loading every shot module (over 100 MB of JavaScript, mostly the
+  ending's traced data) takes a while before the first frame; the renderer sets no load timeout.
+- **Disk.** About 2–3 GB for `.venv/`, Chrome and the npx cache, plus about 430 MB for each rendered MP4.
 - **Network.** `index.html` loads GSAP 3.14.2 from jsDelivr, so every render needs internet access, even after setup.
 - **Gate every render** with `npm run verify` (`tools/verify_render.py`). It checks for 3,520 frames, no black frames
   and no red error bars from a failing shot. With `APPRENTICE_SOURCE` it also prints the per-shot distance to the
   original, and given an older render it fails if any shot got worse by more than 0.5.
-- **Reproducible, with one exception.** A render from a fresh clone matched the published video exactly (same
-  pixels, same audio) in every frame except 48: s25's last 1.9 s (108.60–110.48), which vary a little from run to run
-  (scattered pixels, 0.6 levels on average, invisible at viewing size; see [Known gaps](#known-gaps)). So two renders
-  are usually not byte-identical: check yours with `npm run verify` rather than by hash. For reference, the published
-  render's SHA-256 is `3ae17f85a09588baf4a5a6c72153c3490ed3a2377e9c033c85f37cbee27bbc21`. The distance numbers above
-  were measured on it. Other GPUs and drivers may give slightly different pixels.
+- **Determinism audit.** `npm run purity` (`tools/harness/purity.mjs 0 140.76`) draws every frame three times in one
+  fresh page: in order, scrambled (shots last to first, the frames inside each shot permuted), and in order again. It
+  hashes every pixel of each graded frame and reports, by shot, the frames that are unstable (the two in-order passes
+  differ) and those that depend on draw order (the scrambled pass differs). Current result over all 3,520 frames:
+  in-order renders are identical between fresh page loads, and 3 frames depend on draw order: 100.44 (s24), 100.48
+  (s25) and 129.04 (s27). A few more differ when drawn first after their shot's caches are rebuilt; see
+  [Known gaps](#known-gaps). Neither affects `npm run render`, which always draws in order from a fresh page.
+- **Reproducible.** Two renders of the current code on the M4 Max were byte-identical, SHA-256
+  `679437fee996992cd5d63298f742b29a54016a94be3b6ff7e5e57937f735e8fd`. The distance numbers above were measured on
+  that render. Other machines, Chrome builds, GPUs or ffmpeg versions may give different bytes, so check yours with
+  `npm run verify` rather than by hash.
 - **Stills.** `node tools/harness/shoot.mjs OUTDIR 12.5,60,120` renders exact frames without HyperFrames' per-seek
   timeout. `tools/compare.sh` (render|original pairs) uses `hyperframes snapshot`, which can time out while all the
-  shots load.
+  shots load. A still is usually the first frame its shot draws in that page, so it can show the cold-start differences
+  in [Known gaps](#known-gaps).
 - **Fonts.** The end card is set in Satoshi, which `scripts/fetch-fonts.sh` downloads (part of `npm run setup`).
   Without it the film does not load: `src/main.js` loads every font before the first frame, and that load fails.
 - **`npm run check`.** Lint passes with no errors or warnings. The runtime step fails with a CDP timeout
@@ -327,13 +356,19 @@ workflow scripts are exactly what each agent was asked to do.
 
 ## Known gaps
 
-- **Weakest shots** by measured distance from the original: s20 (21.8), s15 (21.4), s19 (14.2), s05 (12.9) and
-  s25 (12.9). s15's corridor is shader drawing over measured tone, not the original's charcoal texture. The owls in
+- **Weakest shots** by measured distance from the original: s20 (21.80), s15 (21.40), s19 (14.31), s05 (12.83) and
+  s25 (12.78). s15's corridor is shader drawing over measured tone, not the original's charcoal texture. The owls in
   s19, s20 and s25 are simpler drawings than the original's painterly bird.
-- **s25 is not a pure function of time at its end.** Its last 1.9 s (108.60–110.48) carry some drawing state from
-  earlier frames, so they vary slightly between full renders of the same code (up to 41 levels on scattered pixels,
-  0.6 on average, invisible at viewing size) and when drawn out of order. Every other frame is reproducible.
-- The colour ending (s26–s28) is close, at 4.4–6.5, because it is traced.
+- **A few frames depend on what was drawn before.** In-order renders are identical between fresh page loads, but
+  `npm run purity` finds 3 frames that change when drawn out of order: 100.44 (s24), 100.48 (s25) and 129.04 (s27). A
+  cold-start sweep (release every shot's caches, then draw one frame) found frames that differ when drawn first after
+  a cache rebuild: s18 at 56.80–56.84 (1 level on a few hundred pixels) and s25's first frame after its caches are
+  rebuilt (up to about 50 levels on the crack lines). The cause of these two: Chrome still moves a CPU canvas to the
+  GPU the first time a GPU-backed canvas (a WebGL canvas, for example) is drawn into it, so a rebuilt cache can land
+  in a different raster mode. `npm run render` is not affected, because it always draws in order from a fresh page.
+  Stills, the Studio preview and multi-worker renders are. Forcing every canvas into one raster mode would remove
+  this, but it shifts the anti-aliasing of the whole film slightly, so it is left for later.
+- The colour ending (s26–s28) is close, at 4.2–6.5, because it is traced.
 - 17 of 26 shots are **approx**: same staging, timing and camera, with visibly simpler drawing. Each log in
   `docs/fidelity/` lists that shot's gaps. For example, the s01→s02 cut lands one frame late, and the owl visibly
   changes drawing at the s25→s26 cut.
@@ -352,8 +387,8 @@ No licence is granted: all rights reserved. The code is published so that you ca
 - **Fonts** keep their own licences: see [`assets/fonts/LICENSES.md`](assets/fonts/LICENSES.md). Nine files are under
   the SIL Open Font License 1.1 and are committed. Satoshi (Indian Type Foundry, ITF Free Font License) may not be
   redistributed, so it is git-ignored, and `scripts/fetch-fonts.sh` downloads it from Fontshare.
-- **GSAP** 3.14.2 is loaded from jsDelivr when the page loads (HyperFrames inlines it at render time). It is not
-  redistributed here and keeps its own licence.
+- **GSAP** 3.14.2 is loaded from jsDelivr when the page loads. It is not redistributed here and keeps its own
+  licence.
 
 ## History
 

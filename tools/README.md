@@ -1,16 +1,17 @@
 # tools/
 
 Runnable tools. Run them from the repository root, with the Python environment from `npm run setup` active
-(`source .venv/bin/activate`). The ones marked **source** read your copy of the original film from
-`APPRENTICE_SOURCE` (or `REF`); nothing else here needs it.
+(`source .venv/bin/activate`); the Node scripts need `npm install` (puppeteer-core). The ones marked **source** read
+your copy of the original film from `APPRENTICE_SOURCE` (or `REF`); nothing else here needs it.
 
 | tool | what it does |
 |---|---|
+| `render.mjs [out.mp4]` | Renders the film (`npm run render`, default `renders/film.mp4`): draws every frame in order in one headless Chrome page with the composition's own `renderAt`, reads the graded WebGL canvas back and streams the raw frames into ffmpeg with `audio/score.wav` (libx264 CRF 16, yuv420p, BT.709, AAC 192k, bitexact flags, no metadata). About 12.5 min on an M4 Max. |
 | `sound/score.py` | Synthesizes the soundtrack: `audio/score.wav` + `audio/CUES.md` from the cue table `sound/cues.py` (`npm run score`). See [`../docs/audio.md`](../docs/audio.md) for the other files in `sound/`. |
 | `sound/verify.py`, `sound/calibrate.py` | **source** Compare the score with the original's audio (analysis only); calibrate the mix trims (`*_cal.json`). |
 | `verify_render.py NEW.mp4 [OLD.mp4]` | Gates a full render: 3,520 frames, no black frames, no error bars. With **source** it adds the per-shot distance to the original and, given OLD, fails if a shot got worse (`npm run verify`). |
 | `fidelity_log.py` | Rebuilds `docs/FIDELITY.md` from `docs/fidelity/*.md` (`npm run fidelity`). |
-| `harness/` | Frame-exact stills, WebGL context probe and dependency list from the live composition (see [`harness/README.md`](harness/README.md)). |
+| `harness/` | Frame-exact stills, the determinism audit (`purity.mjs`, `npm run purity`), WebGL context probe and dependency list from the live composition (see [`harness/README.md`](harness/README.md)). |
 | `compare.sh TIMES [outdir]` | **source** Render|original pairs at the given times (`hyperframes snapshot --against`). |
 | `sidebyside.sh START END FPS outdir` | **source** Motion check: pairs at FPS packed into `sheet.jpg` and an mp4. |
 | `film_sidebyside.sh film.mp4 [out.mp4]` | **source** Whole-film render-over-original video (quick version of `comparison/`). |

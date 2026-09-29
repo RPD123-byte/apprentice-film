@@ -4,7 +4,8 @@
 > written, with only the paths changed for the published layout: the author's absolute paths became `$APPRENTICE_SOURCE`
 > and the repository root, `fidelity/` moved to `docs/fidelity/`, the archived builds and trace folders moved to
 > [`../tracing/`](../tracing/README.md), and the render harnesses to `tools/harness/`. Two notes mark libraries that no
-> final shot uses (`cam3d.js`, `owlColor.js`), which are now in `tracing/` too.
+> final shot uses (`cam3d.js`, `owlColor.js`), which are now in `tracing/` too. The Rendering note was rewritten on
+> 2026-09-28 for the current renderer and determinism rules.
 
 The goal: rebuild the source film **as closely as possible, drawn entirely in code**. No frame, crop or pixel of the source
 (or of any AI-generated image) may appear in the render. The source is used only to measure and to compare against.
@@ -21,11 +22,26 @@ the user has approved **traced geometry**: vector traces of source frames (colou
 fitted gains) redrawn by code, as in the archived builds (now `tracing/<shot>/prev-builds-*/`). Fidelity to the source comes first
 there. Still no source pixels, crops or image files in the render: traces are stored as numbers/paths and painted by code.
 
-**Rendering (2026-09-27):** render with ONE worker (`npm run render` is pinned to `--workers 1`). With several Chrome
-workers on the GPU at once, the heavier traced ending made the workers lose their WebGL contexts part-way through and the
-rest of each worker's chunk rendered black (2 renders, ~2,000 black frames). A single page renders the whole film cleanly
-(checked frame by frame: no context loss). Always gate a full render with `python3 tools/verify_render.py NEW.mp4 OLD.mp4`
-(black frames, error bars, per-shot distance to the source vs the previous render) before sharing it.
+**Rendering (updated 2026-09-28):** `npm run render` is `node tools/render.mjs renders/film.mp4`. One headless Chrome
+page draws every frame in order with the composition's own `renderAt`, and the graded frames are piped into ffmpeg
+(about 12.5 min on an M4 Max). `hyperframes render` is no longer used for the film: with every canvas on the CPU its frame
+capture slowed to ~1 fps and stalled. (Before that it ran with one worker, because several workers on the GPU lost their
+WebGL contexts and rendered black frames.) Determinism rules:
+
+- `index.html` creates every 2D canvas (`HTMLCanvasElement` and `OffscreenCanvas`) with `willReadFrequently`, so Chrome
+  rasterizes it on the CPU from the start. Otherwise Chrome moves a GPU canvas to the CPU after repeated `getImageData`
+  readbacks; the two anti-alias differently, and pixels then depend on draw history. Chrome can still move a CPU canvas
+  to the GPU the first time a GPU-backed canvas (e.g. a WebGL canvas) is drawn into it, so a rebuilt cache can land in a
+  different raster mode.
+- `draw` must carry no state from one frame to the next: no context state left set, no scratch canvas reused without
+  clearing, no cache whose content or raster mode depends on the first frame that built it. `src/main.js` calls
+  `release()` on every shot except the current one and the one before it, so a shot drawn again after a jump (stills,
+  the preview) rebuilds its caches, and they must come back identical.
+- Check a change with `npm run purity` (`tools/harness/purity.mjs`: every frame in order, scrambled, in order again;
+  `--baseline` shows the in-order frames did not change).
+
+Always gate a full render with `npm run verify -- OLD.mp4` (`tools/verify_render.py`: black frames, error bars, per-shot
+distance to the source vs the previous render) before sharing it.
 `tools/compare.sh` can time out loading every shot; `tools/harness/probe.mjs` and `tools/harness/shoot.mjs` (then
 `snapshots/gpu-diag/probe.mjs` and the critic's `snapshots/end-critic/tools/shoot.mjs`) load the live composition without a
 protocol timeout.

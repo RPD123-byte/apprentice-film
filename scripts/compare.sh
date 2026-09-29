@@ -3,7 +3,7 @@
 #   comparison/renders/opus-5.5-vs-original-seedance.mp4 — the recreation on top, the original underneath, labelled,
 #   with the recreation's soundtrack (comparison/index.html, 1920x1656, 140.8 s).
 # Needs APPRENTICE_SOURCE (your copy of the original film). Steps:
-#   1. renders the film first if renders/film.mp4 is missing (npm run render, ~15 min on an M4 Max);
+#   1. renders the film first if renders/film.mp4 is missing (npm run render, about 12.5 min on an M4 Max);
 #      set RECREATION=path/to/other.mp4 to stack a different render instead
 #   2. links comparison/media/ (scripts/link-media.sh)
 #   3. renders comparison/ with HyperFrames

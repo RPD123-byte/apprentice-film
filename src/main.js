@@ -41,6 +41,7 @@ function paintShot(g, s, t) {
   g.restore();
 }
 let lastShot = null;
+const live = new Set(); // shots drawn since their caches were last released
 
 // The source opens at full exposure and fades linearly to black over its last 0.57 s (measured).
 function fadeAt(t) {
@@ -51,13 +52,22 @@ export function renderAt(time) {
   const t = Math.min(Math.max(time, 0), DUR - 1e-4);
   const s = shotAt(t);
   const i = SHOTS.indexOf(s);
-  // free caches of shots the timeline has left (renders walk forward; keep the previous one for dissolves)
-  if (lastShot && lastShot !== s && lastShot !== SHOTS[i - 1] && lastShot.release) { try { lastShot.release(); } catch (e) {} }
+  // Free the caches of every shot the timeline has left, keeping this shot and the previous one (for dissolves).
+  // Before, only a shot left by a jump was released, so a forward render kept every shot's cached canvases alive and,
+  // with the canvases on the CPU (index.html), memory grew until the renderer stalled around 100 s. Every shot is a
+  // pure function of time (tools/harness/purity.mjs), so releasing and rebuilding a cache cannot change its pixels.
+  for (const o of live) {
+    if (o === s || o === SHOTS[i - 1]) continue;
+    if (o.release) { try { o.release(); } catch (e) {} }
+    live.delete(o);
+  }
+  live.add(s);
   lastShot = s;
   const local = t - s.start;
   if (s.xfade && local < s.xfade && i > 0) {
     // dissolve: the previous shot keeps running underneath while this one fades up
     const prev = SHOTS[i - 1];
+    live.add(prev);
     paintShot(ctx, prev, t);
     paintShot(lctx, s, t);
     const u = local / s.xfade;
